@@ -29,6 +29,11 @@ function Get-ADUserProperties {
     }
 }
 
+# Function to retrieve domain controllers
+function Get-DomainControllers {
+    return Get-ADDomainController -Filter *
+}
+
 # Function to display AD properties as a table with color coding
 function Show-ADUserProperties {
     param (
@@ -66,11 +71,8 @@ function Show-ADUserProperties {
         } else {
             Write-Host "LockedOut: False" -ForegroundColor Green
         }
-
     }
 }
-
-
 
 # Function to display last 10 log entries
 function Show-LastLogEntries {
@@ -96,7 +98,7 @@ function Unlock-ADAccountOnAllDomainControllers {
     )
 
     try {
-        $domainControllers = Get-ADDomainController -Filter *
+        $domainControllers = Get-DomainControllers
         foreach ($dc in $domainControllers) {
             Write-Host "Unlocking AD Account for User ID: $userId on Domain Controller: $($dc.Name)"
             Unlock-ADAccount -Identity $userId -Server $dc.HostName -ErrorAction Stop
@@ -106,7 +108,6 @@ function Unlock-ADAccountOnAllDomainControllers {
         Write-Host "Error: $_"
     }
 }
-
 
 # Main loop
 while ($true) {
@@ -134,9 +135,8 @@ while ($true) {
         # Main menu loop
         Write-Host "1. Unlock AD Account on All Domain Controllers"
         Write-Host "2. Set Temporary Password (User Must Change)"
-        Write-Host "3. Display AD User Properties"
-        Write-Host "4. Show Last 10 Log Entries"
-        Write-Host "5. Clear and Restart"
+        Write-Host "3. Clear and Restart"
+        Write-Host "4. Quit"
 
         $choice = Read-Host "Enter your choice"
 
@@ -160,23 +160,15 @@ while ($true) {
                 Read-Host
             }
             '3' {
-                # Display AD properties for the provided User ID
-                Show-ADUserProperties -adUser $adUser
-                Write-Host "Press Enter to continue"
-                Read-Host
-            }
-            '4' {
-                # Show last 10 log entries
-                Show-LastLogEntries -logFilePath $logFilePath
-                Write-Host "Press Enter to continue"
-                Read-Host
-            }
-            '5' {
                 # Clear the console, reset User ID, and restart the script
                 $userId = $null
                 Clear-Host
                 $userId = Read-Host "Enter New User ID"
                 break
+            }
+            '4' {
+                # Quit the script
+                return
             }
         }
     }
