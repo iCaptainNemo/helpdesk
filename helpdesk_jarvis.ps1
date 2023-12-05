@@ -2,16 +2,22 @@ Clear-Host
 # Import the Active Directory module
 Import-Module ActiveDirectory
 
-# Prompt for temporary password or default to the current season and year
-$temporaryPassword = Read-Host "Enter a temporary password to use for password resets or leave as default ($(Get-Date -UFormat '%B%Y'))"
-if (-not $temporaryPassword) {
-    $temporaryPassword = Get-Date -UFormat '%B%Y'
+# Function to retrieve domain controllers
+function Get-DomainControllers {
+    return Get-ADDomainController -Filter *
 }
 
-# Function to get User ID
+# Function to get User ID with error handling
 function Get-UserId {
-    $userId = Read-Host "Enter New User ID"
-    return $userId
+    while ($true) {
+        $userId = Read-Host "Enter User ID"
+        try {
+            Get-ADUser -Identity $userId -ErrorAction Stop | Out-Null
+            return $userId
+        } catch {
+            Write-Host "Cannot find an object with given identity. Try again."
+        }
+    }
 }
 
 # Function to get AD properties for a given User ID
@@ -29,10 +35,6 @@ function Get-ADUserProperties {
     }
 }
 
-# Function to retrieve domain controllers
-function Get-DomainControllers {
-    return Get-ADDomainController -Filter *
-}
 
 # Function to display AD properties as a table with color coding
 function Show-ADUserProperties {
@@ -70,6 +72,15 @@ function Show-ADUserProperties {
             Write-Host "LockedOut: True" -ForegroundColor Red
         } else {
             Write-Host "LockedOut: False" -ForegroundColor Green
+        }
+
+        # Color coding for Password Last Set within the last 14 days
+        $passwordLastSet = $adUser.PasswordLastSet
+        $daysSinceLastSet = (Get-Date) - $passwordLastSet
+        if ($daysSinceLastSet.TotalDays -le 14) {
+            Write-Host "Password Last Set: $($passwordLastSet.ToString('yyyy-MM-dd HH:mm:ss')) (within last 14 days)" -ForegroundColor Green
+        } else {
+            Write-Host "Password Last Set: $($passwordLastSet.ToString('yyyy-MM-dd HH:mm:ss')) (more than 14 days ago)" -ForegroundColor Yellow
         }
     }
 }
@@ -148,11 +159,27 @@ while ($true) {
                 Read-Host
             }
             '2' {
+                # Prompt for a custom temporary password or default to the current season and year
+                $customTemporaryPassword = Read-Host "Enter a custom temporary password for password resets (press Enter to use default based on season and year)"
+                if (-not $customTemporaryPassword) {
+                    $currentMonth = (Get-Date).Month
+                    $season = switch ($currentMonth) {
+                        { $_ -in 3..5 } { 'Spring' }
+                        { $_ -in 6..8 } { 'Summer' }
+                        { $_ -in 9..11 } { 'Fall' }
+                        { $_ -in 1, 2, 12 } { 'Winter' }
+                    }
+
+                    # Set Temporary Password based on the season and year
+                    $temporaryPassword = "$season$(Get-Date -UFormat ' %Y')"
+                } else {
+                    $temporaryPassword = $customTemporaryPassword
+                }
                 Write-Host "Setting Temporary Password for User ID: $userId to $temporaryPassword (User Must Change)"
                 try {
                     Set-ADAccountPassword -Identity $userId -Reset -NewPassword (ConvertTo-SecureString -AsPlainText $temporaryPassword -Force) -ErrorAction Stop
                     Set-ADUser -Identity $userId -ChangePasswordAtLogon $true -ErrorAction Stop
-                    Write-Host "Temporary password set to $temporaryPassword. User must change the password at next login."
+                    Write-Host "Temporary password set to $temporaryPassword. User must change the password at the next login."
                 } catch {
                     Write-Host "Error: $_"
                 }
@@ -163,7 +190,7 @@ while ($true) {
                 # Clear the console, reset User ID, and restart the script
                 $userId = $null
                 Clear-Host
-                $userId = Read-Host "Enter New User ID"
+                $userId = Get-UserId
                 break
             }
             '4' {
