@@ -49,7 +49,7 @@ function Show-ADUserProperties {
             'Display Name'              = $adUser.DisplayName
             'Email'                     = $adUser.EmailAddress
             'Department'                = $adUser.Department
-            'Password Last Set'         = $adUser.PasswordLastSet
+            'Telephone'                 = $adUser.telephoneNumber
             'Account Lockout Time'      = $adUser.AccountLockoutTime
             'Last Bad Password Attempt' = $adUser.LastBadPasswordAttempt
             'Bad Logon Count'           = $adUser.BadLogonCount
@@ -65,6 +65,18 @@ function Show-ADUserProperties {
         } else {
             Write-Host "Password Expired: Not Expired" -ForegroundColor Green
         }
+        # Color coding for Password Last Set within the last 14 days
+        $passwordLastSet = $adUser.PasswordLastSet
+        if ($passwordLastSet -ne $null) {
+            $daysSinceLastSet = (Get-Date) - $passwordLastSet
+            if ($daysSinceLastSet.TotalDays -le 14) {
+                Write-Host "Password Last Set: $($passwordLastSet.ToString('yyyy-MM-dd HH:mm:ss')) (within last 14 days)" -ForegroundColor Green
+            } else {
+                Write-Host "Password Last Set: $($passwordLastSet.ToString('yyyy-MM-dd HH:mm:ss')) (more than 14 days ago)" -ForegroundColor Yellow
+            }
+        } else {
+            Write-Host "Password Last Set: Not available" -ForegroundColor Yellow
+        }
 
         # Color coding for LockedOut
         $lockedOut = $adUser.LockedOut
@@ -74,14 +86,6 @@ function Show-ADUserProperties {
             Write-Host "LockedOut: False" -ForegroundColor Green
         }
 
-        # Color coding for Password Last Set within the last 14 days
-        $passwordLastSet = $adUser.PasswordLastSet
-        $daysSinceLastSet = (Get-Date) - $passwordLastSet
-        if ($daysSinceLastSet.TotalDays -le 14) {
-            Write-Host "Password Last Set: $($passwordLastSet.ToString('yyyy-MM-dd HH:mm:ss')) (within last 14 days)" -ForegroundColor Green
-        } else {
-            Write-Host "Password Last Set: $($passwordLastSet.ToString('yyyy-MM-dd HH:mm:ss')) (more than 14 days ago)" -ForegroundColor Yellow
-        }
     }
 }
 
@@ -93,14 +97,22 @@ function Show-LastLogEntries {
 
     try {
         $logEntries = Get-Content $logFilePath -Tail 10
-        Write-Host "Last 10 log entries:"
+        Write-Host "Last 10 login entries:"
         foreach ($entry in $logEntries) {
             Write-Host $entry
         }
     } catch {
-        Write-Host "Error: $_"
+        $errorMessage = $_.Exception.Message
+
+        if ($errorMessage -like '*ObjectNotFound*') {
+            Write-Host "Error: Log file not found at $logFilePath" -ForegroundColor Yellow
+        } else {
+            Write-Host "Error: $errorMessage" -ForegroundColor Red
+        }
     }
 }
+
+
 
 # Function to unlock an AD account on all domain controllers
 function Unlock-ADAccountOnAllDomainControllers {
@@ -144,23 +156,35 @@ while ($true) {
         Write-Host "`n"  # This adds a line break
 
         # Main menu loop
-        Write-Host "1. Unlock AD Account on All Domain Controllers"
-        Write-Host "2. Set Temporary Password (User Must Change)"
-        Write-Host "3. Clear and Restart"
+        Write-Host "1. Clear and Restart"
+        Write-Host "2. Unlock AD Account on All Domain Controllers"
+        Write-Host "3. Set Temporary Password (User Must Change)"
         Write-Host "4. Quit"
 
         $choice = Read-Host "Enter your choice"
 
+        if ($choice -eq '') {
+            # If Enter is pressed without entering a number, restart from Show-ADUserProperties
+            continue
+        }
+
         switch ($choice) {
             '1' {
+                # Clear the console, reset User ID, and restart the script
+                $userId = $null
+                Clear-Host
+                $userId = Get-UserId
+                break
+            }
+            '2' {
                 # Unlock AD account on all domain controllers
                 Unlock-ADAccountOnAllDomainControllers -userId $userId
                 Write-Host "Press Enter to continue"
                 Read-Host
             }
-            '2' {
+            '3' {
                 # Prompt for a custom temporary password or default to the current season and year
-                $customTemporaryPassword = Read-Host "Enter a custom temporary password for password resets (press Enter to use default based on season and year)"
+                $customTemporaryPassword = Read-Host "Enter a custom temporary password for password resets (press Enter to use default based on SeasonYear)"
                 if (-not $customTemporaryPassword) {
                     $currentMonth = (Get-Date).Month
                     $season = switch ($currentMonth) {
@@ -171,7 +195,7 @@ while ($true) {
                     }
 
                     # Set Temporary Password based on the season and year
-                    $temporaryPassword = "$season$(Get-Date -UFormat ' %Y')"
+                    $temporaryPassword = "$season$(Get-Date -UFormat '%Y')"
                 } else {
                     $temporaryPassword = $customTemporaryPassword
                 }
@@ -185,13 +209,6 @@ while ($true) {
                 }
                 Write-Host "Press Enter to continue"
                 Read-Host
-            }
-            '3' {
-                # Clear the console, reset User ID, and restart the script
-                $userId = $null
-                Clear-Host
-                $userId = Get-UserId
-                break
             }
             '4' {
                 # Quit the script
