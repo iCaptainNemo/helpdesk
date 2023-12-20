@@ -1,3 +1,6 @@
+# Import the Active Directory module
+Import-Module ActiveDirectory
+
 # Function to retrieve domain controllers
 function Get-DomainControllers {
     return Get-ADDomainController -Filter *
@@ -62,14 +65,18 @@ function Show-ADUserProperties {
         } else {
             Write-Host "Password Expired: Not Expired" -ForegroundColor Green
         }
-        # Color coding for Password Last Set within the last 14 days
+        # Color coding for Password Last Set age
         $passwordLastSet = $adUser.PasswordLastSet
         if ($passwordLastSet -ne $null) {
             $daysSinceLastSet = (Get-Date) - $passwordLastSet
-            if ($daysSinceLastSet.TotalDays -le 14) {
-                Write-Host "Password Last Set: $($passwordLastSet.ToString('yyyy-MM-dd HH:mm:ss')) (within the last 14 days)" -ForegroundColor Green
+            $passwordAge = [math]::Round($daysSinceLastSet.TotalDays)
+    
+            if ($passwordAge -le 14) {
+                Write-Host "Password Last Set: $($passwordLastSet.ToString('yyyy-MM-dd HH:mm:ss')) ($passwordAge days old)" -ForegroundColor Green
+            } elseif ($passwordAge -gt 46) {
+                Write-Host "Password Last Set: $($passwordLastSet.ToString('yyyy-MM-dd HH:mm:ss')) ($passwordAge days old)" -ForegroundColor Red
             } else {
-                Write-Host "Password Last Set: $($passwordLastSet.ToString('yyyy-MM-dd HH:mm:ss')) (more than 14 days ago)" -ForegroundColor Yellow
+                Write-Host "Password Last Set: $($passwordLastSet.ToString('yyyy-MM-dd HH:mm:ss')) ($passwordAge days old)" -ForegroundColor Yellow
             }
         } else {
             Write-Host "Password Last Set: Not available" -ForegroundColor Yellow
@@ -82,8 +89,17 @@ function Show-ADUserProperties {
         } else {
             Write-Host "LockedOut: False" -ForegroundColor Green
         }
+
+        # Color coding for Disabled
+        $disabled = $adUser.Enabled -eq $false
+        if ($disabled) {
+            Write-Host "Disabled: True" -ForegroundColor Red
+        } else {
+            Write-Host "Disabled: False" -ForegroundColor Green
+        }
     }
 }
+
 
 # Function to display last 10 log entries
 function Show-LastLogEntries {
@@ -105,22 +121,34 @@ function Show-LastLogEntries {
 
 
 
-# Function to unlock an AD account on all reachable domain controllers
-function Unlock-ADAccountOnReachableDomainControllers {
+# Function to unlock an AD account on all domain controllers in parallel
+function Unlock-ADAccountOnAllDomainControllers {
     param (
         [string]$userId
     )
 
     $DCList = Get-DomainControllers
 
-    foreach ($targetDC in $DCList.Name) {
-        try {
-            Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorAction Stop
-            Write-Host ("Unlocked in " + $targetDC) -BackgroundColor DarkGreen
-        } catch {
-            $errormsg = "Failed to unlock $userId in $targetDC. Error: $_"
-            Write-Host $errormsg -ForegroundColor White -BackgroundColor Red
-        }
+    $jobs = foreach ($targetDC in $DCList.Name) {
+        Start-Job -ScriptBlock {
+            param ($userId, $targetDC)
+            try {
+                Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorAction Stop
+                Write-Host ("Unlocked in " + $targetDC) -BackgroundColor DarkGreen
+            } catch {
+                $errormsg = "Failed to unlock $userId in $targetDC. Error: $_"
+                Write-Host $errormsg -ForegroundColor White -BackgroundColor Red
+            }
+        } -ArgumentList $userId, $targetDC
+    }
+
+    # Wait for all jobs to complete
+    $jobs | Wait-Job | Out-Null
+
+        # Receive and remove completed jobs without displaying job information
+    $jobs | ForEach-Object {
+        Receive-Job -Job $_ | Out-Null
+        Remove-Job -Job $_ | Out-Null
     }
 }
 
@@ -138,7 +166,7 @@ function Test-AssetConnection {
     }
 }
 
-# Function to perform Asset Control actions
+# Function to perform Asset Control actions & Menu
 function Asset-Control {
     param (
         [string]$userId
@@ -173,6 +201,26 @@ try {
         }
 
         $properties.GetEnumerator() | Format-Table
+
+        # Get LastBootUpTime using Get-CimInstance
+        $lastBootUpTime = Get-CimInstance -ClassName Win32_OperatingSystem -ComputerName $computerName | Select-Object -ExpandProperty LastBootUpTime
+
+        # Calculate the uptime
+        $uptime = (Get-Date) - $lastBootUpTime
+
+        # Display LastBootUpTime with color coding
+        Write-Host "Last Boot Up Time: $lastBootUpTime"
+
+        # Color coding for computer uptime
+        if ($uptime.TotalDays -gt 5) {
+            Write-Host "Uptime: More than 5 days" -ForegroundColor Red
+        } elseif ($uptime.TotalDays -gt 3) {
+            Write-Host "Uptime: More than 3 days" -ForegroundColor Yellow
+        } else {
+            Write-Host "Uptime: Less than or equal to 3 days" -ForegroundColor Green
+        }
+
+
     } else {
         Write-Host "Computer not found: $computerName" -ForegroundColor Red
         return
@@ -182,14 +230,15 @@ try {
     return
 }
 
-# Submenu for Asset Control
+# Asset Control submenu
 while ($true) {
     Write-Host "`nAsset Control Menu"
     Write-Host "1. Remote Desktop"
     Write-Host "2. Remote Assistance"
-    Write-Host "3. Clear Browser Data"
-    Write-Host "4. Add Network Printer"
-    Write-Host "5. Back to Main Menu"
+    Write-Host "3. Console"  # New menu item
+    Write-Host "4. Clear Browser Data"
+    Write-Host "5. Add Network Printer"
+    Write-Host "6. Back to Main Menu"
 
     $assetChoice = Read-Host "Enter your choice"
 
@@ -209,24 +258,42 @@ while ($true) {
             } else {
                 Write-Host "SCCM Remote Tool not found at $sccmToolPath" -ForegroundColor Red
             }
+            break
         }
         '2' {
             # Launch Remote Assistance tool
-            # Add your Remote Assistance tool invocation command here
-            Write-Host "Launching Remote Assistance for $computerName"
+            $msraPath = "C:\Windows\System32\msra.exe"
+            if (Test-Path $msraPath) {
+                try {
+                    # Invoke Remote Assistance tool
+                    Start-Process -FilePath $msraPath -ArgumentList "/offerRA $computerName" -Wait
+                    Write-Host "Remote Assistance launched for $computerName"
+                } catch {
+                    Write-Host "Error launching Remote Assistance tool: $_" -ForegroundColor Red
+                }
+            } else {
+                Write-Host "Remote Assistance tool not found at $msraPath" -ForegroundColor Red
+            }
         }
         '3' {
+            # Open PowerShell console session in a new window
+            Start-Process powershell -ArgumentList "-NoExit -Command Enter-PSSession -ComputerName $computerName"
+            break
+        }
+        '4' {
             # Clear browser data
             # Add your browser data clearing command here
             Write-Host "Clearing Browser Data for $computerName"
+            break
         }
-        '4' {
+        '5' {
             # Add network printer
             $printServer = Read-Host "Enter Print Server Name"
             $printerName = Read-Host "Enter Printer Name"
-            Add-NetworkPrinter -printServer $printServer -printerName $printerName
+            Add-NetworkPrinter -PrintServer $printServer -PrinterName $printerName
+            break
         }
-        '5' {
+        '6' {
             # Back to main menu
             return
         }
@@ -281,15 +348,12 @@ function Add-NetworkPrinter {
     }
 }
 
-# Main loop
-while ($true) {
-    # Get User ID before entering the main menu
-    $userId = Get-UserId
+# Main loop function
+function Main-Loop {
+    param (
+        [string]$userId
+    )
 
-    # Initialize $logFilePath inside the main loop
-    $logFilePath = "\\hssserver037\login-tracking\$userId.log"
-
-    # Loop for the main menu
     while ($true) {
         # Get AD properties for the provided User ID
         $adUser = Get-ADUserProperties -userId $userId
@@ -320,21 +384,18 @@ while ($true) {
                 # Clear the console, reset User ID, and restart the script
                 $userId = $null
                 Clear-Host
-                $userId = Get-UserId
-                # Reset log file path
-                $logFilePath = "\\hssserver037\login-tracking\$userId.log"
-                break
+                return
             }
             '2' {
                 # Unlock AD account on all domain controllers
-                Unlock-ADAccountOnReachableDomainControllers -userId $userId
+                Unlock-ADAccountOnAllDomainControllers -userId $userId
                 Write-Host "Press Enter to continue"
                 Read-Host
             }
             '3' {
                 # Prompt for setting a temporary or permanent password
                 $passwordChoice = Read-Host "Do you want to set a temporary (T) or permanent (P) password? Enter T or P"
-
+            
                 switch ($passwordChoice) {
                     'T' {
                         # Set Temporary Password based on the season and year
@@ -345,7 +406,7 @@ while ($true) {
                             { $_ -in 9..11 } { 'Fall' }
                             { $_ -in 1, 2, 12 } { 'Winter' }
                         }
-
+            
                         $temporaryPassword = "$season$(Get-Date -UFormat '%Y')"
                         Write-Host "Setting Temporary Password for User ID: $userId to $temporaryPassword (User Must Change)"
                         try {
@@ -379,7 +440,8 @@ while ($true) {
                         break
                     }
                 }
-}
+            }
+
             '4' {
                 # Asset Control submenu
                 Asset-Control -userId $userId
@@ -391,3 +453,18 @@ while ($true) {
         }
     }
 }
+
+# Main loop
+while ($true) {
+    # Get User ID before entering the main menu
+    $userId = Get-UserId
+
+    # Initialize $logFilePath inside the main loop
+    $logFilePath = "\\hssserver037\login-tracking\$userId.log"
+
+    # Call the main loop function
+    Main-Loop -userId $userId
+}
+
+
+
