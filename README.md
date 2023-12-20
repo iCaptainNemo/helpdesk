@@ -1,2 +1,0 @@
-# helpdesk
-Help Desk Scripts
