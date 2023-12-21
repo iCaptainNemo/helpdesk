@@ -5,8 +5,8 @@
 # Power BI API endpoint
 ###$endpoint = "https://api.powerbigov.us/beta/31399e53-6a93-49aa-8cae-c929f9d4a91d/datasets/a08cf34a-60d2-4b7f-8632-83ac4780364c/rows?key=95UTbh7eub3juY%2Fe53DCZ%2Ba1qOEudlWngNjNtmSdEcF%2FRfXzR97Y0s13Ys1ySmTkAt%2BXP3PCLko%2BleYk%2FtOlDA%3D%3D"
 
-# Get the current user
-$AdminUser = Get-ADUser -Identity $env:USERNAME -Properties *
+## Get the current user with specific properties
+$AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name
 
 $restartScript = $true
 
