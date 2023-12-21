@@ -1,10 +1,5 @@
 ﻿Import-Module ActiveDirectory
 
-###Login-PowerBI
-
-# Power BI API endpoint
-###$endpoint = "https://api.powerbigov.us/beta/31399e53-6a93-49aa-8cae-c929f9d4a91d/datasets/a08cf34a-60d2-4b7f-8632-83ac4780364c/rows?key=95UTbh7eub3juY%2Fe53DCZ%2Ba1qOEudlWngNjNtmSdEcF%2FRfXzR97Y0s13Ys1ySmTkAt%2BXP3PCLko%2BleYk%2FtOlDA%3D%3D"
-
 ## Get the current user with specific properties
 $AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name
 
@@ -19,7 +14,7 @@ while ($restartScript) {
         Get-ADUser -Identity $lockedOutUser.SamAccountName -Properties *
     }
 
-    # Filter locked-out users whose lockoutTime is within 2 days of the current date, Enabled is True, PasswordExpired is False, and badPwdCount is greater than 0
+    # Filter locked-out users whose lockoutTime is within X days of the current date, Enabled is True, PasswordExpired is False, and badPwdCount is greater than 0
     $probableLockedOutUsers = $probableLockedOutUsers | Where-Object {
         $_.AccountlockoutTime -ge (Get-Date).AddDays(-1) -and
         $_.Enabled -eq $true -and
@@ -32,20 +27,6 @@ while ($restartScript) {
         Write-Host "Locked-out users within the last 24 hours:"
         $probableLockedOutUsers | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, Enabled, LockedOut, PasswordExpired, badPwdCount, AccountLockoutTime -AutoSize
 
-     #   # Post data to Power BI API for each locked-out user
-     #   foreach ($user in $probableLockedOutUsers) {
-     #       $payload = @{
-     #           "AdminID" = $AdminUser.SamAccountName  # Assuming SamAccountName is the AdminID, modify as needed
-     #           "UserID" = $user.SamAccountName
-     #           "Enabled" = $user.Enabled
-     #           "Locked" = $user.LockedOut
-     #           "PasswordExpired" = $user.PasswordExpired
-     #           "BadPasswords" = $user.badPwdCount
-     #           "AccountLockoutTime" = $user.AccountLockoutTime
-     #       }
-        
-     #       Invoke-RestMethod -Method Post -Uri $endpoint -Body (ConvertTo-Json @($payload))
-      #  }
     } else {
         Write-Host "No recent locked-out users found."
     }
@@ -68,12 +49,38 @@ while ($restartScript) {
         2 {
             Clear-Host
             $unlockedUsersCount = 0
+            $jobs = @()
+        
             foreach ($user in $probableLockedOutUsers) {
-                Unlock-ADAccount -Identity $user.SamAccountName -Confirm:$false
-                $unlockedUsersCount++
+                $job = Start-Job -ScriptBlock {
+                    param ($userId)
+                    try {
+                        Unlock-ADAccount -Identity $userId -Confirm:$false
+                        Write-Host ("User $userId unlocked.") -BackgroundColor DarkGreen
+                    } catch {
+                        $errormsg = "Failed to unlock $userId. Error: $_"
+                        Write-Host $errormsg -ForegroundColor White -BackgroundColor Red
+                    }
+                } -ArgumentList $user.SamAccountName
+        
+                $jobs += $job
             }
+        
+            # Wait for all jobs to complete
+            $jobs | Wait-Job | Out-Null
+        
+            # Receive and remove completed jobs without displaying job information
+            $jobs | ForEach-Object {
+                $result = Receive-Job -Job $_ | Out-Null
+                Remove-Job -Job $_ | Out-Null
+                if ($result -eq $null) {
+                    $unlockedUsersCount++
+                }
+            }
+        
             Write-Host "$unlockedUsersCount user(s) unlocked."
         }
+        
         3 {
             # Set $restartScript to $false to exit the loop and restart the script
             $restartScript = $false
