@@ -121,12 +121,12 @@ while ($restartScript) {
 
             # Auto Unlock at specified refresh interval
             do {
-                Clear-Host
+                #Clear-Host
                 Write-Host "Auto Unlocking every $refreshInterval minutes. Press Ctrl+C to stop."
-                Start-Sleep -Seconds 60 * $refreshInterval
+                Start-Sleep -Seconds (60 * $refreshInterval)
 
                 # Auto Unlock logic similar to Option 1
-                Clear-Host
+                #Clear-Host
                 $unlockedUsersCount = 0
                 $jobs = @()
 
@@ -168,18 +168,18 @@ while ($restartScript) {
                 $refreshInterval = Read-Host "Enter the refresh interval in minutes (e.g., 1, 5, 10):"
                 $refreshInterval = [int]$refreshInterval
             } while ($refreshInterval -le 0)
-
+        
             # Auto Unlock Users BP = 0 at specified refresh interval
             do {
                 Clear-Host
                 Write-Host "Auto Unlocking Users BP = 0 every $refreshInterval minutes. Press Ctrl+C to stop."
-                Start-Sleep -Seconds 60 * $refreshInterval
-
+                Start-Sleep -Seconds (60 * $refreshInterval)
+        
                 # Auto Unlock logic similar to Option 2
                 Clear-Host
                 $unlockedUsersCount = 0
                 $jobs = @()
-
+        
                 foreach ($user in $probableLockedOutUsers) {
                     $job = Start-Job -ScriptBlock {
                         param ($userId)
@@ -191,13 +191,13 @@ while ($restartScript) {
                             Write-Host $errormsg -ForegroundColor White -BackgroundColor Red
                         }
                     } -ArgumentList $user.SamAccountName
-
+        
                     $jobs += $job
                 }
-
+        
                 # Wait for all jobs to complete
                 $jobs | Wait-Job | Out-Null
-
+        
                 # Receive and remove completed jobs without displaying job information
                 $jobs | ForEach-Object {
                     $result = Receive-Job -Job $_ | Out-Null
@@ -206,12 +206,12 @@ while ($restartScript) {
                         $unlockedUsersCount++
                     }
                 }
-
+        
                 Write-Host "$unlockedUsersCount user(s) unlocked."
-
+        
             } while ($true)
         }
-
+        
         5 {
             # Set $restartScript to $false to exit the loop and restart the script
             $restartScript = $false
