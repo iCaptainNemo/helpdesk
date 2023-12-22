@@ -133,7 +133,7 @@ while ($restartScript) {
             # Auto Unlock at specified refresh interval
             do {
                 # Clear-Host
-                Write-Host "Auto Unlocking every $refreshInterval minutes. Press Ctrl+C to stop."
+               # Write-Host "Auto Unlocking every $refreshInterval minutes. Press Ctrl+C to stop."
                 Start-Sleep -Seconds (60 * $refreshInterval)
 
                 # Get probable locked-out users
@@ -186,7 +186,7 @@ while ($restartScript) {
             # Auto Unlock Users BP = 0 at specified refresh interval
             do {
                 # Clear-Host
-                Write-Host "Auto Unlocking Users BP = 0 every $refreshInterval minutes. Press Ctrl+C to stop."
+               # Write-Host "Auto Unlocking Users BP = 0 every $refreshInterval minutes. Press Ctrl+C to stop."
                 Start-Sleep -Seconds (60 * $refreshInterval)
         
                 # Get probable locked-out users
