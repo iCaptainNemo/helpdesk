@@ -235,8 +235,8 @@ while ($true) {
     Write-Host "`nAsset Control Menu"
     Write-Host "1. Remote Desktop"
     Write-Host "2. Remote Assistance"
-    Write-Host "3. Console"  # New menu item
-    Write-Host "4. Clear Browser Data"
+    Write-Host "3. PS Console"
+    Write-Host "4. PSEXEC Console"
     Write-Host "5. Add Network Printer"
     Write-Host "6. Back to Main Menu"
 
@@ -281,9 +281,14 @@ while ($true) {
             break
         }
         '4' {
-            # Clear browser data
-            # Add your browser data clearing command here
-            Write-Host "Clearing Browser Data for $computerName"
+            # Start PsExec to open a command prompt on the remote computer
+            $psexecCommand = "psexec.exe \\$computerName cmd.exe"
+            Write-Host "Starting PsExec to open a command prompt on $computerName"
+            
+            # Execute the PsExec command
+            Start-Process -FilePath "cmd.exe" -ArgumentList "/c $psexecCommand" -Wait
+            
+            Write-Host "PsExec command completed for $computerName"
             break
         }
         '5' {
