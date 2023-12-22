@@ -3,9 +3,8 @@
 ## Get the current user with specific properties
 $AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name
 
-$restartScript = $true
-
-while ($restartScript) {
+# Function to get probable locked-out users
+function Get-ProbableLockedOutUsers {
     # Search for all locked-out user accounts
     $lockedOutUsers = Search-ADAccount -LockedOut -UsersOnly
 
@@ -21,6 +20,18 @@ while ($restartScript) {
         $_.PasswordExpired -eq $false -and
         $_.badPwdCount -eq 0
     }
+
+    return $probableLockedOutUsers
+}
+
+# Get the current user with specific properties
+$AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name
+
+$restartScript = $true
+
+while ($restartScript) {
+    # Get probable locked-out users
+    $probableLockedOutUsers = Get-ProbableLockedOutUsers
 
     # Display the properties of probable locked-out users in a separate table
     if ($probableLockedOutUsers.Count -gt 0) {
@@ -121,12 +132,15 @@ while ($restartScript) {
 
             # Auto Unlock at specified refresh interval
             do {
-                #Clear-Host
+                # Clear-Host
                 Write-Host "Auto Unlocking every $refreshInterval minutes. Press Ctrl+C to stop."
                 Start-Sleep -Seconds (60 * $refreshInterval)
 
+                # Get probable locked-out users
+                $probableLockedOutUsers = Get-ProbableLockedOutUsers
+
                 # Auto Unlock logic similar to Option 1
-                #Clear-Host
+                # Clear-Host
                 $unlockedUsersCount = 0
                 $jobs = @()
 
@@ -171,12 +185,15 @@ while ($restartScript) {
         
             # Auto Unlock Users BP = 0 at specified refresh interval
             do {
-                Clear-Host
+                # Clear-Host
                 Write-Host "Auto Unlocking Users BP = 0 every $refreshInterval minutes. Press Ctrl+C to stop."
                 Start-Sleep -Seconds (60 * $refreshInterval)
         
+                # Get probable locked-out users
+                $probableLockedOutUsers = Get-ProbableLockedOutUsers
+
                 # Auto Unlock logic similar to Option 2
-                Clear-Host
+                # Clear-Host
                 $unlockedUsersCount = 0
                 $jobs = @()
         
