@@ -101,7 +101,29 @@ function Show-ADUserProperties {
 }
 
 
-# Function to display last 10 log entries
+# Function to parse log entry
+function Parse-LogEntry {
+    param (
+        [string]$logEntry
+    )
+
+    # Assuming $logEntry has the format "TAD062DT379527 Tue 12/19/2023 14:49:26.98"
+    $components = $logEntry -split ' '
+    $PossibleComputerName = $components[0]
+    $day = $components[1]
+    $date = $components[2]
+    $time = $components[3]
+
+    # Return parsed information
+    return @{
+        PossibleComputerName = $PossibleComputerName
+        Day = $day
+        Date = $date
+        Time = $time
+    }
+}
+
+# Function to display last 10 log entries with parsed information
 function Show-LastLogEntries {
     param (
         [string]$logFilePath
@@ -109,9 +131,10 @@ function Show-LastLogEntries {
 
     try {
         $logEntries = Get-Content $logFilePath -Tail 10
-        Write-Host "Last 10 login entries:"
+        Write-Host "Last 10 login entries with parsed information:"
         foreach ($entry in $logEntries) {
-            Write-Host $entry
+            $parsedInfo = Parse-LogEntry -logEntry $entry
+            Write-Host $($parsedInfo.PossibleComputerName)$($parsedInfo.Day)$($parsedInfo.Date)$($parsedInfo.Time)
         }
     } catch {
         Write-Host "Error: $_" -ForegroundColor Red
