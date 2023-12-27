@@ -134,6 +134,8 @@ function Show-LastLogEntries {
         if (Test-Path $logFilePath -PathType Leaf) {
             $logEntries = Get-Content $logFilePath -Tail 10
             Write-Host "Last 10 login entries with parsed information:"
+            # Add a line break or additional Write-Host statements for space
+            Write-Host "`n"
             foreach ($entry in $logEntries) {
                 $parsedInfo = Parse-LogEntry -logEntry $entry
                 Write-Host $($parsedInfo.PossibleComputerName)$($parsedInfo.Day)$($parsedInfo.Date)$($parsedInfo.Time)
@@ -258,6 +260,26 @@ try {
     return
 }
 
+# Function to get print jobs for a specific computer
+function Get-PrintJobsForComputer {
+    param (
+        [string]$ComputerName
+    )
+
+    try {
+        $printJobs = Get-PrintJob -ComputerName $ComputerName
+        if ($printJobs) {
+            Write-Host "Print Jobs on ${computerName}:"
+            foreach ($job in $printJobs) {
+                Write-Host "Job ID: $($job.JobId), Document: $($job.Document), Status: $($job.JobStatus)"
+            }
+        } else {
+            Write-Host "No print jobs found on $ComputerName."
+        }
+    } catch {
+        Write-Host "Error getting print jobs: $_" -ForegroundColor Red
+    }
+}
 # Asset Control submenu
 while ($true) {
     Write-Host "`nAsset Control Menu"
@@ -266,7 +288,8 @@ while ($true) {
     Write-Host "3. PS Console"
     Write-Host "4. PSEXEC Console"
     Write-Host "5. Add Network Printer"
-    Write-Host "6. Back to Main Menu"
+    Write-Host "6. Get Print Jobs"
+    Write-Host "7. Back to Main Menu"
 
     $assetChoice = Read-Host "Enter your choice"
 
@@ -327,6 +350,13 @@ while ($true) {
             break
         }
         '6' {
+            # Prompt for printer name before getting print jobs
+            $printerName = Read-Host "Enter Printer Name"
+            Write-Host "Getting Print Jobs for $printerName on $computerName"
+            Get-PrintJobsForComputer -ComputerName $computerName
+            break
+        }
+        '7' {
             # Back to main menu
             return
         }
@@ -334,8 +364,7 @@ while ($true) {
             Write-Host "Invalid choice. Please enter a valid option."
         }
     }
-}
-
+} 
 }
 
 # Function to invoke SCCM remote tool
@@ -351,7 +380,7 @@ function Invoke-SCCMRemoteTool {
         try {
             
             # Add a line break or additional Write-Host statements for space
-            Write-Host "`n"  # This adds a line break
+            Write-Host "`n"
 
             # Invoke SCCM remote tool
             Start-Process -FilePath $sccmToolPath -ArgumentList "/server:$computerName" -Wait
