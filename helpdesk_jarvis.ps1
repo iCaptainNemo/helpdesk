@@ -130,15 +130,20 @@ function Show-LastLogEntries {
     )
 
     try {
-        $logEntries = Get-Content $logFilePath -Tail 10
-        Write-Host "Last 10 login entries with parsed information:"
-        foreach ($entry in $logEntries) {
-            $parsedInfo = Parse-LogEntry -logEntry $entry
-            Write-Host $($parsedInfo.PossibleComputerName)$($parsedInfo.Day)$($parsedInfo.Date)$($parsedInfo.Time)
+        # Check if the log file exists
+        if (Test-Path $logFilePath -PathType Leaf) {
+            $logEntries = Get-Content $logFilePath -Tail 10
+            Write-Host "Last 10 login entries with parsed information:"
+            foreach ($entry in $logEntries) {
+                $parsedInfo = Parse-LogEntry -logEntry $entry
+                Write-Host "PossibleComputerName: $($parsedInfo.PossibleComputerName), Day: $($parsedInfo.Day), Date: $($parsedInfo.Date), Time: $($parsedInfo.Time)"
+            }
+        } else {
+            Write-Host " No computer logs found" -ForegroundColor Yellow
         }
     } catch {
-        Write-Host "Error: $_" -ForegroundColor Red
-        Write-Host "No logs found" -ForegroundColor Yellow
+        # Write-Host "Error: $_" -ForegroundColor Red
+        Write-Host "No computer logs found" -ForegroundColor Yellow
     }
 }
 
