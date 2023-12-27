@@ -136,7 +136,7 @@ function Show-LastLogEntries {
             Write-Host "Last 10 login entries with parsed information:"
             foreach ($entry in $logEntries) {
                 $parsedInfo = Parse-LogEntry -logEntry $entry
-                Write-Host "PossibleComputerName: $($parsedInfo.PossibleComputerName), Day: $($parsedInfo.Day), Date: $($parsedInfo.Date), Time: $($parsedInfo.Time)"
+                Write-Host $($parsedInfo.PossibleComputerName)$($parsedInfo.Day)$($parsedInfo.Date)$($parsedInfo.Time)
             }
         } else {
             Write-Host " No computer logs found" -ForegroundColor Yellow
