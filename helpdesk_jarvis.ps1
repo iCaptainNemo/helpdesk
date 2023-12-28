@@ -249,12 +249,13 @@ try {
                 Write-Host "Uptime: Less than or equal to 3 days" -ForegroundColor Green
             }
         } catch {
-            Write-Host "Unable to get Uptime" -ForegroundColor Red
+            if ($_.Exception.Message -like "*WinRM cannot complete the operation*") {
+                Write-Host "Error: Unable to connect to the computer. Please check the computer name, network connection, and firewall settings."
+            } else {
+                Write-Host "Error occurred while getting LastBootUpTime: $_"
+            }
             return
         }
-
-
-
     } else {
         Write-Host "Computer not found: $computerName" -ForegroundColor Red
         return
