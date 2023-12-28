@@ -1,7 +1,7 @@
 ﻿Import-Module ActiveDirectory
 
 ## Get the current user with specific properties
-$AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name
+$AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name, HomeDirectory
 
 # Function to get probable locked-out users
 function Get-ProbableLockedOutUsers {
