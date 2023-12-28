@@ -452,11 +452,10 @@ function Main-Loop {
         Write-Host "`n"  # This adds a line break
 
         # Main menu loop
-        Write-Host "0. Clear and Restart Script"
         Write-Host "1. Unlock AD Account on All Domain Controllers"
         Write-Host "2. Password Reset"
         Write-Host "3. Asset Control"
-        Write-Host "4. Quit"
+        Write-Host "0. Clear and Restart Script"
 
         $choice = Read-Host "Enter your choice"
 
@@ -526,10 +525,6 @@ function Main-Loop {
             '3' {
                 # Asset Control submenu
                 Asset-Control -userId $userId
-            }
-            '4' {
-                # Quit the script
-                return
             }
         }
     }
