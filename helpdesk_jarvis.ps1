@@ -241,8 +241,7 @@ try {
             }
         }
 
-        $properties.GetEnumerator() | Format-Table
-
+       # $properties.GetEnumerator() | Format-Table
         $uptimeJob = Start-Job -ScriptBlock {
             param ($computerName)
             try {
@@ -503,7 +502,7 @@ function Main-Loop {
             }
             '2' {
                 # Prompt for setting a temporary or permanent password
-                $passwordChoice = Read-Host "Do you want to set a temporary (T) or permanent (P) password? Enter T or P"
+                $passwordChoice = Read-Host "Do you want to set a temporary (T), permanent (P), or cancel (C) password? Enter T, P, or C"
             
                 switch ($passwordChoice) {
                     'T' {
@@ -540,8 +539,13 @@ function Main-Loop {
                         }
                         break
                     }
+                    'C' {
+                        # Cancel password change
+                        Write-Host "Password change canceled."
+                        break
+                    }
                     default {
-                        Write-Host "Invalid choice. Please enter either T or P."
+                        Write-Host "Invalid choice. Please enter either T, P, or C."
                         break
                     }
                 }
