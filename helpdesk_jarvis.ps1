@@ -289,7 +289,7 @@ try {
         Write-Host "5. PSEXEC Console"
         Write-Host "6. Add Network Printer"
         Write-Host "7. Get Print Jobs"
-        Write-Host "8. Back to Main Menu"
+        Write-Host "0. Back to Main Menu"
 
         $assetChoice = Read-Host "Enter your choice"
 
@@ -306,7 +306,8 @@ try {
             '2' {
                 # Check if the SCCM remote tool executable exists
                 $sccmToolPath = "C:\Program Files (x86)\Microsoft Endpoint Manager\AdminConsole\bin\i386\CmRcViewer.exe"
-
+                $sccmToolPath2 = "C:\Program Files\RcViewer\CmRcViewer.exe"
+    
                 if (Test-Path $sccmToolPath) {
                     try {
                         # Invoke SCCM remote tool
@@ -315,8 +316,16 @@ try {
                     } catch {
                         Write-Host "Error launching SCCM Remote Tool: $_" -ForegroundColor Red
                     }
+                } elseif (Test-Path $sccmToolPath2) {
+                    try {
+                        # Invoke SCCM remote tool (alternative path)
+                        Start-Process -FilePath $sccmToolPath2 $computerName -Wait
+                        Write-Host "Remote Desktop launched for $computerName"
+                    } catch {
+                        Write-Host "Error launching SCCM Remote Tool: $_" -ForegroundColor Red
+                    }
                 } else {
-                    Write-Host "SCCM Remote Tool not found at $sccmToolPath" -ForegroundColor Red
+                    Write-Host "SCCM Remote Tool not found" -ForegroundColor Red
                 }
                 break
             }
@@ -366,7 +375,7 @@ try {
             Get-PrintJobsForComputer -ComputerName $computerName
             break
             }
-            '8' {
+            '0' {
                 # Back to main menu
                 return
             }
@@ -443,28 +452,28 @@ function Main-Loop {
         Write-Host "`n"  # This adds a line break
 
         # Main menu loop
-        Write-Host "1. Clear and Restart Script"
-        Write-Host "2. Unlock AD Account on All Domain Controllers"
-        Write-Host "3. Password Reset"
-        Write-Host "4. Asset Control"
-        Write-Host "5. Quit"
+        Write-Host "0. Clear and Restart Script"
+        Write-Host "1. Unlock AD Account on All Domain Controllers"
+        Write-Host "2. Password Reset"
+        Write-Host "3. Asset Control"
+        Write-Host "4. Quit"
 
         $choice = Read-Host "Enter your choice"
 
         switch ($choice) {
-            '1' {
+            '0' {
                 # Clear the console, reset User ID, and restart the script
                 $userId = $null
                 Clear-Host
                 return
             }
-            '2' {
+            '1' {
                 # Unlock AD account on all domain controllers
                 Unlock-ADAccountOnAllDomainControllers -userId $userId
                 Write-Host "Press Enter to continue"
                 Read-Host
             }
-            '3' {
+            '2' {
                 # Prompt for setting a temporary or permanent password
                 $passwordChoice = Read-Host "Do you want to set a temporary (T) or permanent (P) password? Enter T or P"
             
@@ -514,11 +523,11 @@ function Main-Loop {
                 }
             }
 
-            '4' {
+            '3' {
                 # Asset Control submenu
                 Asset-Control -userId $userId
             }
-            '5' {
+            '4' {
                 # Quit the script
                 return
             }
