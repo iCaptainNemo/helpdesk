@@ -224,9 +224,21 @@ try {
 
         # Display properties in a table
         $properties = @{
-            'HSRemoteComputers'      = $isHSRemoteComputers
-            'HSRemoteMFAComputers'   = $isHSRemoteMFAComputers
-            'Computer Reachable' = Test-Connection -Count 1 -ComputerName $computerName -Quiet
+            'HSRemoteComputers'      = if ($isHSRemoteComputers) { 'True' } else { 'False' }
+            'HSRemoteMFAComputers'   = if ($isHSRemoteMFAComputers) { 'True' } else { 'False' }
+            'Computer Reachable'     = if (Test-Connection -Count 1 -ComputerName $computerName -Quiet) { 'True' } else { 'False' }
+        }
+
+        # Color coding for properties
+        $properties.GetEnumerator() | ForEach-Object {
+            $propertyName = $_.Key
+            $propertyValue = $_.Value
+
+            if ($propertyValue -eq 'True') {
+                Write-Host "${propertyName}: ${propertyValue}" -ForegroundColor Green
+            } else {
+                Write-Host "${propertyName}: ${propertyValue}" -ForegroundColor Red
+            }
         }
 
         $properties.GetEnumerator() | Format-Table
