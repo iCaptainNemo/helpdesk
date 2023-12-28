@@ -1,5 +1,16 @@
-# Import the Active Directory module
+# Import required modules
 Import-Module ActiveDirectory
+if (-not (Get-Module -Name ImportExcel -ListAvailable)) {
+    try {
+        Install-Module -Name ImportExcel -Force -ErrorAction Stop -Scope CurrentUser
+    } catch {
+        Write-Host "Failed to install the ImportExcel module. Error: $_"
+        return
+    }
+}
+
+Import-Module ImportExcel
+
 
 # Get the current domain
 $currentDomain = (Get-ADDomain).DNSRoot
@@ -8,10 +19,21 @@ Write-Host "Current domain: $currentDomain"
 ## Get the current user with specific properties
 $AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name, HomeDirectory
 
-# Function to check for Helpdesk-work folder and create if it doesn't exist
+# Check for Helpdesk-work folder and create if it doesn't exist
 $helpdeskWorkFolder = Join-Path -Path $AdminUser.HomeDirectory -ChildPath "Helpdesk-work"
 if (!(Test-Path -Path $helpdeskWorkFolder -PathType Container)) {
     New-Item -Path $helpdeskWorkFolder -ItemType Directory > $null
+}
+# Check if "users.xlsx" file exists in Helpdesk-work folder
+$usersFilePath = Join-Path -Path $helpdeskWorkFolder -ChildPath "users.xlsx"
+if (!(Test-Path -Path $usersFilePath -PathType Leaf)) {
+    # Create "users.xlsx" file
+    $excel = New-Object -ComObject Excel.Application
+    $excel.Visible = $false
+    $workbook = $excel.Workbooks.Add()
+    $workbook.SaveAs($usersFilePath)
+    $workbook.Close()
+    $excel.Quit()
 }
 
 # Function to retrieve domain controllers
