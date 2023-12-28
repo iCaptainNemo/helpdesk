@@ -149,8 +149,6 @@ function Show-LastLogEntries {
     }
 }
 
-
-
 # Function to unlock an AD account on all domain controllers in parallel
 function Unlock-ADAccountOnAllDomainControllers {
     param (
@@ -255,116 +253,127 @@ try {
         Write-Host "Computer not found: $computerName" -ForegroundColor Red
         return
     }
-} catch {
-    Write-Host "Error retrieving computer properties: $_" -ForegroundColor Red
-    return
-}
-
-# Function to get print jobs for a specific computer
-function Get-PrintJobsForComputer {
-    param (
-        [string]$ComputerName
-    )
-
-    try {
-        $printJobs = Get-PrintJob -ComputerName $ComputerName
-        if ($printJobs) {
-            Write-Host "Print Jobs on ${computerName}:"
-            foreach ($job in $printJobs) {
-                Write-Host "Job ID: $($job.JobId), Document: $($job.Document), Status: $($job.JobStatus)"
-            }
-        } else {
-            Write-Host "No print jobs found on $ComputerName."
-        }
     } catch {
-        Write-Host "Error getting print jobs: $_" -ForegroundColor Red
+        Write-Host "Error retrieving computer properties: $_" -ForegroundColor Red
+        return
     }
-}
-# Asset Control submenu
-while ($true) {
-    Write-Host "`nAsset Control Menu"
-    Write-Host "1. Remote Desktop"
-    Write-Host "2. Remote Assistance"
-    Write-Host "3. PS Console"
-    Write-Host "4. PSEXEC Console"
-    Write-Host "5. Add Network Printer"
-    Write-Host "6. Get Print Jobs"
-    Write-Host "7. Back to Main Menu"
 
-    $assetChoice = Read-Host "Enter your choice"
+    # Function to get print jobs for a specific computer
+    function Get-PrintJobsForComputer {
+        param (
+            [string]$ComputerName
+        )
 
-    switch ($assetChoice) {
-        '1' {
-            # Check if the SCCM remote tool executable exists
-            $sccmToolPath = "C:\Program Files (x86)\Microsoft Endpoint Manager\AdminConsole\bin\i386\CmRcViewer.exe"
-
-            if (Test-Path $sccmToolPath) {
-                try {
-                    # Invoke SCCM remote tool
-                    Start-Process -FilePath $sccmToolPath $computerName -Wait
-                    Write-Host "Remote Desktop launched for $computerName"
-                } catch {
-                    Write-Host "Error launching SCCM Remote Tool: $_" -ForegroundColor Red
+        try {
+            $printJobs = Get-PrintJob -ComputerName $ComputerName
+            if ($printJobs) {
+                Write-Host "Print Jobs on ${computerName}:"
+                foreach ($job in $printJobs) {
+                    Write-Host "Job ID: $($job.JobId), Document: $($job.Document), Status: $($job.JobStatus)"
                 }
             } else {
-                Write-Host "SCCM Remote Tool not found at $sccmToolPath" -ForegroundColor Red
+                Write-Host "No print jobs found on $ComputerName."
             }
-            break
+        } catch {
+            Write-Host "Error getting print jobs: $_" -ForegroundColor Red
         }
-        '2' {
-            # Launch Remote Assistance tool
-            $msraPath = "C:\Windows\System32\msra.exe"
-            if (Test-Path $msraPath) {
-                try {
-                    # Invoke Remote Assistance tool
-                    Start-Process -FilePath $msraPath -ArgumentList "/offerRA $computerName" -Wait
-                    Write-Host "Remote Assistance launched for $computerName"
-                } catch {
-                    Write-Host "Error launching Remote Assistance tool: $_" -ForegroundColor Red
+    }
+    # Asset Control submenu
+    while ($true) {
+        Write-Host "`nAsset Control Menu"
+        Write-Host "1. Test Connection"
+        Write-Host "2. Remote Desktop"
+        Write-Host "3. Remote Assistance"
+        Write-Host "4. PS Console"
+        Write-Host "5. PSEXEC Console"
+        Write-Host "6. Add Network Printer"
+        Write-Host "7. Get Print Jobs"
+        Write-Host "8. Back to Main Menu"
+
+        $assetChoice = Read-Host "Enter your choice"
+
+        switch ($assetChoice) {
+            '1' {
+                # Test connection
+                if (Test-AssetConnection -ComputerName $computerName) {
+                    Write-Host "Connection to $computerName successful" -ForegroundColor Green
+                } else {
+                    Write-Host "Connection to $computerName failed" -ForegroundColor Red
                 }
-            } else {
-                Write-Host "Remote Assistance tool not found at $msraPath" -ForegroundColor Red
+                break
             }
-        }
-        '3' {
-            # Open PowerShell console session in a new window
-            Start-Process powershell -ArgumentList "-NoExit -Command Enter-PSSession -ComputerName $computerName"
-            break
-        }
-        '4' {
-            # Start PsExec to open a command prompt on the remote computer
-            $psexecCommand = "psexec.exe \\$computerName cmd.exe"
-            Write-Host "Starting PsExec to open a command prompt on $computerName"
-            
-            # Execute the PsExec command
-            Start-Process -FilePath "cmd.exe" -ArgumentList "/c $psexecCommand" -Wait
-            
-            Write-Host "PsExec command completed for $computerName"
-            break
-        }
-        '5' {
-            # Add network printer
-            $printServer = Read-Host "Enter Print Server Name"
-            $printerName = Read-Host "Enter Printer Name"
-            Add-NetworkPrinter -PrintServer $printServer -PrinterName $printerName
-            break
-        }
-        '6' {
+            '2' {
+                # Check if the SCCM remote tool executable exists
+                $sccmToolPath = "C:\Program Files (x86)\Microsoft Endpoint Manager\AdminConsole\bin\i386\CmRcViewer.exe"
+
+                if (Test-Path $sccmToolPath) {
+                    try {
+                        # Invoke SCCM remote tool
+                        Start-Process -FilePath $sccmToolPath $computerName -Wait
+                        Write-Host "Remote Desktop launched for $computerName"
+                    } catch {
+                        Write-Host "Error launching SCCM Remote Tool: $_" -ForegroundColor Red
+                    }
+                } else {
+                    Write-Host "SCCM Remote Tool not found at $sccmToolPath" -ForegroundColor Red
+                }
+                break
+            }
+            '3' {
+                # Launch Remote Assistance tool
+                $msraPath = "C:\Windows\System32\msra.exe"
+                if (Test-Path $msraPath) {
+                    try {
+                        # Invoke Remote Assistance tool
+                        Start-Process -FilePath $msraPath -ArgumentList "/offerRA $computerName" -Wait
+                        Write-Host "Remote Assistance launched for $computerName"
+                    } catch {
+                        Write-Host "Error launching Remote Assistance tool: $_" -ForegroundColor Red
+                    }
+                } else {
+                    Write-Host "Remote Assistance tool not found at $msraPath" -ForegroundColor Red
+                }
+                break
+            }
+            '4' {
+                # Open PowerShell console session in a new window
+                Start-Process powershell -ArgumentList "-NoExit -Command Enter-PSSession -ComputerName $computerName"
+                break
+            }
+            '5' {
+                # Start PsExec to open a command prompt on the remote computer
+                $psexecCommand = "psexec.exe \\$computerName cmd.exe"
+                Write-Host "Starting PsExec to open a command prompt on $computerName"
+                
+                # Execute the PsExec command
+                Start-Process -FilePath "cmd.exe" -ArgumentList "/c $psexecCommand" -Wait
+                
+                Write-Host "PsExec command completed for $computerName"
+                break
+            }
+            '6' {
+                # Add network printer
+                $printServer = Read-Host "Enter Print Server Name"
+                $printerName = Read-Host "Enter Printer Name"
+                Add-NetworkPrinter -PrintServer $printServer -PrinterName $printerName
+                break
+            }
+            '7' {
             # Prompt for printer name before getting print jobs
             $printerName = Read-Host "Enter Printer Name"
             Write-Host "Getting Print Jobs for $printerName on $computerName"
             Get-PrintJobsForComputer -ComputerName $computerName
             break
+            }
+            '8' {
+                # Back to main menu
+                return
+            }
+            default {
+                Write-Host "Invalid choice. Please enter a valid option."
+            }
         }
-        '7' {
-            # Back to main menu
-            return
-        }
-        default {
-            Write-Host "Invalid choice. Please enter a valid option."
-        }
-    }
-} 
+    } 
 }
 
 # Function to invoke SCCM remote tool
