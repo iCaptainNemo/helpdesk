@@ -1,6 +1,14 @@
 # Import the Active Directory module
 Import-Module ActiveDirectory
 
+# Get the current domain
+$currentDomain = (Get-ADDomain).DNSRoot
+Write-Host "Current domain: $currentDomain"
+
+## Get the current user with specific properties
+$AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name, HomeDirectory
+
+
 # Function to retrieve domain controllers
 function Get-DomainControllers {
     return Get-ADDomainController -Filter *
