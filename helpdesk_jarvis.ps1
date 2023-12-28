@@ -67,7 +67,7 @@ function Show-ADUserProperties {
         }
         # Color coding for Password Last Set age
         $passwordLastSet = $adUser.PasswordLastSet
-        if ($passwordLastSet -ne $null) {
+        if ($null -ne $passwordLastSet) {
             $daysSinceLastSet = (Get-Date) - $passwordLastSet
             $passwordAge = [math]::Round($daysSinceLastSet.TotalDays)
     
