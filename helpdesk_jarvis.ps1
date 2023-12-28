@@ -231,30 +231,43 @@ try {
 
         $properties.GetEnumerator() | Format-Table
 
-        try {
-            # Get LastBootUpTime using Get-CimInstance
-            $lastBootUpTime = Get-CimInstance -ClassName Win32_OperatingSystem -ComputerName $computerName | Select-Object -ExpandProperty LastBootUpTime
-            # Calculate the uptime
-            $uptime = (Get-Date) - $lastBootUpTime
+        $uptimeJob = Start-Job -ScriptBlock {
+            param ($computerName)
+            try {
+                # Get LastBootUpTime using Get-CimInstance
+                $lastBootUpTime = Get-CimInstance -ClassName Win32_OperatingSystem -ComputerName $computerName | Select-Object -ExpandProperty LastBootUpTime
+                # Calculate the uptime
+                $uptime = (Get-Date) - $lastBootUpTime
 
-            # Display LastBootUpTime with color coding
-            Write-Host "Last Boot Up Time: $lastBootUpTime"
+                # Display LastBootUpTime with color coding
+                Write-Host "Last Boot Up Time: $lastBootUpTime"
 
-            # Color coding for computer uptime
-            if ($uptime.TotalDays -gt 5) {
-                Write-Host "Uptime: More than 5 days" -ForegroundColor Red
-            } elseif ($uptime.TotalDays -gt 3) {
-                Write-Host "Uptime: More than 3 days" -ForegroundColor Yellow
-            } else {
-                Write-Host "Uptime: Less than or equal to 3 days" -ForegroundColor Green
+                # Color coding for computer uptime
+                if ($uptime.TotalDays -gt 5) {
+                    Write-Host "Uptime: More than 5 days" -ForegroundColor Red
+                } elseif ($uptime.TotalDays -gt 3) {
+                    Write-Host "Uptime: More than 3 days" -ForegroundColor Yellow
+                } else {
+                    Write-Host "Uptime: Less than or equal to 3 days" -ForegroundColor Green
+                }
+            } catch {
+                if ($_.Exception.Message -like "*WinRM cannot complete the operation*") {
+                    Write-Host "Error: Unable to connect to the computer. Please check the computer name, network connection, and firewall settings."
+                } else {
+                    Write-Host "Error occurred while getting LastBootUpTime: $_"
+                }
+                return
             }
-        } catch {
-            if ($_.Exception.Message -like "*WinRM cannot complete the operation*") {
-                Write-Host "Error: Unable to connect to the computer. Please check the computer name, network connection, and firewall settings."
-            } else {
-                Write-Host "Error occurred while getting LastBootUpTime: $_"
-            }
-            return
+        } -ArgumentList $computerName
+
+        # Check if the job completed successfully
+        if ($uptimeJob.State -eq 'Completed') {
+            # Retrieve the job results
+            $uptimeResult = Receive-Job -Job $uptimeJob
+            # Display the results
+            $uptimeResult
+        } else {
+            Write-Host "Cannot get uptime. Continuing with the script."
         }
     } else {
         Write-Host "Computer not found: $computerName" -ForegroundColor Red
