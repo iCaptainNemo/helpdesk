@@ -469,8 +469,6 @@ function Main-Loop {
             '1' {
                 # Unlock AD account on all domain controllers
                 Unlock-ADAccountOnAllDomainControllers -userId $userId
-                Write-Host "Press Enter to continue"
-                Read-Host
             }
             '2' {
                 # Prompt for setting a temporary or permanent password
@@ -496,8 +494,6 @@ function Main-Loop {
                         } catch {
                             Write-Host "Error: $_"
                         }
-                        Write-Host "Press Enter to continue"
-                        Read-Host
                         break
                     }
                     'P' {
@@ -511,8 +507,6 @@ function Main-Loop {
                         } catch {
                             Write-Host "Error: $_"
                         }
-                        Write-Host "Press Enter to continue"
-                        Read-Host
                         break
                     }
                     default {
