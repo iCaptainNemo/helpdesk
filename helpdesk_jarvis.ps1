@@ -254,7 +254,7 @@ try {
             }
         }
 
-       # $properties.GetEnumerator() | Format-Table
+    if (Test-Connection -Count 1 -ComputerName $computerName -Quiet) {
         try {
             # Get LastBootUpTime using CIM instance
             $lastBootUpTime = Get-CimInstance -ClassName Win32_OperatingSystem -ComputerName $computerName | Select-Object -ExpandProperty LastBootUpTime
@@ -280,6 +280,7 @@ try {
             }
             return
         }
+    }
     } else {
         Write-Host "Computer not found: $computerName" -ForegroundColor Red
         return
