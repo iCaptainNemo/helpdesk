@@ -13,13 +13,6 @@ $helpdeskWorkFolder = Join-Path -Path $AdminUser.HomeDirectory -ChildPath "Helpd
 if (!(Test-Path -Path $helpdeskWorkFolder -PathType Container)) {
     New-Item -Path $helpdeskWorkFolder -ItemType Directory > $null
 }
-
-
-# Function to retrieve domain controllers
-function Get-DomainControllers {
-    return Get-ADDomainController -Filter *
-}
-
 # Function to get User ID with error handling
 function Get-UserId {
     while ($true) {
@@ -159,16 +152,14 @@ function Show-LastLogEntries {
         Write-Host "No computer logs found" -ForegroundColor Yellow
     }
 }
-
-# Function to unlock an AD account on all domain controllers in parallel
 function Unlock-ADAccountOnAllDomainControllers {
     param (
         [string]$userId
     )
 
-    $DCList = Get-DomainControllers
-
-    $jobs = foreach ($targetDC in $DCList.Name) {
+    $dcList = Get-ADDomainController -Filter *
+    
+    $jobs = foreach ($targetDC in $dcList.Name) {
         Start-Job -ScriptBlock {
             param ($userId, $targetDC)
             try {
@@ -184,7 +175,7 @@ function Unlock-ADAccountOnAllDomainControllers {
     # Wait for all jobs to complete
     $jobs | Wait-Job | Out-Null
 
-        # Receive and remove completed jobs without displaying job information
+    # Receive and remove completed jobs without displaying job information
     $jobs | ForEach-Object {
         Receive-Job -Job $_ | Out-Null
         Remove-Job -Job $_ | Out-Null
