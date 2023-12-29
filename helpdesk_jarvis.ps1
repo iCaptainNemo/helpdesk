@@ -162,13 +162,8 @@ function Unlock-ADAccountOnAllDomainControllers {
     $jobs = foreach ($targetDC in $dcList.Name) {
         Start-Job -ScriptBlock {
             param ($userId, $targetDC)
-            try {
-                Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorAction Stop
-                Write-Host ("Unlocked in " + $targetDC) -BackgroundColor DarkGreen
-            } catch {
-                $errormsg = "Failed to unlock $userId in $targetDC. Error: $_"
-                Write-Host $errormsg -ForegroundColor White -BackgroundColor Red
-            }
+            Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorAction SilentlyContinue
+            Write-Host ("Unlocked in " + $targetDC) -BackgroundColor DarkGreen
         } -ArgumentList $userId, $targetDC
     }
 
