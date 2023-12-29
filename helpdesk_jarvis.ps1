@@ -1,16 +1,5 @@
 # Import required modules
 Import-Module ActiveDirectory
-if (-not (Get-Module -Name ImportExcel -ListAvailable)) {
-    try {
-        Install-Module -Name ImportExcel -Force -ErrorAction Stop -Scope CurrentUser
-    } catch {
-        Write-Host "Failed to install the ImportExcel module. Error: $_"
-        return
-    }
-}
-
-Import-Module ImportExcel
-
 
 # Get the current domain
 $currentDomain = (Get-ADDomain).DNSRoot
@@ -24,17 +13,7 @@ $helpdeskWorkFolder = Join-Path -Path $AdminUser.HomeDirectory -ChildPath "Helpd
 if (!(Test-Path -Path $helpdeskWorkFolder -PathType Container)) {
     New-Item -Path $helpdeskWorkFolder -ItemType Directory > $null
 }
-# Check if "users.xlsx" file exists in Helpdesk-work folder
-$usersFilePath = Join-Path -Path $helpdeskWorkFolder -ChildPath "users.xlsx"
-if (!(Test-Path -Path $usersFilePath -PathType Leaf)) {
-    # Create "users.xlsx" file
-    $excel = New-Object -ComObject Excel.Application
-    $excel.Visible = $false
-    $workbook = $excel.Workbooks.Add()
-    $workbook.SaveAs($usersFilePath)
-    $workbook.Close()
-    $excel.Quit()
-}
+
 
 # Function to retrieve domain controllers
 function Get-DomainControllers {
@@ -69,7 +48,6 @@ function Get-ADUserProperties {
         return $null
     }
 }
-
 
 # Function to display AD properties as a table with color coding
 function Show-ADUserProperties {
