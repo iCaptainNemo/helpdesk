@@ -1,7 +1,7 @@
 ﻿Import-Module ActiveDirectory
 
 ## Get the current user with specific properties
-$AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name
+$AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name, HomeDirectory
 
 # Function to get probable locked-out users
 function Get-ProbableLockedOutUsers {
@@ -175,20 +175,19 @@ while ($restartScript) {
 
             } while ($true)
         }
-
         4 {
             # Prompt user for refresh interval
             do {
                 $refreshInterval = Read-Host "Enter the refresh interval in minutes (e.g., 1, 5, 10):"
                 $refreshInterval = [int]$refreshInterval
             } while ($refreshInterval -le 0)
-        
+
+            $unlockedUsersTotalCount = 0
             # Auto Unlock Users BP = 0 at specified refresh interval
             do {
                 # Clear-Host
-               # Write-Host "Auto Unlocking Users BP = 0 every $refreshInterval minutes. Press Ctrl+C to stop."
+                # Write-Host "Auto Unlocking Users BP = 0 every $refreshInterval minutes. Press Ctrl+C to stop."
                 Start-Sleep -Seconds (60 * $refreshInterval)
-        
                 # Get probable locked-out users
                 $probableLockedOutUsers = Get-ProbableLockedOutUsers
 
@@ -196,7 +195,6 @@ while ($restartScript) {
                 # Clear-Host
                 $unlockedUsersCount = 0
                 $jobs = @()
-        
                 foreach ($user in $probableLockedOutUsers) {
                     $job = Start-Job -ScriptBlock {
                         param ($userId)
@@ -208,13 +206,10 @@ while ($restartScript) {
                             Write-Host $errormsg -ForegroundColor White -BackgroundColor Red
                         }
                     } -ArgumentList $user.SamAccountName
-        
                     $jobs += $job
                 }
-        
                 # Wait for all jobs to complete
                 $jobs | Wait-Job | Out-Null
-        
                 # Receive and remove completed jobs without displaying job information
                 $jobs | ForEach-Object {
                     $result = Receive-Job -Job $_ | Out-Null
@@ -223,9 +218,10 @@ while ($restartScript) {
                         $unlockedUsersCount++
                     }
                 }
-        
-                Write-Host "$unlockedUsersCount user(s) unlocked."
-        
+                if ($unlockedUsersCount -gt 0) {
+                    $unlockedUsersTotalCount += $unlockedUsersCount
+                    Write-Host "$unlockedUsersCount user(s) unlocked."
+                }
             } while ($true)
         }
         

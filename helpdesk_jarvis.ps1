@@ -1,5 +1,19 @@
-# Import the Active Directory module
+# Import required modules
 Import-Module ActiveDirectory
+
+# Get the current domain
+$currentDomain = (Get-ADDomain).DNSRoot
+Write-Host "Current domain: $currentDomain"
+
+## Get the current user with specific properties
+$AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name, HomeDirectory
+
+# Check for Helpdesk-work folder and create if it doesn't exist
+$helpdeskWorkFolder = Join-Path -Path $AdminUser.HomeDirectory -ChildPath "Helpdesk-work"
+if (!(Test-Path -Path $helpdeskWorkFolder -PathType Container)) {
+    New-Item -Path $helpdeskWorkFolder -ItemType Directory > $null
+}
+
 
 # Function to retrieve domain controllers
 function Get-DomainControllers {
@@ -35,7 +49,6 @@ function Get-ADUserProperties {
     }
 }
 
-
 # Function to display AD properties as a table with color coding
 function Show-ADUserProperties {
     param (
@@ -67,7 +80,7 @@ function Show-ADUserProperties {
         }
         # Color coding for Password Last Set age
         $passwordLastSet = $adUser.PasswordLastSet
-        if ($passwordLastSet -ne $null) {
+        if ($null -ne $passwordLastSet) {
             $daysSinceLastSet = (Get-Date) - $passwordLastSet
             $passwordAge = [math]::Round($daysSinceLastSet.TotalDays)
     
@@ -99,27 +112,53 @@ function Show-ADUserProperties {
         }
     }
 }
+# Function to parse log entry
+function Parse-LogEntry {
+    param (
+        [string]$logEntry
+    )
 
+    # Assuming $logEntry has the format "TAD062DT379527 Tue 12/19/2023 14:49:26.98"
+    $components = $logEntry -split ' '
+    $PossibleComputerName = $components[0]
+    $day = $components[1]
+    $date = $components[2]
+    $time = $components[3]
 
-# Function to display last 10 log entries
+    # Return parsed information
+    return @{
+        PossibleComputerName = $PossibleComputerName
+        Day = $day
+        Date = $date
+        Time = $time
+    }
+}
+
+# Function to display last 10 log entries with parsed information
 function Show-LastLogEntries {
     param (
         [string]$logFilePath
     )
 
     try {
-        $logEntries = Get-Content $logFilePath -Tail 10
-        Write-Host "Last 10 login entries:"
-        foreach ($entry in $logEntries) {
-            Write-Host $entry
+        # Check if the log file exists
+        if (Test-Path $logFilePath -PathType Leaf) {
+            $logEntries = Get-Content $logFilePath -Tail 10
+            Write-Host "Last 10 login entries with parsed information:"
+            # Add a line break or additional Write-Host statements for space
+            Write-Host "`n"
+            foreach ($entry in $logEntries) {
+                $parsedInfo = Parse-LogEntry -logEntry $entry
+                Write-Host $($parsedInfo.PossibleComputerName)$($parsedInfo.Day)$($parsedInfo.Date)$($parsedInfo.Time)
+            }
+        } else {
+            Write-Host " No computer logs found" -ForegroundColor Yellow
         }
     } catch {
-        Write-Host "Error: $_" -ForegroundColor Red
-        Write-Host "No logs found" -ForegroundColor Yellow
+        # Write-Host "Error: $_" -ForegroundColor Red
+        Write-Host "No computer logs found" -ForegroundColor Yellow
     }
 }
-
-
 
 # Function to unlock an AD account on all domain controllers in parallel
 function Unlock-ADAccountOnAllDomainControllers {
@@ -155,23 +194,22 @@ function Unlock-ADAccountOnAllDomainControllers {
 # Function to test connection to an asset
 function Test-AssetConnection {
     param (
-        [string]$assetName
+        [Parameter(Mandatory=$true)]
+        [string]$ComputerName
     )
 
     try {
-        $null = Test-Connection -ComputerName $assetName -Count 1 -ErrorAction Stop
+        $null = Test-Connection -ComputerName $ComputerName -Count 1 -ErrorAction Stop
         return $true
     } catch {
         return $false
     }
 }
-
 # Function to perform Asset Control actions & Menu
 function Asset-Control {
     param (
         [string]$userId
     )
-
     # Add a line break or additional Write-Host statements for space
     Write-Host "`n"  # This adds a line break
 
@@ -195,121 +233,191 @@ try {
 
         # Display properties in a table
         $properties = @{
-            'HSRemoteComputers'      = $isHSRemoteComputers
-            'HSRemoteMFAComputers'   = $isHSRemoteMFAComputers
-            'Computer Reachable' = Test-Connection -Count 1 -ComputerName $computerName -Quiet
+            'HSRemoteComputers'      = if ($isHSRemoteComputers) { 'True' } else { 'False' }
+            'HSRemoteMFAComputers'   = if ($isHSRemoteMFAComputers) { 'True' } else { 'False' }
+            'Computer Reachable'     = if (Test-Connection -Count 1 -ComputerName $computerName -Quiet) { 'True' } else { 'False' }
         }
 
-        $properties.GetEnumerator() | Format-Table
+        # Color coding for properties
+        $properties.GetEnumerator() | ForEach-Object {
+            $propertyName = $_.Key
+            $propertyValue = $_.Value
 
-        # Get LastBootUpTime using Get-CimInstance
-        $lastBootUpTime = Get-CimInstance -ClassName Win32_OperatingSystem -ComputerName $computerName | Select-Object -ExpandProperty LastBootUpTime
-
-        # Calculate the uptime
-        $uptime = (Get-Date) - $lastBootUpTime
-
-        # Display LastBootUpTime with color coding
-        Write-Host "Last Boot Up Time: $lastBootUpTime"
-
-        # Color coding for computer uptime
-        if ($uptime.TotalDays -gt 5) {
-            Write-Host "Uptime: More than 5 days" -ForegroundColor Red
-        } elseif ($uptime.TotalDays -gt 3) {
-            Write-Host "Uptime: More than 3 days" -ForegroundColor Yellow
-        } else {
-            Write-Host "Uptime: Less than or equal to 3 days" -ForegroundColor Green
+            if ($propertyValue -eq 'True') {
+                Write-Host "${propertyName}: ${propertyValue}" -ForegroundColor Green
+            } else {
+                Write-Host "${propertyName}: ${propertyValue}" -ForegroundColor Red
+            }
         }
 
+    if ($properties.'Computer Reachable' -eq 'True' -and $computer.Domain -eq 'hs.gov') {
+        try {
+            # Get LastBootUpTime using CIM instance
+            $lastBootUpTime = Get-CimInstance -ClassName Win32_OperatingSystem -ComputerName $computerName | Select-Object -ExpandProperty LastBootUpTime
+            # Calculate the uptime
+            $uptime = (Get-Date) - $lastBootUpTime
 
+            # Display LastBootUpTime with color coding
+            Write-Host "Last Boot Up Time: $lastBootUpTime"
+
+            # Color coding for computer uptime
+            if ($uptime.TotalDays -gt 5) {
+                Write-Host "Uptime: More than 5 days" -ForegroundColor Red
+            } elseif ($uptime.TotalDays -gt 3) {
+                Write-Host "Uptime: More than 3 days" -ForegroundColor Yellow
+            } else {
+                Write-Host "Uptime: Less than or equal to 3 days" -ForegroundColor Green
+            }
+        } catch {
+            if ($_.Exception.Message -like "*WinRM cannot complete the operation*") {
+                Write-Host "Error: Unable to connect to the computer. Please check the computer name, network connection, and firewall settings."
+            } else {
+                Write-Host "Error occurred while getting LastBootUpTime: $_"
+            }
+            return
+        }
+    }
     } else {
         Write-Host "Computer not found: $computerName" -ForegroundColor Red
         return
     }
-} catch {
-    Write-Host "Error retrieving computer properties: $_" -ForegroundColor Red
-    return
-}
+    } catch {
+        Write-Host "Error retrieving computer properties: $_" -ForegroundColor Red
+        return
+    }
 
-# Asset Control submenu
-while ($true) {
-    Write-Host "`nAsset Control Menu"
-    Write-Host "1. Remote Desktop"
-    Write-Host "2. Remote Assistance"
-    Write-Host "3. PS Console"
-    Write-Host "4. PSEXEC Console"
-    Write-Host "5. Add Network Printer"
-    Write-Host "6. Back to Main Menu"
+    # Function to get print jobs for a specific computer
+    function Get-PrintJobsForComputer {
+        param (
+            [string]$ComputerName
+        )
 
-    $assetChoice = Read-Host "Enter your choice"
-
-    switch ($assetChoice) {
-        '1' {
-            # Check if the SCCM remote tool executable exists
-            $sccmToolPath = "C:\Program Files (x86)\Microsoft Endpoint Manager\AdminConsole\bin\i386\CmRcViewer.exe"
-
-            if (Test-Path $sccmToolPath) {
-                try {
-                    # Invoke SCCM remote tool
-                    Start-Process -FilePath $sccmToolPath $computerName -Wait
-                    Write-Host "Remote Desktop launched for $computerName"
-                } catch {
-                    Write-Host "Error launching SCCM Remote Tool: $_" -ForegroundColor Red
+        try {
+            $printJobs = Get-PrintJob -ComputerName $ComputerName
+            if ($printJobs) {
+                Write-Host "Print Jobs on ${computerName}:"
+                foreach ($job in $printJobs) {
+                    Write-Host "Job ID: $($job.JobId), Document: $($job.Document), Status: $($job.JobStatus)"
                 }
             } else {
-                Write-Host "SCCM Remote Tool not found at $sccmToolPath" -ForegroundColor Red
+                Write-Host "No print jobs found on $ComputerName."
             }
-            break
-        }
-        '2' {
-            # Launch Remote Assistance tool
-            $msraPath = "C:\Windows\System32\msra.exe"
-            if (Test-Path $msraPath) {
-                try {
-                    # Invoke Remote Assistance tool
-                    Start-Process -FilePath $msraPath -ArgumentList "/offerRA $computerName" -Wait
-                    Write-Host "Remote Assistance launched for $computerName"
-                } catch {
-                    Write-Host "Error launching Remote Assistance tool: $_" -ForegroundColor Red
-                }
-            } else {
-                Write-Host "Remote Assistance tool not found at $msraPath" -ForegroundColor Red
-            }
-        }
-        '3' {
-            # Open PowerShell console session in a new window
-            Start-Process powershell -ArgumentList "-NoExit -Command Enter-PSSession -ComputerName $computerName"
-            break
-        }
-        '4' {
-            # Start PsExec to open a command prompt on the remote computer
-            $psexecCommand = "psexec.exe \\$computerName cmd.exe"
-            Write-Host "Starting PsExec to open a command prompt on $computerName"
-            
-            # Execute the PsExec command
-            Start-Process -FilePath "cmd.exe" -ArgumentList "/c $psexecCommand" -Wait
-            
-            Write-Host "PsExec command completed for $computerName"
-            break
-        }
-        '5' {
-            # Add network printer
-            $printServer = Read-Host "Enter Print Server Name"
-            $printerName = Read-Host "Enter Printer Name"
-            Add-NetworkPrinter -PrintServer $printServer -PrinterName $printerName
-            break
-        }
-        '6' {
-            # Back to main menu
-            return
-        }
-        default {
-            Write-Host "Invalid choice. Please enter a valid option."
+        } catch {
+            Write-Host "Error getting print jobs: $_" -ForegroundColor Red
         }
     }
-}
+    # Asset Control submenu
+    while ($true) {
+        Write-Host "`nAsset Control Menu"
+        Write-Host "1. Test Connection"
+        Write-Host "2. Remote Desktop"
+        Write-Host "3. Remote Assistance"
+        Write-Host "4. PS Console"
+        Write-Host "5. PSEXEC Console"
+        Write-Host "6. Add Network Printer"
+        Write-Host "7. Get Print Jobs"
+        Write-Host "0. Back to Main Menu"
 
-}
+        $assetChoice = Read-Host "Enter your choice"
 
+        switch ($assetChoice) {
+            '1' {
+                # Test connection
+                if (Test-AssetConnection -ComputerName $computerName) {
+                    Write-Host "Connection to $computerName successful" -ForegroundColor Green
+                } else {
+                    Write-Host "Connection to $computerName failed" -ForegroundColor Red
+                }
+                break
+            }
+            '2' {
+                # Check if the SCCM remote tool executable exists
+                $sccmToolPath = "C:\Program Files (x86)\Microsoft Endpoint Manager\AdminConsole\bin\i386\CmRcViewer.exe"
+                $sccmToolPath2 = "C:\Program Files\RcViewer\CmRcViewer.exe"
+    
+                if (Test-Path $sccmToolPath) {
+                    try {
+                        # Invoke SCCM remote tool
+                        Start-Process -FilePath $sccmToolPath $computerName -Wait
+                        Write-Host "Remote Desktop launched for $computerName"
+                    } catch {
+                        Write-Host "Error launching SCCM Remote Tool: $_" -ForegroundColor Red
+                    }
+                } elseif (Test-Path $sccmToolPath2) {
+                    try {
+                        # Invoke SCCM remote tool (alternative path)
+                        Start-Process -FilePath $sccmToolPath2 $computerName -Wait
+                        Write-Host "Remote Desktop launched for $computerName"
+                    } catch {
+                        Write-Host "Error launching SCCM Remote Tool: $_" -ForegroundColor Red
+                    }
+                } else {
+                    Write-Host "SCCM Remote Tool not found" -ForegroundColor Red
+                }
+                break
+            }
+            '3' {
+                # Launch Remote Assistance tool
+                $msraPath = "C:\Windows\System32\msra.exe"
+                if (Test-Path $msraPath) {
+                    try {
+                        # Invoke Remote Assistance tool
+                        Start-Process -FilePath $msraPath -ArgumentList "/offerRA $computerName" -Wait
+                        Write-Host "Remote Assistance launched for $computerName"
+                    } catch {
+                        Write-Host "Error launching Remote Assistance tool: $_" -ForegroundColor Red
+                    }
+                } else {
+                    Write-Host "Remote Assistance tool not found at $msraPath" -ForegroundColor Red
+                }
+                break
+            }
+            '4' {
+                # Check if the current domain is part of "hs.gov"
+                if ($currentDomain -notlike "*hs.gov") {
+                    Write-Host "Error: This domain doesn't have WinRM enabled." -ForegroundColor Red
+                    break
+                }
+
+                # Open PowerShell console session in a new window
+                Start-Process powershell -ArgumentList "-NoExit -Command Enter-PSSession -ComputerName $computerName"
+                break
+            }
+            '5' {
+                # Start PsExec to open a command prompt on the remote computer
+                $psexecCommand = "psexec.exe \\$computerName cmd.exe"
+                Write-Host "Starting PsExec to open a command prompt on $computerName"
+                
+                # Execute the PsExec command
+                Start-Process -FilePath "cmd.exe" -ArgumentList "/c $psexecCommand" -Wait
+                
+                Write-Host "PsExec command completed for $computerName"
+                break
+            }
+            '6' {
+                # Add network printer
+                $printServer = Read-Host "Enter Print Server Name"
+                $printerName = Read-Host "Enter Printer Name"
+                Add-NetworkPrinter -PrintServer $printServer -PrinterName $printerName
+                break
+            }
+            '7' {
+            # Prompt for printer name before getting print jobs
+            $printerName = Read-Host "Enter Printer Name"
+            Write-Host "Getting Print Jobs for $printerName on $computerName"
+            Get-PrintJobsForComputer -ComputerName $computerName
+            break
+            }
+            '0' {
+                # Back to main menu
+                return
+            }
+            default {
+                Write-Host "Invalid choice. Please enter a valid option."
+            }
+        }
+    } 
+}
 # Function to invoke SCCM remote tool
 function Invoke-SCCMRemoteTool {
     param (
@@ -323,7 +431,7 @@ function Invoke-SCCMRemoteTool {
         try {
             
             # Add a line break or additional Write-Host statements for space
-            Write-Host "`n"  # This adds a line break
+            Write-Host "`n"
 
             # Invoke SCCM remote tool
             Start-Process -FilePath $sccmToolPath -ArgumentList "/server:$computerName" -Wait
@@ -376,31 +484,27 @@ function Main-Loop {
         Write-Host "`n"  # This adds a line break
 
         # Main menu loop
-        Write-Host "1. Clear and Restart Script"
-        Write-Host "2. Unlock AD Account on All Domain Controllers"
-        Write-Host "3. Password Reset"
-        Write-Host "4. Asset Control"
-        Write-Host "5. Quit"
+        Write-Host "1. Unlock"
+        Write-Host "2. Password Reset"
+        Write-Host "3. Asset Control"
+        Write-Host "0. Clear and Restart Script"
 
         $choice = Read-Host "Enter your choice"
 
         switch ($choice) {
-            '1' {
+            '0' {
                 # Clear the console, reset User ID, and restart the script
                 $userId = $null
                 Clear-Host
                 return
             }
-            '2' {
+            '1' {
                 # Unlock AD account on all domain controllers
                 Unlock-ADAccountOnAllDomainControllers -userId $userId
-                Write-Host "Press Enter to continue"
-                Read-Host
             }
-            '3' {
+            '2' {
                 # Prompt for setting a temporary or permanent password
-                $passwordChoice = Read-Host "Do you want to set a temporary (T) or permanent (P) password? Enter T or P"
-            
+                $passwordChoice = Read-Host "Do you want to set a temporary (T), permanent (P), or cancel (C) password? Enter T, P, or C"
                 switch ($passwordChoice) {
                     'T' {
                         # Set Temporary Password based on the season and year
@@ -421,8 +525,7 @@ function Main-Loop {
                         } catch {
                             Write-Host "Error: $_"
                         }
-                        Write-Host "Press Enter to continue"
-                        Read-Host
+
                         break
                     }
                     'P' {
@@ -436,24 +539,23 @@ function Main-Loop {
                         } catch {
                             Write-Host "Error: $_"
                         }
-                        Write-Host "Press Enter to continue"
-                        Read-Host
+                        break
+                    }
+                    'C' {
+                        # Cancel password change
+                        Write-Host "Password change canceled."
                         break
                     }
                     default {
-                        Write-Host "Invalid choice. Please enter either T or P."
+                        Write-Host "Invalid choice. Please enter either T, P, or C."
                         break
                     }
                 }
             }
 
-            '4' {
+            '3' {
                 # Asset Control submenu
                 Asset-Control -userId $userId
-            }
-            '5' {
-                # Quit the script
-                return
             }
         }
     }
