@@ -377,6 +377,12 @@ try {
                 break
             }
             '4' {
+                # Check if the current domain is part of "hs.gov"
+                if ($currentDomain -notlike "*hs.gov") {
+                    Write-Host "Error: This domain doesn't have WinRM enabled." -ForegroundColor Red
+                    break
+                }
+
                 # Open PowerShell console session in a new window
                 Start-Process powershell -ArgumentList "-NoExit -Command Enter-PSSession -ComputerName $computerName"
                 break
