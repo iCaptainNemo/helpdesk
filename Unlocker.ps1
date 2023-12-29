@@ -190,10 +190,7 @@ while ($restartScript) {
 
                 # Get probable locked-out users
                 $probableLockedOutUsers = Get-ProbableLockedOutUsers
-
-                # Auto Unlock logic similar to Option 2
                 # Clear-Host
-                $unlockedUsersCount = 0
                 $jobs = @()
 
                 foreach ($user in $probableLockedOutUsers) {
@@ -225,7 +222,7 @@ while ($restartScript) {
 
                 if ($unlockedUsersCount -gt 0) {
                     $unlockedUsersTotalCount += $unlockedUsersCount
-                    Write-Host "$unlockedUsersCount user(s) unlocked."
+                    # Write-Host "$unlockedUsersCount user(s) unlocked."
                 }
 
             } while ($true)
