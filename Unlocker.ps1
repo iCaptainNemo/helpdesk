@@ -217,6 +217,7 @@ while ($restartScript) {
                 }
                 if ($unlockedUsersCount -gt 0) {
                     $unlockedUsersTotalCount += $unlockedUsersCount
+
                     # Write-Host "$unlockedUsersCount user(s) unlocked."
                 }
             } while ($true)
