@@ -112,8 +112,6 @@ function Show-ADUserProperties {
         }
     }
 }
-
-
 # Function to parse log entry
 function Parse-LogEntry {
     param (
@@ -207,13 +205,11 @@ function Test-AssetConnection {
         return $false
     }
 }
-
 # Function to perform Asset Control actions & Menu
 function Asset-Control {
     param (
         [string]$userId
     )
-
     # Add a line break or additional Write-Host statements for space
     Write-Host "`n"  # This adds a line break
 
@@ -422,7 +418,6 @@ try {
         }
     } 
 }
-
 # Function to invoke SCCM remote tool
 function Invoke-SCCMRemoteTool {
     param (
@@ -510,7 +505,6 @@ function Main-Loop {
             '2' {
                 # Prompt for setting a temporary or permanent password
                 $passwordChoice = Read-Host "Do you want to set a temporary (T), permanent (P), or cancel (C) password? Enter T, P, or C"
-            
                 switch ($passwordChoice) {
                     'T' {
                         # Set Temporary Password based on the season and year
@@ -531,6 +525,7 @@ function Main-Loop {
                         } catch {
                             Write-Host "Error: $_"
                         }
+
                         break
                     }
                     'P' {
