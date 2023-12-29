@@ -254,7 +254,7 @@ try {
             }
         }
 
-    if (Test-Connection -Count 1 -ComputerName $computerName -Quiet) {
+    if ($properties.'Computer Reachable' -eq 'True') {
         try {
             # Get LastBootUpTime using CIM instance
             $lastBootUpTime = Get-CimInstance -ClassName Win32_OperatingSystem -ComputerName $computerName | Select-Object -ExpandProperty LastBootUpTime
