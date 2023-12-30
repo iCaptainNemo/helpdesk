@@ -152,6 +152,7 @@ function Show-LastLogEntries {
         Write-Host "No computer logs found" -ForegroundColor Yellow
     }
 }
+# Function to unlock AD account on all domain controllers
 function Unlock-ADAccountOnAllDomainControllers {
     param (
         [string]$userId
