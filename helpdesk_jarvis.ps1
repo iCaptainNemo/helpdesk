@@ -16,7 +16,7 @@ if (!(Test-Path -Path $helpdeskWorkFolder -PathType Container)) {
 # Function to get User ID with error handling
 function Get-UserId {
     while ($true) {
-        $userId = Read-Host "Enter User ID"
+        $userId = (Read-Host "Enter User ID").Replace(' ', '')
         try {
             Get-ADUser -Identity $userId -ErrorAction Stop | Out-Null
             return $userId
