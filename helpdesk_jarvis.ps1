@@ -243,7 +243,7 @@ try {
             }
         }
 
-    if ($properties.'Computer Reachable' -eq 'True' -and $computer.Domain -eq 'hs.gov') {
+    if ($properties.'Computer Reachable' -eq 'True' -and $currentDomain -eq 'hs.gov') {
         try {
             # Get LastBootUpTime using CIM instance
             $lastBootUpTime = Get-CimInstance -ClassName Win32_OperatingSystem -ComputerName $computerName | Select-Object -ExpandProperty LastBootUpTime
