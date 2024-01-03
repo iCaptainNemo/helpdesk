@@ -163,8 +163,14 @@ function Unlock-ADAccountOnAllDomainControllers {
     $jobs = foreach ($targetDC in $dcList.Name) {
         Start-Job -ScriptBlock {
             param ($userId, $targetDC)
-            Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorAction SilentlyContinue
-            Write-Host ("Unlocked in " + $targetDC) -BackgroundColor DarkGreen
+            $error.Clear()
+            Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorAction SilentlyContinue -ErrorVariable unlockError
+            if ($unlockError) {
+                # Handle the error here. For example, you could write it to a log file.
+               # Write-Host ("Error unlocking in " + $targetDC) -BackgroundColor DarkRed
+            } else {
+                Write-Host ("Unlocked in " + $targetDC) -BackgroundColor DarkGreen
+            }
         } -ArgumentList $userId, $targetDC
     }
 
@@ -325,7 +331,7 @@ try {
                 if (Test-Path $sccmToolPath) {
                     try {
                         # Invoke SCCM remote tool
-                        Start-Process -FilePath $sccmToolPath $computerName -Wait
+                        Start-Process -FilePath $sccmToolPath $computerName
                         Write-Host "Remote Desktop launched for $computerName"
                     } catch {
                         Write-Host "Error launching SCCM Remote Tool: $_" -ForegroundColor Red
@@ -333,7 +339,7 @@ try {
                 } elseif (Test-Path $sccmToolPath2) {
                     try {
                         # Invoke SCCM remote tool (alternative path)
-                        Start-Process -FilePath $sccmToolPath2 $computerName -Wait
+                        Start-Process -FilePath $sccmToolPath2 $computerName
                         Write-Host "Remote Desktop launched for $computerName"
                     } catch {
                         Write-Host "Error launching SCCM Remote Tool: $_" -ForegroundColor Red
