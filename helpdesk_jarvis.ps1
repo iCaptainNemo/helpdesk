@@ -105,33 +105,37 @@ function Show-ADUserProperties {
         }
     }
 }
-# Function to parse log entry
-function Parse-LogEntry {
-    param (
-        [string]$logEntry
-    )
-
-    # Assuming $logEntry has the format "TAD062DT379527 Tue 12/19/2023 14:49:26.98"
-    $components = $logEntry -split ' '
-    $PossibleComputerName = $components[0]
-    $day = $components[1]
-    $date = $components[2]
-    $time = $components[3]
-
-    # Return parsed information
-    return @{
-        PossibleComputerName = $PossibleComputerName
-        Day = $day
-        Date = $date
-        Time = $time
-    }
-}
-
 # Function to display last 10 log entries with parsed information
 function Show-LastLogEntries {
     param (
         [string]$logFilePath
     )
+
+    # Function to parse log entry
+    function Parse-LogEntry {
+        param (
+            [string]$logEntry
+        )
+
+        # Assuming $logEntry has the format "TAD062DT379527 Tue 12/19/2023 14:49:26.98"
+        $components = $logEntry -split ' '
+        $PossibleComputerName = $components[0]
+        $day = $components[1]
+        $date = $components[2]
+        $time = $components[3]
+
+        # Return parsed information
+        return @{
+            PossibleComputerName = $PossibleComputerName
+            Day = $day
+            Date = $date
+            Time = $time
+        }
+    }
+
+    # Initialize $possibleComputers and $logTable as empty arrays
+    $possibleComputers = @()
+    $logTable = @()
 
     try {
         # Check if the log file exists
@@ -139,12 +143,13 @@ function Show-LastLogEntries {
             $logEntries = Get-Content $logFilePath -Tail 10
             Write-Host "Last 10 login entries with parsed information:"
             # Add a line break or additional Write-Host statements for space
-            $possibleComputers = @()
             Write-Host "`n"
             foreach ($entry in $logEntries) {
                 $parsedInfo = Parse-LogEntry -logEntry $entry
+                # Add the PossibleComputerName to the $possibleComputers array
                 $possibleComputers += $parsedInfo.PossibleComputerName
-                Write-Host $($parsedInfo.PossibleComputerName)$($parsedInfo.Day)$($parsedInfo.Date)$($parsedInfo.Time)
+                # Add the log entry to the $logTable array
+                $logTable += "$($parsedInfo.PossibleComputerName) $($parsedInfo.Day) $($parsedInfo.Date) $($parsedInfo.Time)"
             }
         } else {
             Write-Host " No computer logs found" -ForegroundColor Yellow
@@ -152,6 +157,11 @@ function Show-LastLogEntries {
     } catch {
         # Write-Host "Error: $_" -ForegroundColor Red
         Write-Host "No computer logs found" -ForegroundColor Yellow
+    }
+    # Return $possibleComputers and $logTable
+    return @{
+        PossibleComputers = $possibleComputers
+        LogTable = $logTable
     }
 }
 # Function to unlock AD account on all domain controllers
@@ -203,35 +213,43 @@ function Test-AssetConnection {
 # Function to perform Asset Control actions & Menu
 function Asset-Control {
     param (
-        [string]$userId,
-        [array]$possibleComputers
+        [string]$userId
     )
-# Add a line break or additional Write-Host statements for space
-Write-Host "`n"  # This adds a line break
+    # Add a line break or additional Write-Host statements for space
+    Write-Host "`n"  # This adds a line break
 
-# Display possible computers as a numbered list
-Write-Host "Possible Computers:"
-for ($i = 0; $i -lt $possibleComputers.Count; $i++) {
-    Write-Host "$($i + 1). $($possibleComputers[$i])"
-}
+    $result = Show-LastLogEntries -logFilePath $logFilePath
+    $possibleComputers = $result.PossibleComputers
 
-# Prompt for Computer Name or number
-$input = Read-Host "Enter Computer Name or number from the list above"
+    # Display possible computers as a numbered list
+    Write-Host "Possible Computers:"
+    for ($i = 0; $i -lt $possibleComputers.Count; $i++) {
+        Write-Host "$($i + 1). $($possibleComputers[$i])"
+    
+    }
 
-# Check if the input is a number and within the range of the list
-if ($input -match '^\d+$' -and $input -le $possibleComputers.Count) {
-    $computerName = $possibleComputers[$input - 1]
-} else {
-    $computerName = $input
-}
+    # Prompt for Computer Name or number
+    $input = Read-Host "Enter Computer Name or number from the list above"
 
-# Add a line break or additional Write-Host statements for space
-Write-Host "`n"  # This adds a line break
-# Get computer properties
-try {
-    $computer = Get-ADComputer $computerName -Properties MemberOf
-    if ($computer) {
-        $memberOf = $computer.MemberOf -join ', '
+        # Check if the user wants to cancel
+    if ($input -eq 'C' -or $input -eq 'c') {
+        Write-Host "Operation cancelled by user."
+        return
+    }
+    # Check if the input is a number and within the range of the list
+    if ($input -match '^\d+$' -and $input -le ($possibleComputers.Count - 1)) {
+        $computerName = $possibleComputers[[int]$input - 1]
+    } else {
+        $computerName = $input
+    }
+
+    # Add a line break or additional Write-Host statements for space
+    Write-Host "`n"  # This adds a line break
+    # Get computer properties
+    try {
+        $computer = Get-ADComputer $computerName -Properties MemberOf
+        if ($computer) {
+            $memberOf = $computer.MemberOf -join ', '
 
         # Check if the required groups are present in MemberOf
         $isHSRemoteComputers = $memberOf -like '*HSRemoteComputers*'
@@ -498,7 +516,9 @@ function Main-Loop {
         Write-Host "`n"  # This adds a line break
 
         # Display last 10 log entries
-        Show-LastLogEntries -logFilePath $logFilePath
+        $result = Show-LastLogEntries -logFilePath $logFilePath
+        $logTable = $result.LogTable
+        $logTable | Format-List
 
         # Add a line break or additional Write-Host statements for space
         Write-Host "`n"  # This adds a line break
