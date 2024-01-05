@@ -139,9 +139,11 @@ function Show-LastLogEntries {
             $logEntries = Get-Content $logFilePath -Tail 10
             Write-Host "Last 10 login entries with parsed information:"
             # Add a line break or additional Write-Host statements for space
+            $possibleComputers = @()
             Write-Host "`n"
             foreach ($entry in $logEntries) {
                 $parsedInfo = Parse-LogEntry -logEntry $entry
+                $possibleComputers += $parsedInfo.PossibleComputerName
                 Write-Host $($parsedInfo.PossibleComputerName)$($parsedInfo.Day)$($parsedInfo.Date)$($parsedInfo.Time)
             }
         } else {
@@ -201,17 +203,30 @@ function Test-AssetConnection {
 # Function to perform Asset Control actions & Menu
 function Asset-Control {
     param (
-        [string]$userId
+        [string]$userId,
+        [array]$possibleComputers
     )
-    # Add a line break or additional Write-Host statements for space
-    Write-Host "`n"  # This adds a line break
+# Add a line break or additional Write-Host statements for space
+Write-Host "`n"  # This adds a line break
 
-    # Prompt for Computer Name
-    $computerName = Read-Host "Enter Computer Name"
+# Display possible computers as a numbered list
+Write-Host "Possible Computers:"
+for ($i = 0; $i -lt $possibleComputers.Count; $i++) {
+    Write-Host "$($i + 1). $($possibleComputers[$i])"
+}
 
-    # Add a line break or additional Write-Host statements for space
-    Write-Host "`n"  # This adds a line break
+# Prompt for Computer Name or number
+$input = Read-Host "Enter Computer Name or number from the list above"
 
+# Check if the input is a number and within the range of the list
+if ($input -match '^\d+$' -and $input -le $possibleComputers.Count) {
+    $computerName = $possibleComputers[$input - 1]
+} else {
+    $computerName = $input
+}
+
+# Add a line break or additional Write-Host statements for space
+Write-Host "`n"  # This adds a line break
 # Get computer properties
 try {
     $computer = Get-ADComputer $computerName -Properties MemberOf
