@@ -216,8 +216,6 @@ function Asset-Control {
 try {
     $computer = Get-ADComputer $computerName -Properties MemberOf
     if ($computer) {
-        Write-Host "Computer Properties for $($computerName):"
-
         $memberOf = $computer.MemberOf -join ', '
 
         # Check if the required groups are present in MemberOf
@@ -242,6 +240,8 @@ try {
                 Write-Host "${propertyName}: ${propertyValue}" -ForegroundColor Red
             }
         }
+        #Line break for space
+        Write-Host "`n"
 
     if ($properties.'Computer Reachable' -eq 'True' -and $currentDomain -eq 'hs.gov') {
         try {
@@ -405,6 +405,11 @@ try {
                 # Back to main menu
                 return
             }
+            '00' {
+                # Set a flag to indicate that the script should be restarted
+                $global:restartScript = $true
+                break
+            }
             default {
                 Write-Host "Invalid choice. Please enter a valid option."
             }
@@ -461,6 +466,13 @@ function Main-Loop {
     )
 
     while ($true) {
+        # If the restart flag is set, perform the '0' action and restart the loop
+        if ($global:restartScript) {
+            $userId = $null
+            Clear-Host
+            $global:restartScript = $false
+            continue
+        }
         # Get AD properties for the provided User ID
         $adUser = Get-ADUserProperties -userId $userId
 
