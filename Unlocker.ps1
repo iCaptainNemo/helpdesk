@@ -3,6 +3,38 @@
 ## Get the current user with specific properties
 $AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name, HomeDirectory
 
+# Function to unlock AD account on all domain controllers
+function Unlock-ADAccountOnAllDomainControllers {
+    param (
+        [string]$userId
+    )
+
+    $dcList = Get-ADDomainController -Filter *
+    
+    $jobs = foreach ($targetDC in $dcList.Name) {
+        Start-Job -ScriptBlock {
+            param ($userId, $targetDC)
+            $error.Clear()
+            Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorAction SilentlyContinue -ErrorVariable unlockError
+            if ($unlockError) {
+                # Handle the error here. For example, you could write it to a log file.
+               # Write-Host ("Error unlocking in " + $targetDC) -BackgroundColor DarkRed
+            } else {
+                Write-Host ("Unlocked in " + $targetDC) -BackgroundColor DarkGreen
+            }
+        } -ArgumentList $userId, $targetDC
+    }
+
+    # Wait for all jobs to complete
+    $jobs | Wait-Job | Out-Null
+
+    # Receive and remove completed jobs without displaying job information
+    $jobs | ForEach-Object {
+        Receive-Job -Job $_ | Out-Null
+        Remove-Job -Job $_ | Out-Null
+    }
+}
+
 $unlockedUsersCount = 0
 # Function to get probable locked-out users
 function Get-ProbableLockedOutUsers {
@@ -41,8 +73,8 @@ function Get-ProbableLockedOutUsers {
             # Users who are locked out and badPwdCount is 0
             $lockedoutusersC = $probableLockedOutUsers | Where-Object {
                 #$_.LockedOut -eq $true -and
-                #$_.badPwdCount -eq 0
-                $_.badPwdCount -lt 3
+                $_.badPwdCount -eq 0
+                #$_.badPwdCount -lt 3
             }
 
             # The rest of the users
@@ -87,8 +119,14 @@ function Get-ProbableLockedOutUsers {
             1 {
                 Clear-Host
                 $jobs = @()
-
+                $failedUserIds = @()
+        
                 foreach ($user in $probableLockedOutUsers) {
+                    # Skip if the user ID is in the failedUserIds array
+                    if ($failedUserIds -contains $user.SamAccountName) {
+                        continue
+                    }
+        
                     $job = Start-Job -ScriptBlock {
                         param ($userId)
                         try {
@@ -97,15 +135,18 @@ function Get-ProbableLockedOutUsers {
                         } catch {
                             $errormsg = "Failed to unlock $userId. Error: $_"
                             Write-Host $errormsg -ForegroundColor White -BackgroundColor Red
+        
+                            # Add the failed user ID to the array
+                            $failedUserIds += $userId
                         }
                     } -ArgumentList $user.SamAccountName
-
+        
                     $jobs += $job
                 }
-
+        
                 # Wait for all jobs to complete
                 $jobs | Wait-Job | Out-Null
-
+        
                 # Receive and remove completed jobs without displaying job information
                 $jobs | ForEach-Object {
                     $result = Receive-Job -Job $_ | Out-Null
@@ -114,7 +155,7 @@ function Get-ProbableLockedOutUsers {
                         $unlockedUsersCount++
                     }
                 }
-
+        
                 Write-Host "$unlockedUsersCount user(s) unlocked."
             }
 
