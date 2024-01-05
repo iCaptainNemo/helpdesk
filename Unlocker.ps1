@@ -194,9 +194,11 @@ function Get-ProbableLockedOutUsers {
                 }
 
                 Write-Host "$unlockedUsersCount user(s) unlocked."
+
             }
             3 {
                 Clear-Host
+                
                 $jobs = @()
 
                 foreach ($user in $probableLockedOutUsers) {
@@ -345,6 +347,7 @@ function Get-ProbableLockedOutUsers {
                 # Set $restartScript to $false to exit the loop and restart the script
                 $restartScript = $false
             }
+
         }
     }
 
