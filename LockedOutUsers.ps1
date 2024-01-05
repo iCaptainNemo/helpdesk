@@ -82,6 +82,3 @@ do {
     Start-Sleep -Seconds ($refreshInterval * 60)
 
 } while ($true)
-
-Write-Host "Exiting the script. Press any key to close the console."
-$null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')

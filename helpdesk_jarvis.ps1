@@ -13,17 +13,10 @@ $helpdeskWorkFolder = Join-Path -Path $AdminUser.HomeDirectory -ChildPath "Helpd
 if (!(Test-Path -Path $helpdeskWorkFolder -PathType Container)) {
     New-Item -Path $helpdeskWorkFolder -ItemType Directory > $null
 }
-
-
-# Function to retrieve domain controllers
-function Get-DomainControllers {
-    return Get-ADDomainController -Filter *
-}
-
 # Function to get User ID with error handling
 function Get-UserId {
     while ($true) {
-        $userId = Read-Host "Enter User ID"
+        $userId = (Read-Host "Enter User ID").Replace(' ', '')
         try {
             Get-ADUser -Identity $userId -ErrorAction Stop | Out-Null
             return $userId
@@ -112,33 +105,37 @@ function Show-ADUserProperties {
         }
     }
 }
-# Function to parse log entry
-function Parse-LogEntry {
-    param (
-        [string]$logEntry
-    )
-
-    # Assuming $logEntry has the format "TAD062DT379527 Tue 12/19/2023 14:49:26.98"
-    $components = $logEntry -split ' '
-    $PossibleComputerName = $components[0]
-    $day = $components[1]
-    $date = $components[2]
-    $time = $components[3]
-
-    # Return parsed information
-    return @{
-        PossibleComputerName = $PossibleComputerName
-        Day = $day
-        Date = $date
-        Time = $time
-    }
-}
-
 # Function to display last 10 log entries with parsed information
 function Show-LastLogEntries {
     param (
         [string]$logFilePath
     )
+
+    # Function to parse log entry
+    function Parse-LogEntry {
+        param (
+            [string]$logEntry
+        )
+
+        # Assuming $logEntry has the format "TAD062DT379527 Tue 12/19/2023 14:49:26.98"
+        $components = $logEntry -split ' '
+        $PossibleComputerName = $components[0]
+        $day = $components[1]
+        $date = $components[2]
+        $time = $components[3]
+
+        # Return parsed information
+        return @{
+            PossibleComputerName = $PossibleComputerName
+            Day = $day
+            Date = $date
+            Time = $time
+        }
+    }
+
+    # Initialize $possibleComputers and $logTable as empty arrays
+    $possibleComputers = @()
+    $logTable = @()
 
     try {
         # Check if the log file exists
@@ -149,7 +146,10 @@ function Show-LastLogEntries {
             Write-Host "`n"
             foreach ($entry in $logEntries) {
                 $parsedInfo = Parse-LogEntry -logEntry $entry
-                Write-Host $($parsedInfo.PossibleComputerName)$($parsedInfo.Day)$($parsedInfo.Date)$($parsedInfo.Time)
+                # Add the PossibleComputerName to the $possibleComputers array
+                $possibleComputers += $parsedInfo.PossibleComputerName
+                # Add the log entry to the $logTable array
+                $logTable += "$($parsedInfo.PossibleComputerName) $($parsedInfo.Day) $($parsedInfo.Date) $($parsedInfo.Time)"
             }
         } else {
             Write-Host " No computer logs found" -ForegroundColor Yellow
@@ -158,25 +158,30 @@ function Show-LastLogEntries {
         # Write-Host "Error: $_" -ForegroundColor Red
         Write-Host "No computer logs found" -ForegroundColor Yellow
     }
+    # Return $possibleComputers and $logTable
+    return @{
+        PossibleComputers = $possibleComputers
+        LogTable = $logTable
+    }
 }
-
-# Function to unlock an AD account on all domain controllers in parallel
+# Function to unlock AD account on all domain controllers
 function Unlock-ADAccountOnAllDomainControllers {
     param (
         [string]$userId
     )
 
-    $DCList = Get-DomainControllers
-
-    $jobs = foreach ($targetDC in $DCList.Name) {
+    $dcList = Get-ADDomainController -Filter *
+    
+    $jobs = foreach ($targetDC in $dcList.Name) {
         Start-Job -ScriptBlock {
             param ($userId, $targetDC)
-            try {
-                Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorAction Stop
+            $error.Clear()
+            Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorAction SilentlyContinue -ErrorVariable unlockError
+            if ($unlockError) {
+                # Handle the error here. For example, you could write it to a log file.
+               # Write-Host ("Error unlocking in " + $targetDC) -BackgroundColor DarkRed
+            } else {
                 Write-Host ("Unlocked in " + $targetDC) -BackgroundColor DarkGreen
-            } catch {
-                $errormsg = "Failed to unlock $userId in $targetDC. Error: $_"
-                Write-Host $errormsg -ForegroundColor White -BackgroundColor Red
             }
         } -ArgumentList $userId, $targetDC
     }
@@ -184,7 +189,7 @@ function Unlock-ADAccountOnAllDomainControllers {
     # Wait for all jobs to complete
     $jobs | Wait-Job | Out-Null
 
-        # Receive and remove completed jobs without displaying job information
+    # Receive and remove completed jobs without displaying job information
     $jobs | ForEach-Object {
         Receive-Job -Job $_ | Out-Null
         Remove-Job -Job $_ | Out-Null
@@ -213,19 +218,38 @@ function Asset-Control {
     # Add a line break or additional Write-Host statements for space
     Write-Host "`n"  # This adds a line break
 
-    # Prompt for Computer Name
-    $computerName = Read-Host "Enter Computer Name"
+    $result = Show-LastLogEntries -logFilePath $logFilePath
+    $possibleComputers = $result.PossibleComputers
+
+    # Display possible computers as a numbered list
+    Write-Host "Possible Computers:"
+    for ($i = 0; $i -lt $possibleComputers.Count; $i++) {
+        Write-Host "$($i + 1). $($possibleComputers[$i])"
+    
+    }
+
+    # Prompt for Computer Name or number
+    $input = Read-Host "Enter Computer Name or number from the list above"
+
+        # Check if the user wants to cancel
+    if ($input -eq 'C' -or $input -eq 'c') {
+        Write-Host "Operation cancelled by user."
+        return
+    }
+    # Check if the input is a number and within the range of the list
+    if ($input -match '^\d+$' -and $input -le ($possibleComputers.Count - 1)) {
+        $computerName = $possibleComputers[[int]$input - 1]
+    } else {
+        $computerName = $input
+    }
 
     # Add a line break or additional Write-Host statements for space
     Write-Host "`n"  # This adds a line break
-
-# Get computer properties
-try {
-    $computer = Get-ADComputer $computerName -Properties MemberOf
-    if ($computer) {
-        Write-Host "Computer Properties for $($computerName):"
-
-        $memberOf = $computer.MemberOf -join ', '
+    # Get computer properties
+    try {
+        $computer = Get-ADComputer $computerName -Properties MemberOf
+        if ($computer) {
+            $memberOf = $computer.MemberOf -join ', '
 
         # Check if the required groups are present in MemberOf
         $isHSRemoteComputers = $memberOf -like '*HSRemoteComputers*'
@@ -249,8 +273,10 @@ try {
                 Write-Host "${propertyName}: ${propertyValue}" -ForegroundColor Red
             }
         }
+        #Line break for space
+        Write-Host "`n"
 
-    if ($properties.'Computer Reachable' -eq 'True' -and $computer.Domain -eq 'hs.gov') {
+    if ($properties.'Computer Reachable' -eq 'True' -and $currentDomain -eq 'hs.gov') {
         try {
             # Get LastBootUpTime using CIM instance
             $lastBootUpTime = Get-CimInstance -ClassName Win32_OperatingSystem -ComputerName $computerName | Select-Object -ExpandProperty LastBootUpTime
@@ -338,7 +364,7 @@ try {
                 if (Test-Path $sccmToolPath) {
                     try {
                         # Invoke SCCM remote tool
-                        Start-Process -FilePath $sccmToolPath $computerName -Wait
+                        Start-Process -FilePath $sccmToolPath $computerName
                         Write-Host "Remote Desktop launched for $computerName"
                     } catch {
                         Write-Host "Error launching SCCM Remote Tool: $_" -ForegroundColor Red
@@ -346,7 +372,7 @@ try {
                 } elseif (Test-Path $sccmToolPath2) {
                     try {
                         # Invoke SCCM remote tool (alternative path)
-                        Start-Process -FilePath $sccmToolPath2 $computerName -Wait
+                        Start-Process -FilePath $sccmToolPath2 $computerName
                         Write-Host "Remote Desktop launched for $computerName"
                     } catch {
                         Write-Host "Error launching SCCM Remote Tool: $_" -ForegroundColor Red
@@ -412,6 +438,11 @@ try {
                 # Back to main menu
                 return
             }
+            '00' {
+                # Set a flag to indicate that the script should be restarted
+                $global:restartScript = $true
+                break
+            }
             default {
                 Write-Host "Invalid choice. Please enter a valid option."
             }
@@ -468,6 +499,13 @@ function Main-Loop {
     )
 
     while ($true) {
+        # If the restart flag is set, perform the '0' action and restart the loop
+        if ($global:restartScript) {
+            $userId = $null
+            Clear-Host
+            $global:restartScript = $false
+            continue
+        }
         # Get AD properties for the provided User ID
         $adUser = Get-ADUserProperties -userId $userId
 
@@ -478,7 +516,9 @@ function Main-Loop {
         Write-Host "`n"  # This adds a line break
 
         # Display last 10 log entries
-        Show-LastLogEntries -logFilePath $logFilePath
+        $result = Show-LastLogEntries -logFilePath $logFilePath
+        $logTable = $result.LogTable
+        $logTable | Format-List
 
         # Add a line break or additional Write-Host statements for space
         Write-Host "`n"  # This adds a line break
