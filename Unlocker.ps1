@@ -132,12 +132,11 @@ function Get-ProbableLockedOutUsers {
                         try {
                             Unlock-ADAccount -Identity $userId -Confirm:$false
                             Write-Host ("User $userId unlocked.") -BackgroundColor DarkGreen
+                            return $true
                         } catch {
                             $errormsg = "Failed to unlock $userId. Error: $_"
                             Write-Host $errormsg -ForegroundColor White -BackgroundColor Red
-        
-                            # Add the failed user ID to the array
-                            $failedUserIds += $userId
+                            return $false
                         }
                     } -ArgumentList $user.SamAccountName
         
@@ -149,10 +148,16 @@ function Get-ProbableLockedOutUsers {
         
                 # Receive and remove completed jobs without displaying job information
                 $jobs | ForEach-Object {
-                    $result = Receive-Job -Job $_ | Out-Null
-                    Remove-Job -Job $_ | Out-Null
-                    if ($result -eq $null) {
+                    $job = $_
+                    $result = Receive-Job -Job $job
+                    Remove-Job -Job $job | Out-Null
+                    if ($result) {
                         $unlockedUsersCount++
+                    } else {
+                        # Ensure that the job has an argument before trying to access it
+                        if ($job.Command.Arguments) {
+                            $failedUserIds += $job.Command.Arguments[0]
+                        }
                     }
                 }
         
