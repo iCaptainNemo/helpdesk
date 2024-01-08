@@ -596,6 +596,14 @@ function Main-Loop {
             '3' {
                 # Asset Control submenu
                 Asset-Control -userId $userId
+        
+                # Check if the script should be restarted
+                if ($global:restartScript) {
+                    $userId = $null
+                    Clear-Host
+                    $global:restartScript = $false
+                    continue
+                }
             }
         }
     }
