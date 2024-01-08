@@ -4,7 +4,23 @@ function Get-CurrentTime {
     Get-Date -Format "yyyy-MM-dd hh:mm:ss tt"
 }
 
-#Login-PowerBI
+function Get-ProbableLockedOutUsers {
+    # Search for all locked-out user accounts
+    $lockedOutUsers = Search-ADAccount -LockedOut -UsersOnly
+
+    # Iterate through all locked-out users and get additional AD properties
+    $probableLockedOutUsers = foreach ($lockedOutUser in $lockedOutUsers) {
+        Get-ADUser -Identity $lockedOutUser.SamAccountName -Properties *
+            }
+
+            # Filter locked-out users whose lockoutTime is within X days of the current date, Enabled is True, PasswordExpired is False, and badPwdCount is greater than 0
+            $probableLockedOutUsers = $probableLockedOutUsers | Where-Object {
+                $_.AccountlockoutTime -ge (Get-Date).AddDays(-1) -and
+                $_.Enabled -eq $true
+            }
+
+            return $probableLockedOutUsers
+        }
 
 
 # Get the current user
@@ -35,46 +51,52 @@ do {
     # Display the restart count
     Display-RestartCount
 
-    # Search for all locked-out user accounts
-    $lockedOutUsers = Search-ADAccount -LockedOut -UsersOnly
-
     # Iterate through all locked-out users and get additional AD properties
     $probableLockedOutUsers = foreach ($lockedOutUser in $lockedOutUsers) {
         $adUser = Get-ADUser -Identity $lockedOutUser.SamAccountName -Properties *
         $adUser
     }
 
-    # Filter locked-out users whose lockoutTime is within 2 days of the current date and Enabled is True
-    $probableLockedOutUsers = $probableLockedOutUsers | Where-Object {
-        $_.AccountlockoutTime -ge (Get-Date).AddDays(-1) -and
-        $_.Enabled -eq $true
-    }
+    # Get probable locked-out users
+    $probableLockedOutUsers = Get-ProbableLockedOutUsers
 
-    # Post data to Power BI API for each locked-out user
-#    foreach ($user in $probableLockedOutUsers) {
-#        $payload = @{
-#            "AdminID" = $AdminUser.SamAccountName  # Assuming SamAccountName is the AdminID, modify as needed
-#            "UserID" = $user.SamAccountName
-#            "Enabled" = $user.Enabled
-#            "Locked" = $user.LockedOut
-#            "PasswordExpired" = $user.PasswordExpired
-#            "BadPasswords" = $user.badPwdCount
-#            "AccountLockoutTime" = $user.AccountLockoutTime
-#        }
-#        # Power BI API endpoint
-#        $endpoint = "https://api.powerbigov.us/beta/31399e53-6a93-49aa-8cae-c929f9d4a91d/datasets/a08cf34a-60d2-4b7f-8632-83ac4780364c/rows?key=95UTbh7eub3juY%2Fe53DCZ%2Ba1qOEudlWngNjNtmSdEcF%2FRfXzR97Y0s13Ys1ySmTkAt%2BXP3PCLko%2BleYk%2FtOlDA%3D%3D"
+        # Users who are locked out and password is expired
+        $lockedoutusersB = $probableLockedOutUsers | Where-Object {
+            #$_.LockedOut -eq $true -and
+            $_.PasswordExpired -eq $true
+        }
 
-#        Invoke-RestMethod -Method Post -Uri $endpoint -Body (ConvertTo-Json @($payload))
-#git    }
+        # Users who are locked out and badPwdCount is 0 or null
+        $lockedoutusersC = $probableLockedOutUsers | Where-Object {
+            #$_.LockedOut -eq $true -and
+            ($_.badPwdCount -eq 0 -or $_.badPwdCount -eq $null)
+        }
 
-    # Display the properties of probable locked-out users in a separate table
+        # The rest of the users
+        $lockedoutusersA = $probableLockedOutUsers | Where-Object {
+            $_ -notin $lockedoutusersB -and
+            $_ -notin $lockedoutusersC
+        }
+    # Display the properties of probable locked-out users
     if ($probableLockedOutUsers.Count -gt 0) {
-        Write-Host "Locked-out users within the last 24 hours:"
-        $probableLockedOutUsers | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, Enabled, LockedOut, PasswordExpired, badPwdCount, AccountLockoutTime -AutoSize
+        # Write-Host "Probable locked-out users within the last 24 hours:"
+        # $probableLockedOutUsers | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, Enabled, LockedOut, PasswordExpired, badPwdCount, AccountLockoutTime -AutoSize
     } else {
         Write-Host "No recent locked-out users found."
     }
-
+    # Display the properties of users in $lockedoutusersA, $lockedoutusersB, and $lockedoutusersC in separate tables
+    if ($lockedoutusersA.Count -gt 0) {
+        Write-Host "Locked-out users within the last 24 hours:"
+        $lockedoutusersA | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, Enabled, LockedOut, PasswordExpired, badPwdCount, AccountLockoutTime -AutoSize
+    }
+    if ($lockedoutusersB.Count -gt 0) {
+        Write-Host "Locked-out users Password Expired within the last 24 hours:"
+        $lockedoutusersB | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, Enabled, LockedOut, PasswordExpired, badPwdCount, AccountLockoutTime -AutoSize
+    }
+    if ($lockedoutusersC.Count -gt 0) {
+        Write-Host "Locked-out users Bad password attempts < 3 within the last 24 hours:"
+        $lockedoutusersC | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, Enabled, LockedOut, PasswordExpired, badPwdCount, AccountLockoutTime -AutoSize
+    }
     # Display the countdown message
     Write-Host "Refreshing in $refreshInterval minute(s)..."
 
