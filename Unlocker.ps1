@@ -70,11 +70,10 @@ function Get-ProbableLockedOutUsers {
                 $_.PasswordExpired -eq $true
             }
 
-            # Users who are locked out and badPwdCount is 0
+            # Users who are locked out and badPwdCount is 0 or null
             $lockedoutusersC = $probableLockedOutUsers | Where-Object {
                 #$_.LockedOut -eq $true -and
-                $_.badPwdCount -eq 0
-                #$_.badPwdCount -lt 3
+                ($_.badPwdCount -eq 0 -or $_.badPwdCount -eq $null)
             }
 
             # The rest of the users
