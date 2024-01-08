@@ -26,6 +26,73 @@ function Get-ProbableLockedOutUsers {
 # Get the current user with specific properties
 $AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name
 
+#Unlock users from filtered group
+function Unlock-Users {
+    param (
+        [Parameter(Mandatory=$true)]
+        [array]$lockedoutusers
+    )
+
+    Clear-Host
+
+    $jobs = @()
+    $failedUserIds = @()
+
+    foreach ($user in $lockedoutusers) {
+        # Skip if the user ID is in the failedUserIds array
+        if ($failedUserIds -contains $user.SamAccountName) {
+            continue
+        }
+
+        $job = Start-Job -ScriptBlock {
+            param ($user)
+
+            function Unlock-ADAccountOnAllDomainControllers {
+                param (
+                    [string]$userId
+                )
+
+                $dcList = Get-ADDomainController -Filter *
+                foreach ($targetDC in $dcList.Name) {
+                    Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorAction SilentlyContinue
+                }
+            }
+
+            try {
+                Unlock-ADAccountOnAllDomainControllers -userId $user.SamAccountName
+                Write-Host ("User $($user.SamAccountName) unlocked.") -BackgroundColor DarkGreen
+                return $true
+            } catch {
+                $errormsg = "Failed to unlock $($user.SamAccountName). Error: $_"
+                Write-Host $errormsg -ForegroundColor White -BackgroundColor Red
+                return $false
+            }
+        } -ArgumentList $user
+
+        $jobs += $job
+    }
+
+    # Wait for all jobs to complete
+    $jobs | Wait-Job | Out-Null
+
+    # Receive and remove completed jobs without displaying job information
+    $jobs | ForEach-Object {
+        $job = $_
+        $result = Receive-Job -Job $job
+        Remove-Job -Job $job | Out-Null
+        if ($result) {
+            $unlockedUsersCount++
+        } else {
+            # Ensure that the job has an argument before trying to access it
+            if ($job.Command.Arguments) {
+                $failedUserIds += $job.Command.Arguments[0].SamAccountName
+            }
+        }
+    }
+
+    Write-Host "$unlockedUsersCount user(s) unlocked."
+}
+
 $restartScript = $true
 
 while ($restartScript) {
@@ -67,15 +134,15 @@ while ($restartScript) {
         $lockedoutusersB | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, Enabled, LockedOut, PasswordExpired, badPwdCount, AccountLockoutTime -AutoSize
     }
     if ($lockedoutusersC.Count -gt 0) {
-        Write-Host "Locked-out users No Bad password attempts within the last 24 hours:"
+        Write-Host "Locked-out users Bad password attempts < 3 within the last 24 hours:"
         $lockedoutusersC | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, Enabled, LockedOut, PasswordExpired, badPwdCount, AccountLockoutTime -AutoSize
     }
 
     # Display the menu for unlocking accounts
     Write-Host "Unlock Account Menu:"
     Write-Host "1. Unlock All Users"
-    Write-Host "2. Unlock All With Password Expired"
-    Write-Host "3. Unlock Users BP = 0"
+    Write-Host "2. Unlock All With Password Expired Only"
+    Write-Host "3. Unlock Users BP < 3"
     Write-Host "4. Auto Unlock Users With Password Expired"
     Write-Host "5. Auto Unlock Users BP = 0"
     Write-Host "0. Exit"
@@ -86,172 +153,17 @@ while ($restartScript) {
     switch ($choice) {
         1 {
             Clear-Host
-            $jobs = @()
-            $failedUserIds = @()
-    
-            foreach ($user in $probableLockedOutUsers) {
-                # Skip if the user ID is in the failedUserIds array
-                if ($failedUserIds -contains $user.SamAccountName) {
-                    continue
-                }
-    
-                $job = Start-Job -ScriptBlock {
-                    param ($userId)
-                    try {
-                        Unlock-ADAccount -Identity $userId -Confirm:$false
-                        Write-Host ("User $userId unlocked.") -BackgroundColor DarkGreen
-                        return $true
-                    } catch {
-                        $errormsg = "Failed to unlock $userId. Error: $_"
-                        Write-Host $errormsg -ForegroundColor White -BackgroundColor Red
-                        return $false
-                    }
-                } -ArgumentList $user.SamAccountName
-    
-                $jobs += $job
-            }
-    
-            # Wait for all jobs to complete
-            $jobs | Wait-Job | Out-Null
-    
-            # Receive and remove completed jobs without displaying job information
-            $jobs | ForEach-Object {
-                $job = $_
-                $result = Receive-Job -Job $job
-                Remove-Job -Job $job | Out-Null
-                if ($result) {
-                    $unlockedUsersCount++
-                } else {
-                    # Ensure that the job has an argument before trying to access it
-                    if ($job.Command.Arguments) {
-                        $failedUserIds += $job.Command.Arguments[0]
-                    }
-                }
-            }
-    
-            Write-Host "$unlockedUsersCount user(s) unlocked."
+            Unlock-Users -lockedoutusers $lockedoutusersA
         }
 
         2 {
             Clear-Host
-        
-            $jobs = @()
-            $failedUserIds = @()
-        
-            foreach ($user in $lockedoutusersB) {
-                # Skip if the user ID is in the failedUserIds array
-                if ($failedUserIds -contains $user.SamAccountName) {
-                    continue
-                }
-        
-                $job = Start-Job -ScriptBlock {
-                    param ($user)
-        
-                    function Unlock-ADAccountOnAllDomainControllers {
-                        param (
-                            [string]$userId
-                        )
-        
-                        $dcList = Get-ADDomainController -Filter *
-                        foreach ($targetDC in $dcList.Name) {
-                            Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorAction SilentlyContinue
-                        }
-                    }
-        
-                    try {
-                        Unlock-ADAccountOnAllDomainControllers -userId $user.SamAccountName
-                        Write-Host ("User $($user.SamAccountName) unlocked.") -BackgroundColor DarkGreen
-                        return $true
-                    } catch {
-                        $errormsg = "Failed to unlock $($user.SamAccountName). Error: $_"
-                        Write-Host $errormsg -ForegroundColor White -BackgroundColor Red
-                        return $false
-                    }
-                } -ArgumentList $user
-        
-                $jobs += $job
-            }
-        
-            # Wait for all jobs to complete
-            $jobs | Wait-Job | Out-Null
-        
-            # Receive and remove completed jobs without displaying job information
-            $jobs | ForEach-Object {
-                $job = $_
-                $result = Receive-Job -Job $job
-                Remove-Job -Job $job | Out-Null
-                if ($result) {
-                    $unlockedUsersCount++
-                } else {
-                    # Ensure that the job has an argument before trying to access it
-                    if ($job.Command.Arguments) {
-                        $failedUserIds += $job.Command.Arguments[0].SamAccountName
-                    }
-                }
-            }
-        
-            Write-Host "$unlockedUsersCount user(s) unlocked."
+            Unlock-Users -lockedoutusers $lockedoutusersB
         }
         3 {
             #Unlock all users with bad password count = 0 or Null
             Clear-Host
-        
-            $jobs = @()
-            $failedUserIds = @()
-        
-            foreach ($user in $lockedoutusersC) {
-                # Skip if the user ID is in the failedUserIds array
-                if ($failedUserIds -contains $user.SamAccountName) {
-                    continue
-                }
-        
-                $job = Start-Job -ScriptBlock {
-                    param ($user)
-        
-                    function Unlock-ADAccountOnAllDomainControllers {
-                        param (
-                            [string]$userId
-                        )
-        
-                        $dcList = Get-ADDomainController -Filter *
-                        foreach ($targetDC in $dcList.Name) {
-                            Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorAction SilentlyContinue
-                        }
-                    }
-        
-                    try {
-                        Unlock-ADAccountOnAllDomainControllers -userId $user.SamAccountName
-                        Write-Host ("User $($user.SamAccountName) unlocked.") -BackgroundColor DarkGreen
-                        return $true
-                    } catch {
-                        $errormsg = "Failed to unlock $($user.SamAccountName). Error: $_"
-                        Write-Host $errormsg -ForegroundColor White -BackgroundColor Red
-                        return $false
-                    }
-                } -ArgumentList $user
-        
-                $jobs += $job
-            }
-        
-            # Wait for all jobs to complete
-            $jobs | Wait-Job | Out-Null
-        
-            # Receive and remove completed jobs without displaying job information
-            $jobs | ForEach-Object {
-                $job = $_
-                $result = Receive-Job -Job $job
-                Remove-Job -Job $job | Out-Null
-                if ($result) {
-                    $unlockedUsersCount++
-                } else {
-                    # Ensure that the job has an argument before trying to access it
-                    if ($job.Command.Arguments) {
-                        $failedUserIds += $job.Command.Arguments[0].SamAccountName
-                    }
-                }
-            }
-        
-            Write-Host "$unlockedUsersCount user(s) unlocked."
+            Unlock-Users -lockedoutusers $lockedoutusersC
         }
         4 {
             # Prompt user for refresh interval
