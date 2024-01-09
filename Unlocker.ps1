@@ -26,7 +26,6 @@ function Get-ProbableLockedOutUsers {
 # Get the current user with specific properties
 $AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name
 
-#Unlock users from filtered group
 function Unlock-Users {
     param (
         [Parameter(Mandatory=$true)]
@@ -60,11 +59,8 @@ function Unlock-Users {
 
             try {
                 Unlock-ADAccountOnAllDomainControllers -userId $user.SamAccountName
-                Write-Host ("User $($user.SamAccountName) unlocked.") -BackgroundColor DarkGreen
-                return $true
+                return $user.SamAccountName
             } catch {
-                $errormsg = "Failed to unlock $($user.SamAccountName). Error: $_"
-                Write-Host $errormsg -ForegroundColor White -BackgroundColor Red
                 return $false
             }
         } -ArgumentList $user
@@ -80,17 +76,19 @@ function Unlock-Users {
         $job = $_
         $result = Receive-Job -Job $job
         Remove-Job -Job $job | Out-Null
-        if ($result) {
-            $unlockedUsersCount++
+        if ($result -ne $false) {
+            Write-Host ("User $result unlocked.") -BackgroundColor DarkGreen
         } else {
             # Ensure that the job has an argument before trying to access it
             if ($job.Command.Arguments) {
-                $failedUserIds += $job.Command.Arguments[0].SamAccountName
+                $failedUser = $job.Command.Arguments[0].SamAccountName
+                $failedUserIds += $failedUser
+                Write-Host "Failed to unlock $failedUser." -ForegroundColor White -BackgroundColor Red
             }
         }
     }
 
-    Write-Host "$unlockedUsersCount user(s) unlocked."
+    Write-Host "$($failedUserIds.Count) user(s) failed to unlock."
 }
 
 $restartScript = $true
@@ -144,7 +142,7 @@ while ($restartScript) {
     Write-Host "2. Unlock All With Password Expired Only"
     Write-Host "3. Unlock Users BP < 3"
     Write-Host "4. Auto Unlock Users With Password Expired"
-    Write-Host "5. Auto Unlock Users BP = 0"
+    Write-Host "5. Auto Unlock Users BP < 3"
     Write-Host "0. Exit"
 
     $choice = Read-Host "Select an option"
@@ -152,20 +150,23 @@ while ($restartScript) {
     # Process user's choice
     switch ($choice) {
         1 {
-            Clear-Host
+            # Unlock all users
+            #Clear-Host
             Unlock-Users -lockedoutusers $lockedoutusersA
         }
 
         2 {
-            Clear-Host
+            # Unlock all users with password expired
+            #Clear-Host
             Unlock-Users -lockedoutusers $lockedoutusersB
         }
         3 {
             #Unlock all users with bad password count = 0 or Null
-            Clear-Host
+            #Clear-Host
             Unlock-Users -lockedoutusers $lockedoutusersC
         }
         4 {
+            # Auto Unlock Users With Password Expired
             # Prompt user for refresh interval
             do {
                 $refreshInterval = Read-Host "Enter the refresh interval in minutes (e.g., 1, 5, 10):"
@@ -177,50 +178,11 @@ while ($restartScript) {
                 # Clear-Host
                 # Write-Host "Auto Unlocking every $refreshInterval minutes. Press Ctrl+C to stop."
                 Start-Sleep -Seconds (60 * $refreshInterval)
-
-                # Get probable locked-out users
-                $probableLockedOutUsers = Get-ProbableLockedOutUsers
-
-                # Auto Unlock logic similar to Option 1
-                # Clear-Host
-                $unlockedUsersCount = 0
-                $jobs = @()
-
-                foreach ($user in $probableLockedOutUsers) {
-                    $job = Start-Job -ScriptBlock {
-                        param ($userId)
-                        $user = Get-ADUser -Identity $userId -Properties LockedOut, PasswordExpired
-                        if ($user.LockedOut -and $user.PasswordExpired) {
-                            try {
-                                Unlock-ADAccount -Identity $userId -Confirm:$false
-                                Write-Host ("User $userId unlocked.") -BackgroundColor DarkGreen
-                            } catch {
-                                $errormsg = "Failed to unlock $userId. Error: $_"
-                                Write-Host $errormsg -ForegroundColor White -BackgroundColor Red
-                            }
-                        }
-                    } -ArgumentList $user.SamAccountName
-
-                    $jobs += $job
-                }
-
-                # Wait for all jobs to complete
-                $jobs | Wait-Job | Out-Null
-
-                # Receive and remove completed jobs without displaying job information
-                $jobs | ForEach-Object {
-                    $result = Receive-Job -Job $_ | Out-Null
-                    Remove-Job -Job $_ | Out-Null
-                    if ($result -eq $null) {
-                        $unlockedUsersCount++
-                    }
-                }
-
-                Write-Host "$unlockedUsersCount user(s) unlocked."
-
+                Unlock-Users -lockedoutusers $lockedoutusersB
             } while ($true)
         }
         5 {
+            # Auto Unlock Users BP < 3
             # Prompt user for refresh interval
             do {
                 $refreshInterval = Read-Host "Enter the refresh interval in minutes (e.g., 1, 5, 10):"
@@ -232,46 +194,7 @@ while ($restartScript) {
                 # Clear-Host
                 # Write-Host "Auto Unlocking every $refreshInterval minutes. Press Ctrl+C to stop."
                 Start-Sleep -Seconds (60 * $refreshInterval)
-
-                # Get probable locked-out users
-                $probableLockedOutUsers = Get-ProbableLockedOutUsers
-
-                # Auto Unlock logic similar to Option 1
-                # Clear-Host
-                $jobs = @()
-
-                foreach ($user in $probableLockedOutUsers) {
-                    $job = Start-Job -ScriptBlock {
-                        param ($userId)
-                        $user = Get-ADUser -Identity $userId -Properties LockedOut, BadPwdCount
-                        if ($user.LockedOut -and $user.BadPwdCount -eq 0) {
-                            try {
-                                Unlock-ADAccount -Identity $userId -Confirm:$false
-                                Write-Host ("User $userId unlocked.") -BackgroundColor DarkGreen
-                            } catch {
-                                $errormsg = "Failed to unlock $userId. Error: $_"
-                                Write-Host $errormsg -ForegroundColor White -BackgroundColor Red
-                            }
-                        }
-                    } -ArgumentList $user.SamAccountName
-
-                    $jobs += $job
-                }
-
-                # Wait for all jobs to complete
-                $jobs | Wait-Job | Out-Null
-
-                # Receive and remove completed jobs without displaying job information
-                $jobs | ForEach-Object {
-                    $result = Receive-Job -Job $_ | Out-Null
-                    Remove-Job -Job $_ | Out-Null
-                    if ($result -eq $null) {
-                        $unlockedUsersCount++
-                    }
-                }
-
-                Write-Host "$unlockedUsersCount user(s) unlocked."
-
+                Unlock-Users -lockedoutusers $lockedoutusersC
             } while ($true)
         }
 
