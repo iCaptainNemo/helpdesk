@@ -10,13 +10,27 @@ cd /d %~dp0
 
 REM Add the current directory as a safe directory
 git config --global --add safe.directory "%cd%"
+if ErrorLevel 1 (
+    echo Something bad happened...
+    pause
+    exit /b
+)
 
 if not exist .git (
     echo Initializing Git repository...
     git init
-    git remote add main https://github.com/iCaptainNemo/helpdesk.git
+    if ErrorLevel 1 (
+        echo Something bad happened...
+        pause
+        exit /b
+    )
 )
 
-echo Pulling latest changes from origin/main...
-git pull origin main
-echo Success. Hit 
+echo Pulling latest changes...
+git pull https://github.com/iCaptainNemo/helpdesk.git
+if ErrorLevel 1 (
+    echo Something bad happened...
+    pause
+    exit /b
+)
+echo Success. Hit any key to close this window.
