@@ -107,7 +107,7 @@ while ($restartScript) {
         # Users who are locked out and badPwdCount is 0 or null
         $lockedoutusersC = $probableLockedOutUsers | Where-Object {
             #$_.LockedOut -eq $true -and
-            ($_.badPwdCount -eq 0 -or $_.badPwdCount -eq $null)
+            ($_.badPwdCount -lt 3 -or $_.badPwdCount -eq $null)
         }
 
         # The rest of the users
