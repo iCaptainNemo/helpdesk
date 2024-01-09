@@ -533,6 +533,14 @@ function Main-Loop {
 
         switch ($choice) {
             '0' {
+                # If the restart flag is set, perform the '0' action and restart the loop
+                if ($global:restartScript) {
+                    $userId = $null
+                    Clear-Host
+                    $global:restartScript = $false
+                    return
+                }
+        
                 # Clear the console, reset User ID, and restart the script
                 $userId = $null
                 Clear-Host
