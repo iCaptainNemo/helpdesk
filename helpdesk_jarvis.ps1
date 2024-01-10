@@ -276,39 +276,39 @@ function Asset-Control {
         #Line break for space
         Write-Host "`n"
 
-    if ($properties.'Computer Reachable' -eq 'True' -and $currentDomain -eq 'hs.gov') {
-        try {
-            # Get LastBootUpTime using CIM instance
-            $lastBootUpTime = Get-CimInstance -ClassName Win32_OperatingSystem -ComputerName $computerName | Select-Object -ExpandProperty LastBootUpTime
+    try {
+        # Get LastBootUpTime using CIM instance
+        $lastBootUpTime = Get-CimInstance -ClassName Win32_OperatingSystem -ComputerName $computerName -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LastBootUpTime
+    
+        # Check if $lastBootUpTime is not null before trying to calculate $uptime
+        if ($null -ne $lastBootUpTime) {
             # Calculate the uptime
             $uptime = (Get-Date) - $lastBootUpTime
-
-            # Display LastBootUpTime with color coding
             Write-Host "Last Boot Up Time: $lastBootUpTime"
-
-            # Color coding for computer uptime
-            if ($uptime.TotalDays -gt 5) {
-                Write-Host "Uptime: More than 5 days" -ForegroundColor Red
-            } elseif ($uptime.TotalDays -gt 3) {
-                Write-Host "Uptime: More than 3 days" -ForegroundColor Yellow
-            } else {
-                Write-Host "Uptime: Less than or equal to 3 days" -ForegroundColor Green
-            }
-        } catch {
-            if ($_.Exception.Message -like "*WinRM cannot complete the operation*") {
-                Write-Host "Error: Unable to connect to the computer. Please check the computer name, network connection, and firewall settings."
-            } else {
-                Write-Host "Error occurred while getting LastBootUpTime: $_"
-            }
-            return
+        } else {
+            throw
         }
+         } catch {
+        $uptime = "Unable to get uptime, an error occurred"
+        }
+    # Color coding for computer uptime
+    if ($uptime -is [TimeSpan]) {
+        if ($uptime.TotalDays -gt 5) {
+            Write-Host "Uptime: More than 5 days" -ForegroundColor Red
+        } elseif ($uptime.TotalDays -gt 3) {
+            Write-Host "Uptime: More than 3 days" -ForegroundColor Yellow
+        } else {
+            Write-Host "Uptime: Less than or equal to 3 days" -ForegroundColor Green
+        }
+    } else {
+        Write-Host $uptime -ForegroundColor Red
     }
     } else {
         Write-Host "Computer not found: $computerName" -ForegroundColor Red
         return
     }
     } catch {
-        Write-Host "Error retrieving computer properties: $_" -ForegroundColor Red
+        Write-Host "Error retrieving computer properties" -ForegroundColor Red
         return
     }
 
