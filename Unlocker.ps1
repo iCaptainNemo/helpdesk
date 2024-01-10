@@ -19,8 +19,29 @@ function Get-ProbableLockedOutUsers {
                 $_.AccountlockoutTime -ge (Get-Date).AddDays(-1) -and
                 $_.Enabled -eq $true
             }
-
-            return $probableLockedOutUsers
+            # Users who are locked out and password is expired
+            $lockedoutusersB = $probableLockedOutUsers | Where-Object {
+                #$_.LockedOut -eq $true -and
+                $_.PasswordExpired -eq $true
+            }
+    
+            # Users who are locked out and badPwdCount is 0 or null
+            $lockedoutusersC = $probableLockedOutUsers | Where-Object {
+                #$_.LockedOut -eq $true -and
+                ($_.badPwdCount -lt 3 -or $_.badPwdCount -eq $null)
+            }
+    
+            # The rest of the users
+            $lockedoutusersA = $probableLockedOutUsers | Where-Object {
+                $_ -notin $lockedoutusersB -and
+                $_ -notin $lockedoutusersC
+            }
+            return @{
+                'ProbableLockedOutUsers' = $probableLockedOutUsers
+                'LockedOutUsersA' = $lockedoutusersA
+                'LockedOutUsersB' = $lockedoutusersB
+                'LockedOutUsersC' = $lockedoutusersC
+            }
         }
 
 # Get the current user with specific properties
@@ -96,32 +117,12 @@ $restartScript = $true
 while ($restartScript) {
     Clear-Host
     # Get probable locked-out users
-    $probableLockedOutUsers = Get-ProbableLockedOutUsers
+    $result = Get-ProbableLockedOutUsers
+    $probableLockedOutUsers = $result.ProbableLockedOutUsers
+    $lockedoutusersA = $result.LockedOutUsersA
+    $lockedoutusersB = $result.LockedOutUsersB
+    $lockedoutusersC = $result.LockedOutUsersC
 
-        # Users who are locked out and password is expired
-        $lockedoutusersB = $probableLockedOutUsers | Where-Object {
-            #$_.LockedOut -eq $true -and
-            $_.PasswordExpired -eq $true
-        }
-
-        # Users who are locked out and badPwdCount is 0 or null
-        $lockedoutusersC = $probableLockedOutUsers | Where-Object {
-            #$_.LockedOut -eq $true -and
-            ($_.badPwdCount -lt 3 -or $_.badPwdCount -eq $null)
-        }
-
-        # The rest of the users
-        $lockedoutusersA = $probableLockedOutUsers | Where-Object {
-            $_ -notin $lockedoutusersB -and
-            $_ -notin $lockedoutusersC
-        }
-    # Display the properties of probable locked-out users
-    if ($probableLockedOutUsers.Count -gt 0) {
-        # Write-Host "Probable locked-out users within the last 24 hours:"
-        # $probableLockedOutUsers | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, Enabled, LockedOut, PasswordExpired, badPwdCount, AccountLockoutTime -AutoSize
-    } else {
-        Write-Host "No recent locked-out users found."
-    }
     # Display the properties of users in $lockedoutusersA, $lockedoutusersB, and $lockedoutusersC in separate tables
     if ($lockedoutusersA.Count -gt 0) {
         Write-Host "Locked-out users within the last 24 hours:"
@@ -135,6 +136,7 @@ while ($restartScript) {
         Write-Host "Locked-out users Bad password attempts < 3 within the last 24 hours:"
         $lockedoutusersC | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, Enabled, LockedOut, PasswordExpired, badPwdCount, AccountLockoutTime -AutoSize
     }
+
 
     # Display the menu for unlocking accounts
     Write-Host "Unlock Account Menu:"
