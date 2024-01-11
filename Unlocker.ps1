@@ -125,11 +125,11 @@ while ($restartScript) {
     Clear-Host
      # Display the current time
      $currentTime = Get-CurrentTime
-     
-    #Line break for space
-    Write-Host "`n"
-
      Write-Host "Current Time: $currentTime"
+
+     #Line break for space
+    Write-Host "`n"
+    
      Write-Host "Unlocked Users Count: $unlockedCount"  -ForegroundColor Green
 
     # Get probable locked-out users
@@ -163,7 +163,7 @@ while ($restartScript) {
 
      #Line break for space
      Write-Host "`n"
-     
+
     # Display the menu for unlocking accounts
     Write-Host "Unlock Account Menu:"
     Write-Host "1. Unlock All Users"
