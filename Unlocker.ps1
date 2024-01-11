@@ -1,4 +1,6 @@
-﻿Import-Module ActiveDirectory
+﻿Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope CurrentUser
+
+Import-Module ActiveDirectory
 
 ## Get the current user with specific properties
 $AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name, HomeDirectory
@@ -212,7 +214,11 @@ while ($restartScript) {
                $lockedoutusersA = $result.LockedOutUsersA
                $lockedoutusersB = $result.LockedOutUsersB
                $lockedoutusersC = $result.LockedOutUsersC
+               if ($lockedoutusersB -ne $null) {
                 $unlockedCount += Unlock-Users -lockedoutusers $lockedoutusersB
+            } else {
+                Write-Host "No Users to unlock"
+            }
             } while ($true)
         }
         5 {
@@ -235,7 +241,11 @@ while ($restartScript) {
                 $lockedoutusersA = $result.LockedOutUsersA
                 $lockedoutusersB = $result.LockedOutUsersB
                 $lockedoutusersC = $result.LockedOutUsersC
-                $unlockedCount += Unlock-Users -lockedoutusers $lockedoutusersC
+                if ($lockedoutusersC -ne $null) {
+                    $unlockedCount += Unlock-Users -lockedoutusers $lockedoutusersC
+                } else {
+                    Write-Host "No Users to unlock"
+                }
             } while ($true)
         }
 
