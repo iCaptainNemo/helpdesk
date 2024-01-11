@@ -10,9 +10,12 @@ function Get-CurrentTime {
 }
 
 $unlockedUsersCount = 0
+
 # Function to get probable locked-out users
 function Get-ProbableLockedOutUsers {
     # Search for all locked-out user accounts
+    $lockedOutUsers = $null
+    $probableLockedOutUsers = $null
     $lockedOutUsers = Search-ADAccount -LockedOut -UsersOnly
 
     # Iterate through all locked-out users and get additional AD properties
