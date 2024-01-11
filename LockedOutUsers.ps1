@@ -87,15 +87,15 @@ do {
     # Display the properties of users in $lockedoutusersA, $lockedoutusersB, and $lockedoutusersC in separate tables
     if ($lockedoutusersA.Count -gt 0) {
         Write-Host "Locked-out users within the last 24 hours:"
-        $lockedoutusersA | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, Enabled, LockedOut, PasswordExpired, badPwdCount, AccountLockoutTime -AutoSize
+        $lockedoutusersA | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, badPwdCount, AccountLockoutTime -AutoSize
     }
     if ($lockedoutusersB.Count -gt 0) {
         Write-Host "Locked-out users Password Expired within the last 24 hours:"
-        $lockedoutusersB | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, Enabled, LockedOut, PasswordExpired, badPwdCount, AccountLockoutTime -AutoSize
+        $lockedoutusersB | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, badPwdCount, AccountLockoutTime -AutoSize
     }
     if ($lockedoutusersC.Count -gt 0) {
         Write-Host "Locked-out users Bad password attempts < 3 within the last 24 hours:"
-        $lockedoutusersC | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, Enabled, LockedOut, PasswordExpired, badPwdCount, AccountLockoutTime -AutoSize
+        $lockedoutusersC | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, badPwdCount, AccountLockoutTime -AutoSize
     }
     # Display the countdown message
     Write-Host "Refreshing in $refreshInterval minute(s)..."

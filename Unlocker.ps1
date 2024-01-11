@@ -161,7 +161,7 @@ while ($restartScript) {
     
     if ($lockedoutusersC.Count -gt 0) {
         Write-Host "Locked-out users Bad password attempts < 3 within the last 24 hours:"
-        $lockedoutusersC | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, Enabled, badPwdCount, AccountLockoutTime -AutoSize
+        $lockedoutusersC | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, badPwdCount, AccountLockoutTime -AutoSize
         $noUsersToUnlock = $false
     }
     
