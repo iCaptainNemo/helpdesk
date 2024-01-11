@@ -132,9 +132,6 @@ while ($restartScript) {
      Write-Host "Current Time: $currentTime"
      Write-Host "Unlocked Users Count: $unlockedCount"  -ForegroundColor Green
 
-    #Line break for space
-    Write-Host "`n"
-    
     # Get probable locked-out users
     $result = Get-ProbableLockedOutUsers
     $probableLockedOutUsers = $result.ProbableLockedOutUsers
@@ -164,7 +161,9 @@ while ($restartScript) {
         Write-Host "No locked users with bad password attempts < 3 within the last 24 hours." -ForegroundColor Green
     }
 
-
+     #Line break for space
+     Write-Host "`n"
+     
     # Display the menu for unlocking accounts
     Write-Host "Unlock Account Menu:"
     Write-Host "1. Unlock All Users"
