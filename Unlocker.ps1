@@ -3,6 +3,10 @@
 ## Get the current user with specific properties
 $AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name, HomeDirectory
 
+function Get-CurrentTime {
+    Get-Date -Format "yyyy-MM-dd hh:mm:ss tt"
+}
+
 $unlockedUsersCount = 0
 # Function to get probable locked-out users
 function Get-ProbableLockedOutUsers {
@@ -57,6 +61,7 @@ function Unlock-Users {
 
     $jobs = @()
     $failedUserIds = @()
+    $unlockedCount = 0
 
     foreach ($user in $lockedoutusers) {
         # Skip if the user ID is in the failedUserIds array
@@ -98,6 +103,7 @@ function Unlock-Users {
         $result = Receive-Job -Job $job
         Remove-Job -Job $job | Out-Null
         if ($result -ne $false) {
+            $unlockedCount++
             Write-Host ("User $result unlocked.") -BackgroundColor DarkGreen
         } else {
             # Ensure that the job has an argument before trying to access it
@@ -110,12 +116,18 @@ function Unlock-Users {
     }
 
     Write-Host "$($failedUserIds.Count) user(s) failed to unlock."
+    return $unlockedCount
 }
 
 $restartScript = $true
 
 while ($restartScript) {
     Clear-Host
+     # Display the current time
+     $currentTime = Get-CurrentTime
+     Write-Host "Current Time: $currentTime"
+     Write-Host "Unlocked Users Count: $unlockedCount"
+
     # Get probable locked-out users
     $result = Get-ProbableLockedOutUsers
     $probableLockedOutUsers = $result.ProbableLockedOutUsers
@@ -154,18 +166,18 @@ while ($restartScript) {
         1 {
             # Unlock all users
             #Clear-Host
-            Unlock-Users -lockedoutusers $lockedoutusersA
+            $unlockedCount += Unlock-Users -lockedoutusers $lockedoutusersA
         }
 
         2 {
             # Unlock all users with password expired
             #Clear-Host
-            Unlock-Users -lockedoutusers $lockedoutusersB
+            $unlockedCount += Unlock-Users -lockedoutusers $lockedoutusersB
         }
         3 {
             #Unlock all users with bad password count = 0 or Null
             #Clear-Host
-            Unlock-Users -lockedoutusers $lockedoutusersC
+            $unlockedCount += Unlock-Users -lockedoutusers $lockedoutusersC
         }
         4 {
             # Auto Unlock Users With Password Expired
@@ -180,7 +192,13 @@ while ($restartScript) {
                 # Clear-Host
                 # Write-Host "Auto Unlocking every $refreshInterval minutes. Press Ctrl+C to stop."
                 Start-Sleep -Seconds (60 * $refreshInterval)
-                Unlock-Users -lockedoutusers $lockedoutusersB
+               # Get probable locked-out users
+               $result = Get-ProbableLockedOutUsers
+               $probableLockedOutUsers = $result.ProbableLockedOutUsers
+               $lockedoutusersA = $result.LockedOutUsersA
+               $lockedoutusersB = $result.LockedOutUsersB
+               $lockedoutusersC = $result.LockedOutUsersC
+                $unlockedCount += Unlock-Users -lockedoutusers $lockedoutusersB
             } while ($true)
         }
         5 {
@@ -196,7 +214,14 @@ while ($restartScript) {
                 # Clear-Host
                 # Write-Host "Auto Unlocking every $refreshInterval minutes. Press Ctrl+C to stop."
                 Start-Sleep -Seconds (60 * $refreshInterval)
-                Unlock-Users -lockedoutusers $lockedoutusersC
+                
+                # Get probable locked-out users
+                $result = Get-ProbableLockedOutUsers
+                $probableLockedOutUsers = $result.ProbableLockedOutUsers
+                $lockedoutusersA = $result.LockedOutUsersA
+                $lockedoutusersB = $result.LockedOutUsersB
+                $lockedoutusersC = $result.LockedOutUsersC
+                $unlockedCount += Unlock-Users -lockedoutusers $lockedoutusersC
             } while ($true)
         }
 
