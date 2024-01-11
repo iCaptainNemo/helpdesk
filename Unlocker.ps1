@@ -125,9 +125,16 @@ while ($restartScript) {
     Clear-Host
      # Display the current time
      $currentTime = Get-CurrentTime
+     
+    #Line break for space
+    Write-Host "`n"
+
      Write-Host "Current Time: $currentTime"
      Write-Host "Unlocked Users Count: $unlockedCount"  -ForegroundColor Green
 
+    #Line break for space
+    Write-Host "`n"
+    
     # Get probable locked-out users
     $result = Get-ProbableLockedOutUsers
     $probableLockedOutUsers = $result.ProbableLockedOutUsers
