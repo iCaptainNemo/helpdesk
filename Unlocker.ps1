@@ -145,25 +145,28 @@ while ($restartScript) {
     $lockedoutusersC = $result.LockedOutUsersC
 
     # Display the properties of users in $lockedoutusersA, $lockedoutusersB, and $lockedoutusersC in separate tables
+    $noUsersToUnlock = $true
+
     if ($lockedoutusersA.Count -gt 0) {
         Write-Host "Locked-out users within the last 24 hours:"
-        $lockedoutusersA | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, Enabled, LockedOut, PasswordExpired, badPwdCount, AccountLockoutTime -AutoSize
-    } else {
-        Write-Host "No locked users within the last 24 hours." -ForegroundColor Green
+        $lockedoutusersA | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, badPwdCount, AccountLockoutTime -AutoSize
+        $noUsersToUnlock = $false
     }
     
     if ($lockedoutusersB.Count -gt 0) {
         Write-Host "Locked-out users Password Expired within the last 24 hours:"
-        $lockedoutusersB | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, Enabled, LockedOut, PasswordExpired, badPwdCount, AccountLockoutTime -AutoSize
-    } else {
-        Write-Host "No locked users with expired passwords within the last 24 hours." -ForegroundColor Green
+        $lockedoutusersB | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, badPwdCount, AccountLockoutTime -AutoSize
+        $noUsersToUnlock = $false
     }
     
     if ($lockedoutusersC.Count -gt 0) {
         Write-Host "Locked-out users Bad password attempts < 3 within the last 24 hours:"
-        $lockedoutusersC | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, Enabled, LockedOut, PasswordExpired, badPwdCount, AccountLockoutTime -AutoSize
-    } else {
-        Write-Host "No locked users with bad password attempts < 3 within the last 24 hours." -ForegroundColor Green
+        $lockedoutusersC | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, Enabled, badPwdCount, AccountLockoutTime -AutoSize
+        $noUsersToUnlock = $false
+    }
+    
+    if ($noUsersToUnlock) {
+        Write-Host "No users to unlock" -ForegroundColor Green
     }
 
      #Line break for space

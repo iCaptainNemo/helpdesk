@@ -1,5 +1,6 @@
 Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope CurrentUser
 
+Clear-Host
 # Import required modules
 Import-Module ActiveDirectory
 
@@ -500,7 +501,6 @@ function Main-Loop {
     param (
         [string]$userId
     )
-
     while ($true) {
         # If the restart flag is set, perform the '0' action and restart the loop
         if ($global:restartScript) {
