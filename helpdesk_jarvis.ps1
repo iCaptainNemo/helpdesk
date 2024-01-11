@@ -303,11 +303,11 @@ function Asset-Control {
             } else {
                 Write-Host $uptime -ForegroundColor Red
             }
-        } else {
-            Write-Host "Computer not found: $computerName" -ForegroundColor Red
-            return
         }
-}
+    } else {
+        Write-Host "Computer not found: $computerName" -ForegroundColor Red
+        return
+    }
     } catch {
         Write-Host "Error retrieving computer properties" -ForegroundColor Red
         return
@@ -389,7 +389,7 @@ function Asset-Control {
                 if (Test-Path $msraPath) {
                     try {
                         # Invoke Remote Assistance tool
-                        Start-Process -FilePath $msraPath -ArgumentList "/offerRA $computerName" -Wait
+                        Start-Process -FilePath $msraPath -ArgumentList "/offerRA $computerName"
                         Write-Host "Remote Assistance launched for $computerName"
                     } catch {
                         Write-Host "Error launching Remote Assistance tool: $_" -ForegroundColor Red
