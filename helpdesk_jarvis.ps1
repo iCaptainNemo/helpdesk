@@ -1,3 +1,5 @@
+Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope CurrentUser
+
 # Import required modules
 Import-Module ActiveDirectory
 
