@@ -509,6 +509,8 @@ function Main-Loop {
             $global:restartScript = $false
             continue
         }
+        # Clears the console
+        Clear-Host
         # Get AD properties for the provided User ID
         $adUser = Get-ADUserProperties -userId $userId
 
