@@ -126,7 +126,7 @@ while ($restartScript) {
      # Display the current time
      $currentTime = Get-CurrentTime
      Write-Host "Current Time: $currentTime"
-     Write-Host "Unlocked Users Count: $unlockedCount"
+     Write-Host "Unlocked Users Count: $unlockedCount"  -ForegroundColor Green
 
     # Get probable locked-out users
     $result = Get-ProbableLockedOutUsers
@@ -139,14 +139,22 @@ while ($restartScript) {
     if ($lockedoutusersA.Count -gt 0) {
         Write-Host "Locked-out users within the last 24 hours:"
         $lockedoutusersA | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, Enabled, LockedOut, PasswordExpired, badPwdCount, AccountLockoutTime -AutoSize
+    } else {
+        Write-Host "No locked users within the last 24 hours." -ForegroundColor Green
     }
+    
     if ($lockedoutusersB.Count -gt 0) {
         Write-Host "Locked-out users Password Expired within the last 24 hours:"
         $lockedoutusersB | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, Enabled, LockedOut, PasswordExpired, badPwdCount, AccountLockoutTime -AutoSize
+    } else {
+        Write-Host "No locked users with expired passwords within the last 24 hours." -ForegroundColor Green
     }
+    
     if ($lockedoutusersC.Count -gt 0) {
         Write-Host "Locked-out users Bad password attempts < 3 within the last 24 hours:"
         $lockedoutusersC | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, Enabled, LockedOut, PasswordExpired, badPwdCount, AccountLockoutTime -AutoSize
+    } else {
+        Write-Host "No locked users with bad password attempts < 3 within the last 24 hours." -ForegroundColor Green
     }
 
 
