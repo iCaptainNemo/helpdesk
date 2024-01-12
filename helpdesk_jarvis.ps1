@@ -16,6 +16,50 @@ $helpdeskWorkFolder = Join-Path -Path $AdminUser.HomeDirectory -ChildPath "Helpd
 if (!(Test-Path -Path $helpdeskWorkFolder -PathType Container)) {
     New-Item -Path $helpdeskWorkFolder -ItemType Directory > $null
 }
+
+# Function to test domain controllers for ADWS service
+function Test-DomainControllers {
+    # Check if env.ps1 file already exists
+    if (Test-Path ".\env_$currentDomain.ps1") {
+        Write-Host "env_$currentDomain.ps1 file already exists. continuing."
+        return
+    }
+
+    # Get all domain controllers
+    $domainControllers = Get-ADDomainController -Filter *
+
+    # Initialize variables
+    $cmdDomains = @()
+    $PSDomains = @()
+
+    foreach ($dc in $domainControllers) {
+        # Get the hostname of the domain controller
+        $hostname = $dc.HostName
+
+        # Test the connection to the ADWS service
+        $testResult = Test-NetConnection -ComputerName $hostname -Port 9389 -ErrorAction SilentlyContinue
+
+        if ($testResult.TcpTestSucceeded) {
+            $PSDomains += $hostname
+        } else {
+            $cmdDomains += $hostname
+        }
+    }
+
+    # Export variables to env.ps1 file
+    $exportScript = @"
+`$PSDomains = @('{0}')
+`$cmdDomains = @('{1}')
+"@ -f ($PSDomains -join "', '"), ($cmdDomains -join "', '")
+
+    $exportScript | Out-File -FilePath ".\env_$currentDomain.ps1"
+}
+# Call the function to create the env.ps1 file
+Test-DomainControllers
+
+# Import variables from env.ps1 file
+. .\env_$currentDomain.ps1
+
 # Function to get User ID with error handling
 function Get-UserId {
     while ($true) {
@@ -173,20 +217,23 @@ function Unlock-ADAccountOnAllDomainControllers {
         [string]$userId
     )
 
-    $dcList = Get-ADDomainController -Filter *
-    
-    $jobs = foreach ($targetDC in $dcList.Name) {
+    $dcList = $PSDomains + $cmdDomains
+
+    $jobs = foreach ($targetDC in $dcList) {
         Start-Job -ScriptBlock {
-            param ($userId, $targetDC)
+            param ($userId, $targetDC, $PSDomains, $cmdDomains)
             $error.Clear()
-            Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorAction SilentlyContinue -ErrorVariable unlockError
+            if ($targetDC -in $PSDomains) {
+                Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorAction SilentlyContinue -ErrorVariable unlockError
+            } elseif ($targetDC -in $cmdDomains) {
+                net user $userID /active:yes /Domain
+            }
             if ($unlockError) {
-                # Handle the error here. For example, you could write it to a log file.
-               # Write-Host ("Error unlocking in " + $targetDC) -BackgroundColor DarkRed
+                Write-Host "Error unlocking account: $unlockError" -ForegroundColor Red
             } else {
                 Write-Host ("Unlocked in " + $targetDC) -BackgroundColor DarkGreen
             }
-        } -ArgumentList $userId, $targetDC
+        } -ArgumentList $userId, $targetDC, $PSDomains, $cmdDomains
     }
 
     # Wait for all jobs to complete
@@ -510,7 +557,7 @@ function Main-Loop {
             continue
         }
         # Clears the console
-        Clear-Host
+        #Clear-Host
         # Get AD properties for the provided User ID
         $adUser = Get-ADUserProperties -userId $userId
 
