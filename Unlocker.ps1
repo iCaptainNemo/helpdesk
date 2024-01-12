@@ -19,6 +19,39 @@ function Get-CurrentTime {
 
 $unlockedUsersCount = 0
 
+# Function to unlock AD account on all domain controllers
+function Unlock-ADAccountOnAllDomainControllers {
+    param (
+        [string]$userId
+    )
+
+    $dcList = Get-ADDomainController -Filter *
+    
+    $jobs = foreach ($targetDC in $dcList.Name) {
+        Start-Job -ScriptBlock {
+            param ($userId, $targetDC)
+            $error.Clear()
+            Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorAction SilentlyContinue -ErrorVariable unlockError
+            if ($unlockError) {
+                # Handle the error here. For example, you could write it to a log file.
+               # Write-Host ("Error unlocking in " + $targetDC) -BackgroundColor DarkRed
+            } else {
+                Write-Host ("Unlocked in " + $targetDC) -BackgroundColor DarkGreen
+            }
+        } -ArgumentList $userId, $targetDC
+    }
+
+    # Wait for all jobs to complete
+    $jobs | Wait-Job | Out-Null
+
+    # Receive and remove completed jobs without displaying job information
+    $jobs | ForEach-Object {
+        Receive-Job -Job $_ | Out-Null
+        Remove-Job -Job $_ | Out-Null
+    }
+}
+
+$unlockedUsersCount = 0
 # Function to get probable locked-out users
 function Get-ProbableLockedOutUsers {
 # Search for all locked-out user accounts
@@ -258,9 +291,9 @@ while ($restartScript) {
                     Write-Host "No Users to unlock"
                 }
             } while ($true)
+
         }
     }
-}
 
-# Add a restart message outside the loop
-Write-Host "Restarting the script..."
+        # Add a restart message outside the loop
+        Write-Host "Restarting the script..."

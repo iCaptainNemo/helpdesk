@@ -226,6 +226,7 @@ function Unlock-ADAccountOnAllDomainControllers {
             }
             if ($unlockError) {
                 Write-Host "Error unlocking account: $unlockError" -ForegroundColor Red
+
             } else {
                 Write-Host ("Unlocked in " + $targetDC) -BackgroundColor DarkGreen
             }
@@ -321,6 +322,7 @@ function Asset-Control {
         }
         #Line break for space
         Write-Host "`n"
+
     if ($properties.'Computer Reachable' -eq 'True' -and $currentDomain -eq 'hs.gov') {
         try {
             # Get LastBootUpTime using CIM instance
@@ -552,8 +554,10 @@ function Main-Loop {
             $global:restartScript = $false
             continue
         }
+
         # Clears the console
         Clear-Host
+
         # Get AD properties for the provided User ID
         $adUser = Get-ADUserProperties -userId $userId
 
