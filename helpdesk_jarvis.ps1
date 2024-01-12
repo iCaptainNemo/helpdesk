@@ -55,7 +55,9 @@ function Test-DomainControllers {
     $exportScript | Out-File -FilePath ".\env_$currentDomain.ps1"
 }
 # Call the function to create the env.ps1 file
-Test-DomainControllers
+if (-not (Test-Path ".\env_$currentDomain.ps1")) {
+    Test-DomainControllers
+}
 
 # Import variables from env.ps1 file
 . .\env_$currentDomain.ps1
