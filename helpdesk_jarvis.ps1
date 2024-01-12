@@ -11,12 +11,6 @@ Write-Host "Current domain: $currentDomain"
 ## Get the current user with specific properties
 $AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name, HomeDirectory
 
-# Check for Helpdesk-work folder and create if it doesn't exist
-$helpdeskWorkFolder = Join-Path -Path $AdminUser.HomeDirectory -ChildPath "Helpdesk-work"
-if (!(Test-Path -Path $helpdeskWorkFolder -PathType Container)) {
-    New-Item -Path $helpdeskWorkFolder -ItemType Directory > $null
-}
-
 # Function to test domain controllers for ADWS service
 function Test-DomainControllers {
     # Check if env.ps1 file already exists
