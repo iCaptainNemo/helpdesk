@@ -1,1 +1,3 @@
-Domain Agnostic Powershell scripts designed to aid Help desk with common tasks and prodecures. 
+# Helpdesk Jarvis
+
+This repository contains a collection of domain-agnostic PowerShell scripts designed to assist helpdesk teams with common tasks and procedures.

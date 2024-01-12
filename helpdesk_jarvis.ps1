@@ -1,3 +1,6 @@
+Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope CurrentUser
+
+Clear-Host
 # Import required modules
 Import-Module ActiveDirectory
 
@@ -8,11 +11,51 @@ Write-Host "Current domain: $currentDomain"
 ## Get the current user with specific properties
 $AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name, HomeDirectory
 
-# Check for Helpdesk-work folder and create if it doesn't exist
-$helpdeskWorkFolder = Join-Path -Path $AdminUser.HomeDirectory -ChildPath "Helpdesk-work"
-if (!(Test-Path -Path $helpdeskWorkFolder -PathType Container)) {
-    New-Item -Path $helpdeskWorkFolder -ItemType Directory > $null
+# Function to test domain controllers for ADWS service
+function Test-DomainControllers {
+    # Check if env.ps1 file already exists
+    if (Test-Path ".\env_$currentDomain.ps1") {
+        Write-Host "env_$currentDomain.ps1 file already exists. continuing."
+        return
+    }
+
+    # Get all domain controllers
+    $domainControllers = Get-ADDomainController -Filter *
+
+    # Initialize variables
+    $cmdDomains = @()
+    $PSDomains = @()
+
+    foreach ($dc in $domainControllers) {
+        # Get the hostname of the domain controller
+        $hostname = $dc.HostName
+
+        # Test the connection to the ADWS service
+        $testResult = Test-NetConnection -ComputerName $hostname -Port 9389 -ErrorAction SilentlyContinue
+
+        if ($testResult.TcpTestSucceeded) {
+            $PSDomains += $hostname
+        } else {
+            $cmdDomains += $hostname
+        }
+    }
+
+    # Export variables to env.ps1 file
+    $exportScript = @"
+`$PSDomains = @('{0}')
+`$cmdDomains = @('{1}')
+"@ -f ($PSDomains -join "', '"), ($cmdDomains -join "', '")
+
+    $exportScript | Out-File -FilePath ".\env_$currentDomain.ps1"
 }
+# Call the function to create the env.ps1 file
+if (-not (Test-Path ".\env_$currentDomain.ps1")) {
+    Test-DomainControllers
+}
+
+# Import variables from env.ps1 file
+. .\env_$currentDomain.ps1
+
 # Function to get User ID with error handling
 function Get-UserId {
     while ($true) {
@@ -170,20 +213,24 @@ function Unlock-ADAccountOnAllDomainControllers {
         [string]$userId
     )
 
-    $dcList = Get-ADDomainController -Filter *
-    
-    $jobs = foreach ($targetDC in $dcList.Name) {
+    $dcList = $PSDomains + $cmdDomains
+
+    $jobs = foreach ($targetDC in $dcList) {
         Start-Job -ScriptBlock {
-            param ($userId, $targetDC)
+            param ($userId, $targetDC, $PSDomains, $cmdDomains)
             $error.Clear()
-            Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorAction SilentlyContinue -ErrorVariable unlockError
+            if ($targetDC -in $PSDomains) {
+                Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorAction SilentlyContinue -ErrorVariable unlockError
+            } elseif ($targetDC -in $cmdDomains) {
+                net user $userID /active:yes /Domain
+            }
             if ($unlockError) {
-                # Handle the error here. For example, you could write it to a log file.
-               # Write-Host ("Error unlocking in " + $targetDC) -BackgroundColor DarkRed
+                Write-Host "Error unlocking account: $unlockError" -ForegroundColor Red
+
             } else {
                 Write-Host ("Unlocked in " + $targetDC) -BackgroundColor DarkGreen
             }
-        } -ArgumentList $userId, $targetDC
+        } -ArgumentList $userId, $targetDC, $PSDomains, $cmdDomains
     }
 
     # Wait for all jobs to complete
@@ -279,36 +326,38 @@ function Asset-Control {
     if ($properties.'Computer Reachable' -eq 'True' -and $currentDomain -eq 'hs.gov') {
         try {
             # Get LastBootUpTime using CIM instance
-            $lastBootUpTime = Get-CimInstance -ClassName Win32_OperatingSystem -ComputerName $computerName | Select-Object -ExpandProperty LastBootUpTime
-            # Calculate the uptime
-            $uptime = (Get-Date) - $lastBootUpTime
-
-            # Display LastBootUpTime with color coding
-            Write-Host "Last Boot Up Time: $lastBootUpTime"
-
-            # Color coding for computer uptime
-            if ($uptime.TotalDays -gt 5) {
-                Write-Host "Uptime: More than 5 days" -ForegroundColor Red
-            } elseif ($uptime.TotalDays -gt 3) {
-                Write-Host "Uptime: More than 3 days" -ForegroundColor Yellow
+            $lastBootUpTime = Get-CimInstance -ClassName Win32_OperatingSystem -ComputerName $computerName -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LastBootUpTime
+        
+            # Check if $lastBootUpTime is not null before trying to calculate $uptime
+            if ($null -ne $lastBootUpTime) {
+                # Calculate the uptime
+                $uptime = (Get-Date) - $lastBootUpTime
+                Write-Host "Last Boot Up Time: $lastBootUpTime"
             } else {
-                Write-Host "Uptime: Less than or equal to 3 days" -ForegroundColor Green
+                throw
             }
-        } catch {
-            if ($_.Exception.Message -like "*WinRM cannot complete the operation*") {
-                Write-Host "Error: Unable to connect to the computer. Please check the computer name, network connection, and firewall settings."
+            } catch {
+            $uptime = "Unable to get uptime, an error occurred"
+            }
+        # Color coding for computer uptime
+            if ($uptime -is [TimeSpan]) {
+                if ($uptime.TotalDays -gt 5) {
+                    Write-Host "Uptime: More than 5 days" -ForegroundColor Red
+                } elseif ($uptime.TotalDays -gt 3) {
+                    Write-Host "Uptime: More than 3 days" -ForegroundColor Yellow
+                } else {
+                    Write-Host "Uptime: Less than or equal to 3 days" -ForegroundColor Green
+                }
             } else {
-                Write-Host "Error occurred while getting LastBootUpTime: $_"
+                Write-Host $uptime -ForegroundColor Red
             }
-            return
         }
-    }
     } else {
         Write-Host "Computer not found: $computerName" -ForegroundColor Red
         return
     }
     } catch {
-        Write-Host "Error retrieving computer properties: $_" -ForegroundColor Red
+        Write-Host "Error retrieving computer properties" -ForegroundColor Red
         return
     }
 
@@ -388,7 +437,7 @@ function Asset-Control {
                 if (Test-Path $msraPath) {
                     try {
                         # Invoke Remote Assistance tool
-                        Start-Process -FilePath $msraPath -ArgumentList "/offerRA $computerName" -Wait
+                        Start-Process -FilePath $msraPath -ArgumentList "/offerRA $computerName"
                         Write-Host "Remote Assistance launched for $computerName"
                     } catch {
                         Write-Host "Error launching Remote Assistance tool: $_" -ForegroundColor Red
@@ -497,7 +546,6 @@ function Main-Loop {
     param (
         [string]$userId
     )
-
     while ($true) {
         # If the restart flag is set, perform the '0' action and restart the loop
         if ($global:restartScript) {
@@ -506,6 +554,10 @@ function Main-Loop {
             $global:restartScript = $false
             continue
         }
+
+        # Clears the console
+        Clear-Host
+
         # Get AD properties for the provided User ID
         $adUser = Get-ADUserProperties -userId $userId
 
@@ -533,6 +585,14 @@ function Main-Loop {
 
         switch ($choice) {
             '0' {
+                # If the restart flag is set, perform the '0' action and restart the loop
+                if ($global:restartScript) {
+                    $userId = $null
+                    Clear-Host
+                    $global:restartScript = $false
+                    return
+                }
+        
                 # Clear the console, reset User ID, and restart the script
                 $userId = $null
                 Clear-Host
@@ -596,6 +656,14 @@ function Main-Loop {
             '3' {
                 # Asset Control submenu
                 Asset-Control -userId $userId
+        
+                # Check if the script should be restarted
+                if ($global:restartScript) {
+                    $userId = $null
+                    Clear-Host
+                    $global:restartScript = $false
+                    continue
+                }
             }
         }
     }
