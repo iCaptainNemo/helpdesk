@@ -1,60 +1,63 @@
 ﻿Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope CurrentUser
 
+# Import the ActiveDirectory module
 Import-Module ActiveDirectory
 
-## Get the current user with specific properties
-$AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name, HomeDirectory
+# Get the current user with specific properties
+$AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name
 
+
+# Get the current domain
+$currentDomain = (Get-ADDomain).DNSRoot
+Write-Host "Current domain: $currentDomain"
 function Get-CurrentTime {
     Get-Date -Format "yyyy-MM-dd hh:mm:ss tt"
 }
+
+# Import variables from env.ps1 file
+. .\env_$currentDomain.ps1
 
 $unlockedUsersCount = 0
 
 # Function to get probable locked-out users
 function Get-ProbableLockedOutUsers {
-    # Search for all locked-out user accounts
-    $lockedOutUsers = $null
-    $probableLockedOutUsers = $null
-    $lockedOutUsers = Search-ADAccount -LockedOut -UsersOnly
+# Search for all locked-out user accounts
+$lockedOutUsers = Search-ADAccount -LockedOut -UsersOnly
 
-    # Iterate through all locked-out users and get additional AD properties
-    $probableLockedOutUsers = foreach ($lockedOutUser in $lockedOutUsers) {
-        Get-ADUser -Identity $lockedOutUser.SamAccountName -Properties *
-            }
-
-            # Filter locked-out users whose lockoutTime is within X days of the current date, Enabled is True, PasswordExpired is False, and badPwdCount is greater than 0
-            $probableLockedOutUsers = $probableLockedOutUsers | Where-Object {
-                $_.AccountlockoutTime -ge (Get-Date).AddDays(-1) -and
-                $_.Enabled -eq $true
-            }
-            # Users who are locked out and password is expired
-            $lockedoutusersB = $probableLockedOutUsers | Where-Object {
-                #$_.LockedOut -eq $true -and
-                $_.PasswordExpired -eq $true
-            }
-    
-            # Users who are locked out and badPwdCount is 0 or null
-            $lockedoutusersC = $probableLockedOutUsers | Where-Object {
-                #$_.LockedOut -eq $true -and
-                ($_.badPwdCount -lt 3 -or $_.badPwdCount -eq $null)
-            }
-    
-            # The rest of the users
-            $lockedoutusersA = $probableLockedOutUsers | Where-Object {
-                $_ -notin $lockedoutusersB -and
-                $_ -notin $lockedoutusersC
-            }
-            return @{
-                'ProbableLockedOutUsers' = $probableLockedOutUsers
-                'LockedOutUsersA' = $lockedoutusersA
-                'LockedOutUsersB' = $lockedoutusersB
-                'LockedOutUsersC' = $lockedoutusersC
-            }
+# Iterate through all locked-out users and get additional AD properties
+$probableLockedOutUsers = foreach ($lockedOutUser in $lockedOutUsers) {
+    Get-ADUser -Identity $lockedOutUser.SamAccountName -Properties *
         }
 
-# Get the current user with specific properties
-$AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name
+        # Filter locked-out users whose lockoutTime is within X days of the current date, Enabled is True, PasswordExpired is False, and badPwdCount is greater than 0
+        $probableLockedOutUsers = $probableLockedOutUsers | Where-Object {
+            $_.AccountlockoutTime -ge (Get-Date).AddDays(-1) -and
+            $_.Enabled -eq $true
+        }
+        # Users who are locked out and password is expired
+        $lockedoutusersB = $probableLockedOutUsers | Where-Object {
+            #$_.LockedOut -eq $true -and
+            $_.PasswordExpired -eq $true
+        }
+
+        # Users who are locked out and badPwdCount is 0 or null
+        $lockedoutusersC = $probableLockedOutUsers | Where-Object {
+            #$_.LockedOut -eq $true -and
+            ($_.badPwdCount -lt 3 -or $_.badPwdCount -eq $null)
+        }
+
+        # The rest of the users
+        $lockedoutusersA = $probableLockedOutUsers | Where-Object {
+            $_ -notin $lockedoutusersB -and
+            $_ -notin $lockedoutusersC
+        }
+        return @{
+            'ProbableLockedOutUsers' = $probableLockedOutUsers
+            'LockedOutUsersA' = $lockedoutusersA
+            'LockedOutUsersB' = $lockedoutusersB
+            'LockedOutUsersC' = $lockedoutusersC
+        }
+}
 
 function Unlock-Users {
     param (
@@ -127,7 +130,7 @@ function Unlock-Users {
 $restartScript = $true
 
 while ($restartScript) {
-    Clear-Host
+    #Clear-Host
      # Display the current time
      $currentTime = Get-CurrentTime
      Write-Host "Current Time: $currentTime"
@@ -179,7 +182,6 @@ while ($restartScript) {
     Write-Host "3. Unlock Users BP < 3"
     Write-Host "4. Auto Unlock Users With Password Expired"
     Write-Host "5. Auto Unlock Users BP < 3"
-    Write-Host "0. Exit"
 
     $choice = Read-Host "Select an option"
 
@@ -209,17 +211,19 @@ while ($restartScript) {
                 $refreshInterval = [int]$refreshInterval
             } while ($refreshInterval -le 0)
 
+            
+            # Get probable locked-out users
+            $result = Get-ProbableLockedOutUsers
+            $probableLockedOutUsers = $result.ProbableLockedOutUsers
+            $lockedoutusersA = $result.LockedOutUsersA
+            $lockedoutusersB = $result.LockedOutUsersB
+
             # Auto Unlock at specified refresh interval
             do {
                 # Clear-Host
                 # Write-Host "Auto Unlocking every $refreshInterval minutes. Press Ctrl+C to stop."
                 Start-Sleep -Seconds (60 * $refreshInterval)
-               # Get probable locked-out users
-               $result = Get-ProbableLockedOutUsers
-               $probableLockedOutUsers = $result.ProbableLockedOutUsers
-               $lockedoutusersA = $result.LockedOutUsersA
-               $lockedoutusersB = $result.LockedOutUsersB
-               $lockedoutusersC = $result.LockedOutUsersC
+
                if ($lockedoutusersB -ne $null) {
                 $unlockedCount += Unlock-Users -lockedoutusers $lockedoutusersB
             } else {
@@ -235,17 +239,18 @@ while ($restartScript) {
                 $refreshInterval = [int]$refreshInterval
             } while ($refreshInterval -le 0)
 
+            # Get probable locked-out users
+            $result = Get-ProbableLockedOutUsers
+            $probableLockedOutUsers = $result.ProbableLockedOutUsers
+            $lockedoutusersA = $result.LockedOutUsersA
+            $lockedoutusersB = $result.LockedOutUsersB
+
             # Auto Unlock at specified refresh interval
             do {
                 # Clear-Host
                 # Write-Host "Auto Unlocking every $refreshInterval minutes. Press Ctrl+C to stop."
                 Start-Sleep -Seconds (60 * $refreshInterval)
                 
-                # Get probable locked-out users
-                $result = Get-ProbableLockedOutUsers
-                $probableLockedOutUsers = $result.ProbableLockedOutUsers
-                $lockedoutusersA = $result.LockedOutUsersA
-                $lockedoutusersB = $result.LockedOutUsersB
                 $lockedoutusersC = $result.LockedOutUsersC
                 if ($lockedoutusersC -ne $null) {
                     $unlockedCount += Unlock-Users -lockedoutusers $lockedoutusersC
@@ -254,12 +259,6 @@ while ($restartScript) {
                 }
             } while ($true)
         }
-
-        0 {
-            # Set $restartScript to $false to exit the loop and restart the script
-            $restartScript = $false
-        }
-
     }
 }
 

@@ -553,7 +553,7 @@ function Main-Loop {
             continue
         }
         # Clears the console
-        #Clear-Host
+        Clear-Host
         # Get AD properties for the provided User ID
         $adUser = Get-ADUserProperties -userId $userId
 
