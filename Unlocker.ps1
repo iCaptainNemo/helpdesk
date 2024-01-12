@@ -297,3 +297,4 @@ while ($restartScript) {
 
         # Add a restart message outside the loop
         Write-Host "Restarting the script..."
+}
