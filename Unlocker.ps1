@@ -1,4 +1,5 @@
-﻿Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope CurrentUser
+﻿$Host.UI.RawUI.WindowTitle = Split-Path -Path $MyInvocation.MyCommand.Definition -Leaf
+Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope CurrentUser
 
 # Import the ActiveDirectory module
 Import-Module ActiveDirectory
@@ -17,6 +18,7 @@ function Get-CurrentTime {
 # Import variables from env.ps1 file
 . .\env_$currentDomain.ps1
 
+
 $unlockedUsersCount = 0
 
 # Function to unlock AD account on all domain controllers
@@ -31,10 +33,10 @@ function Unlock-ADAccountOnAllDomainControllers {
         Start-Job -ScriptBlock {
             param ($userId, $targetDC)
             $error.Clear()
-            Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorAction SilentlyContinue -ErrorVariable unlockError
+            Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorVariable unlockError
             if ($unlockError) {
-                # Handle the error here. For example, you could write it to a log file.
-               # Write-Host ("Error unlocking in " + $targetDC) -BackgroundColor DarkRed
+                # Error handling if it failes to unlock per DC
+                Write-Host ("Error unlocking in " + $targetDC) -BackgroundColor DarkRed
             } else {
                 Write-Host ("Unlocked in " + $targetDC) -BackgroundColor DarkGreen
             }
@@ -163,7 +165,7 @@ function Unlock-Users {
 $restartScript = $true
 
 while ($restartScript) {
-    #Clear-Host
+    Clear-Host
      # Display the current time
      $currentTime = Get-CurrentTime
      Write-Host "Current Time: $currentTime"

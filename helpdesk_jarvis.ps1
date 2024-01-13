@@ -1,3 +1,4 @@
+$Host.UI.RawUI.WindowTitle = Split-Path -Path $MyInvocation.MyCommand.Definition -Leaf
 Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope CurrentUser
 
 Clear-Host

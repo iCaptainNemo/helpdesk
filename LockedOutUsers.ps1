@@ -1,4 +1,5 @@
-﻿Import-Module ActiveDirectory
+﻿$Host.UI.RawUI.WindowTitle = Split-Path -Path $MyInvocation.MyCommand.Definition -Leaf
+Import-Module ActiveDirectory
 
 function Get-CurrentTime {
     Get-Date -Format "yyyy-MM-dd hh:mm:ss tt"
