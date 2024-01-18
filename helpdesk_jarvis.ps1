@@ -321,21 +321,26 @@ function Unlock-ADAccountOnAllDomainControllers {
                 net user $userID /active:yes /Domain
             }
             if ($unlockError) {
-                Write-Host "Error unlocking account: $unlockError" -ForegroundColor Red
-
+                "Error unlocking account: $unlockError"
             } else {
-                Write-Host ("Unlocked in " + $targetDC) -BackgroundColor DarkGreen
+                "Unlocked in " + $targetDC
             }
         } -ArgumentList $userId, $targetDC, $PSDomains, $cmdDomains
     }
 
-    # Wait for all jobs to complete
-    $jobs | Wait-Job | Out-Null
-
-    # Receive and remove completed jobs without displaying job information
+    # Receive and print job outputs as they complete
     $jobs | ForEach-Object {
-        Receive-Job -Job $_ | Out-Null
-        Remove-Job -Job $_ | Out-Null
+        while ($_ -ne $null -and $_.State -ne 'Completed') {
+            if ($_.State -eq 'Failed') {
+                Write-Host "Job failed"
+                break
+            }
+            Start-Sleep -Seconds 1
+        }
+        if ($_.State -eq 'Completed') {
+            Receive-Job -Job $_
+            Remove-Job -Job $_
+        }
     }
 }
 
