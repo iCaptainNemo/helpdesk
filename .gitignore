@@ -2,3 +2,4 @@
 Unlocker.ps1
 .env_*.ps1
 env_*.ps1
+updater.bat
