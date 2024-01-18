@@ -323,7 +323,7 @@ function Unlock-ADAccountOnAllDomainControllers {
             if ($unlockError) {
                 "Error unlocking account: $unlockError"
             } else {
-                "Unlocked in " + $targetDC
+                Write-Host ("Unlocked in " + $targetDC) -BackgroundColor DarkGreen
             }
         } -ArgumentList $userId, $targetDC, $PSDomains, $cmdDomains
     }
