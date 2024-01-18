@@ -12,6 +12,9 @@ Write-Host "Current domain: $currentDomain"
 # Get the current user with specific properties
 $AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name
 
+# Initialize $envVars hashtable
+$envVars = @{}
+
 # Function to set $tempPassword
 function Set-TempPassword {
     do {
@@ -31,25 +34,34 @@ function Set-TempPassword {
         }
         $confirm = Read-Host "You entered '$tempPassword'. Is this correct? (press enter for yes, n for no)"
     } while ($confirm -eq 'n')
+
+    # Update the tempPassword in the $envVars hashtable
+    $envVars['tempPassword'] = $tempPassword
+
+    # Convert the updated hashtable to a list of strings
+    $envVarsList = "`$envVars = @{}" + ($envVars.GetEnumerator() | ForEach-Object { "`n`$envVars['$($_.Key)'] = '$($_.Value)'" })
+    # Write the updated environmental variables to the $AdminConfig file
+    Set-Content -Path $AdminConfig -Value ($envVarsList -join "`n")
+
     return $tempPassword
 }
 
 # Check if the .env_$AdminConfig.ps1 file exists
 $AdminConfig = ".\.env_$($AdminUser.SamAccountName).ps1"
 if (Test-Path $AdminConfig) {
-    Write-Host "$AdminConfig file already exists. Importing."
+    Write-Host "Admin config file exists. Importing."
     . $AdminConfig
 
     # Check if 'tempPassword' key in $envVars is null
     if ($null -eq $envVars['tempPassword']) {
         $envVars['tempPassword'] = Set-TempPassword
         # Convert the updated hashtable to a list of strings
-        $envVarsList = $envVars.GetEnumerator() | ForEach-Object { "$($_.Key) = '$($_.Value)'" }
+        $envVarsList = "`$envVars = @{}" + ($envVars.GetEnumerator() | ForEach-Object { "`n`$envVars['$($_.Key)'] = '$($_.Value)'" })
         # Write the updated environmental variables to the $AdminConfig file
         Set-Content -Path $AdminConfig -Value $envVarsList
     }
 } else {
-    Write-Host "$AdminConfig does not exist. Creating."
+    Write-Host "Admin Config does not exist. Creating."
     New-Item -Path $AdminConfig -ItemType File | Out-Null
 
     # Set 'tempPassword' key in $envVars
@@ -58,7 +70,7 @@ if (Test-Path $AdminConfig) {
         UserID = $null
     }
     # Convert the hashtable to a list of strings
-    $envVarsList = $envVars.GetEnumerator() | ForEach-Object { "$($_.Key) = '$($_.Value)'" }
+    $envVarsList = "`$envVars = @{}" + ($envVars.GetEnumerator() | ForEach-Object { "`n`$envVars['$($_.Key)'] = '$($_.Value)'" })
     # Write the environmental variables to the $AdminConfig file
     Set-Content -Path $AdminConfig -Value $envVarsList
 }
@@ -68,11 +80,10 @@ $envVars = @{
     tempPassword = $envVars['tempPassword']
     UserID = $null
 }
-
 Write-Host "Admin User: $($AdminUser.SamAccountName)"
 Write-Host "Temp Password: $($envVars['tempPassword'])"
 
-# Function to remove the UserID from the $AdminConfig file
+# Function to set the UserID in the $AdminConfig file to an empty string
 function Remove-UserId {
     param (
         [string]$AdminConfig
@@ -82,10 +93,10 @@ function Remove-UserId {
     $envVars['UserID'] = $null
 
     # Convert the updated hashtable to a list of strings
-    $envVarsList = $envVars.GetEnumerator() | ForEach-Object { "$($_.Key) = '$($_.Value)'" }
+    $envVarsList = "`$envVars = @{}" + ($envVars.GetEnumerator() | ForEach-Object { "`n`$envVars['$($_.Key)'] = '$($_.Value)'" })
 
     # Write the updated environmental variables to the $AdminConfig file
-    Set-Content -Path $AdminConfig -Value $envVarsList
+    Set-Content -Path $AdminConfig -Value ($envVarsList -join "`n")
 }
 
 # Function to test domain controllers for ADWS service
@@ -142,9 +153,9 @@ function Get-UserId {
                 Get-ADUser -Identity $UserID -ErrorAction Stop | Out-Null
                 $envVars['UserID'] = $UserID
                 # Convert the updated hashtable to a list of strings
-                $envVarsList = $envVars.GetEnumerator() | ForEach-Object { "$($_.Key) = '$($_.Value)'" }
+                $envVarsList = "`$envVars = @{}" + ($envVars.GetEnumerator() | ForEach-Object { "`n`$envVars['$($_.Key)'] = '$($_.Value)'" })
                 # Write the updated environmental variables to the $AdminConfig file
-                Set-Content -Path $AdminConfig -Value $envVarsList
+                Set-Content -Path $AdminConfig -Value ($envVarsList -join "`n")
                 return $UserID
             } catch {
                 #Clear-Host
@@ -155,7 +166,6 @@ function Get-UserId {
         return $envVars['UserID']
     }
 }
-
 # Function to get specific AD properties for a given User ID
 function Get-ADUserProperties {
     param (
@@ -640,6 +650,9 @@ function Main-Loop {
 
         # Clears the console
         Clear-Host
+
+        # Get User ID before entering the main menu
+        $userId = Get-UserID
 
         # Get AD properties for the provided User ID
         $userId = $envVars['UserID']
