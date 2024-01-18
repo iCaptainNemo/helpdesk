@@ -27,31 +27,41 @@ function Unlock-ADAccountOnAllDomainControllers {
         [string]$userId
     )
 
-    $dcList = Get-ADDomainController -Filter *
-    
-    $jobs = foreach ($targetDC in $dcList.Name) {
+    $dcList = $PSDomains + $cmdDomains
+
+    $jobs = foreach ($targetDC in $dcList) {
         Start-Job -ScriptBlock {
-            param ($userId, $targetDC)
+            param ($userId, $targetDC, $PSDomains, $cmdDomains)
             $error.Clear()
-            Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorVariable unlockError
+            if ($targetDC -in $PSDomains) {
+                Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorAction SilentlyContinue -ErrorVariable unlockError
+            } elseif ($targetDC -in $cmdDomains) {
+                net user $userID /active:yes /Domain
+            }
             if ($unlockError) {
-                # Error handling if it failes to unlock per DC
-                Write-Host ("Error unlocking in " + $targetDC) -BackgroundColor DarkRed
+                "Error unlocking account: $unlockError"
             } else {
                 Write-Host ("Unlocked in " + $targetDC) -BackgroundColor DarkGreen
             }
-        } -ArgumentList $userId, $targetDC
+        } -ArgumentList $userId, $targetDC, $PSDomains, $cmdDomains
     }
 
-    # Wait for all jobs to complete
-    $jobs | Wait-Job | Out-Null
-
-    # Receive and remove completed jobs without displaying job information
+    # Receive and print job outputs as they complete
     $jobs | ForEach-Object {
-        Receive-Job -Job $_ | Out-Null
-        Remove-Job -Job $_ | Out-Null
+        while ($_ -ne $null -and $_.State -ne 'Completed') {
+            if ($_.State -eq 'Failed') {
+                Write-Host "Job failed"
+                break
+            }
+            Start-Sleep -Seconds 1
+        }
+        if ($_.State -eq 'Completed') {
+            Receive-Job -Job $_
+            Remove-Job -Job $_
+        }
     }
 }
+
 
 $unlockedUsersCount = 0
 # Function to get probable locked-out users
