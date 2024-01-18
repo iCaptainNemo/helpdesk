@@ -1,3 +1,4 @@
 .github/workflows/
 Unlocker.ps1
+.env_*.ps1
 env_*.ps1
