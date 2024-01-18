@@ -130,8 +130,8 @@ function Test-DomainControllers {
 
     # Export variables to env.ps1 file
     $exportScript = @"
-`$PSDomains = @('{0}')
-`$cmdDomains = @('{1}')
+    `$PSDomains = @('{0}')
+    `$cmdDomains = @('{1}')
 "@ -f ($PSDomains -join "', '"), ($cmdDomains -join "', '")
 
     $exportScript | Out-File -FilePath ".\env_$currentDomain.ps1"
