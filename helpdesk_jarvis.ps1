@@ -692,8 +692,7 @@ function Main-Loop {
                 Unlock-ADAccountOnAllDomainControllers -userId $userId
             }
             '2' {
-                # Prompt for setting a temporary or permanent password
-                $passwordChoice = Read-Host "Do you want to set a temporary (T), permanent (P), or cancel (C) password? Enter T, P, or C"
+                $passwordChoice = Read-Host "Do you want to set temporary (T), permanent (P), or cancel (C) password? Enter T, P, or C"
                 switch ($passwordChoice) {
                     'T' {
                         $temporaryPassword = Set-TempPassword
