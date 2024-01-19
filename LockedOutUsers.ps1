@@ -75,11 +75,11 @@ do {
     # Display the properties of users in $lockedoutusersA and $lockedoutusersB in separate tables
     if ($lockedoutusersA.Count -gt 0) {
         Write-Host "Locked-out users within the last 24 hours:"
-        $lockedoutusersA | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, badPwdCount, AccountLockoutTime -AutoSize
+        $lockedoutusersA | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, AccountLockoutTime -AutoSize
     }
     if ($lockedoutusersB.Count -gt 0) {
         Write-Host "Locked-out users Password Expired within the last 24 hours:"
-        $lockedoutusersB | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, badPwdCount, AccountLockoutTime -AutoSize
+        $lockedoutusersB | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, AccountLockoutTime -AutoSize
     }
 
     # Display the countdown message
