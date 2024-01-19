@@ -700,7 +700,12 @@ function Main-Loop {
                 $passwordChoice = Read-Host "Do you want to set temporary (T), permanent (P), or cancel (C) password? Enter T, P, or C"
                 switch ($passwordChoice) {
                     'T' {
-                        $temporaryPassword = Set-TempPassword
+                        if (-not $envVars.ContainsKey('tempPassword')) {
+                            Write-Host "Temporary password is not set. Please set it first."
+                            break
+                        }
+            
+                        $temporaryPassword = $envVars['tempPassword']
                         Write-Host "Setting Temporary Password for User ID: $userId to $temporaryPassword (User Must Change)"
                         try {
                             Set-ADAccountPassword -Identity $userId -Reset -NewPassword (ConvertTo-SecureString -AsPlainText $temporaryPassword -Force) -ErrorAction Stop
@@ -709,7 +714,6 @@ function Main-Loop {
                         } catch {
                             Write-Host "Error: $_"
                         }
-                    
                         break
                     }
                     'P' {
