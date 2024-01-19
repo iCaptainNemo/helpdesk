@@ -66,8 +66,8 @@ do {
 
     # Display the properties of probable locked-out users
     if ($probableLockedOutUsers.Count -gt 0) {
-        Write-Host "Probable locked-out users within the last 24 hours:"
-        $probableLockedOutUsers | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, Enabled, LockedOut, PasswordExpired, badPwdCount, AccountLockoutTime -AutoSize
+       # Write-Host "Probable locked-out users within the last 24 hours:"
+       # $probableLockedOutUsers | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, Enabled, LockedOut, PasswordExpired, badPwdCount, AccountLockoutTime -AutoSize
     } else {
         Write-Host "No recent locked-out users found."
     }
