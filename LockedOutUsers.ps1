@@ -13,7 +13,6 @@ function Get-ProbableLockedOutUsers {
     $probableLockedOutUsers = foreach ($lockedOutUser in $lockedOutUsers) {
         Get-ADUser -Identity $lockedOutUser.SamAccountName -Properties *
     }
-
     # Filter locked-out users whose lockoutTime is within X days of the current date, Enabled is True, PasswordExpired is False, and badPwdCount is greater than 0
     $probableLockedOutUsers = $probableLockedOutUsers | Where-Object {
         $_.AccountlockoutTime -ge (Get-Date).AddDays(-1) -and
@@ -81,7 +80,6 @@ do {
         Write-Host "Locked-out users Password Expired within the last 24 hours:"
         $lockedoutusersB | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, AccountLockoutTime -AutoSize
     }
-
     # Display the countdown message
     Write-Host "Refreshing in $refreshInterval minute(s)..."
 

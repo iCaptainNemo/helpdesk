@@ -62,8 +62,8 @@ function Unlock-ADAccountOnAllDomainControllers {
 $unlockedUsersCount = 0
 # Function to get probable locked-out users
 function Get-ProbableLockedOutUsers {
-    # Search for all locked-out user accounts
-    $lockedOutUsers = Search-ADAccount -LockedOut -UsersOnly
+# Search for all locked-out user accounts
+$lockedOutUsers = Search-ADAccount -LockedOut -UsersOnly
 
     # Iterate through all locked-out users and get additional AD properties
     $probableLockedOutUsers = foreach ($lockedOutUser in $lockedOutUsers) {
@@ -102,16 +102,13 @@ function Unlock-Users {
     $jobs = @()
     $failedUserIds = @()
     $unlockedCount = 0
-
     foreach ($user in $lockedoutusers) {
         # Skip if the user ID is in the failedUserIds array
         if ($failedUserIds -contains $user.SamAccountName) {
             continue
         }
-
         $job = Start-Job -ScriptBlock {
             param ($user)
-
             function Unlock-ADAccountOnAllDomainControllers {
                 param (
                     [string]$userId
@@ -130,7 +127,6 @@ function Unlock-Users {
                 return $false
             }
         } -ArgumentList $user
-
         $jobs += $job
     }
 

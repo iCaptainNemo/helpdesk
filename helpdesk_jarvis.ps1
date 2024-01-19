@@ -655,10 +655,9 @@ function Main-Loop {
 
         # Clears the console
         Clear-Host
-
+        
         # Get User ID before entering the main menu
         $userId = Get-UserID
-
         # Get AD properties for the provided User ID
         $userId = $envVars['UserID']
         $adUser = Get-ADUserProperties -userId $userId
