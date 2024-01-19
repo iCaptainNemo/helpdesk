@@ -710,6 +710,7 @@ function Main-Loop {
                             Set-ADAccountPassword -Identity $userId -Reset -NewPassword (ConvertTo-SecureString -AsPlainText $temporaryPassword -Force) -ErrorAction Stop
                             Set-ADUser -Identity $userId -ChangePasswordAtLogon $true -ErrorAction Stop
                             Write-Host "Temporary password set to $temporaryPassword. User must change the password at the next login."
+                            Read-Host "Press any key to continue"
                         } catch {
                             Write-Host "Error: $_"
                         }
@@ -723,6 +724,7 @@ function Main-Loop {
                             Set-ADAccountPassword -Identity $userId -NewPassword (ConvertTo-SecureString -AsPlainText $permanentPassword -Force) -ErrorAction Stop
                             Set-ADUser -Identity $userId -ChangePasswordAtLogon $false -ErrorAction Stop
                             Write-Host "Permanent password set for User ID: $userId"
+                            Read-Host "Press any key to continue"
                         } catch {
                             Write-Host "Error: $_"
                         }
