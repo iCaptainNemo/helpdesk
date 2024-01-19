@@ -1,3 +1,4 @@
+$Host.UI.RawUI.WindowTitle = Split-Path -Path $MyInvocation.MyCommand.Definition -Leaf
 Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope CurrentUser
 
 Clear-Host
@@ -8,8 +9,95 @@ Import-Module ActiveDirectory
 $currentDomain = (Get-ADDomain).DNSRoot
 Write-Host "Current domain: $currentDomain"
 
-## Get the current user with specific properties
-$AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name, HomeDirectory
+# Get the current user with specific properties
+$AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name
+
+# Initialize $envVars hashtable
+$envVars = @{}
+
+# Function to set $tempPassword
+function Set-TempPassword {
+    do {
+        $userInput = Read-Host "The temp password is not set. Enter one to use or press enter to use the default"
+        if ($userInput) {
+            $tempPassword = $userInput
+        } else {
+            # Set Temporary Password based on the season and year
+            $currentMonth = (Get-Date).Month
+            $season = switch ($currentMonth) {
+                { $_ -in 3..5 } { 'Spring' }
+                { $_ -in 6..8 } { 'Summer' }
+                { $_ -in 9..11 } { 'Fall' }
+                { $_ -in 1, 2, 12 } { 'Winter' }
+            }
+            $tempPassword = "$season$(Get-Date -UFormat '%Y')"
+        }
+        $confirm = Read-Host "You entered '$tempPassword'. Is this correct? (press enter for yes, n for no)"
+    } while ($confirm -eq 'n')
+
+    # Update the tempPassword in the $envVars hashtable
+    $envVars['tempPassword'] = $tempPassword
+
+    # Convert the updated hashtable to a list of strings
+    $envVarsList = "`$envVars = @{}" + ($envVars.GetEnumerator() | ForEach-Object { "`n`$envVars['$($_.Key)'] = '$($_.Value)'" })
+    # Write the updated environmental variables to the $AdminConfig file
+    Set-Content -Path $AdminConfig -Value ($envVarsList -join "`n")
+
+    return $tempPassword
+}
+
+# Check if the .env_$AdminConfig.ps1 file exists
+$AdminConfig = ".\.env_$($AdminUser.SamAccountName).ps1"
+if (Test-Path $AdminConfig) {
+    Write-Host "Admin config file exists. Importing."
+    . $AdminConfig
+
+    # Check if 'tempPassword' key in $envVars is null
+    if ($null -eq $envVars['tempPassword']) {
+        $envVars['tempPassword'] = Set-TempPassword
+        # Convert the updated hashtable to a list of strings
+        $envVarsList = "`$envVars = @{}" + ($envVars.GetEnumerator() | ForEach-Object { "`n`$envVars['$($_.Key)'] = '$($_.Value)'" })
+        # Write the updated environmental variables to the $AdminConfig file
+        Set-Content -Path $AdminConfig -Value $envVarsList
+    }
+} else {
+    Write-Host "Admin Config does not exist. Creating."
+    New-Item -Path $AdminConfig -ItemType File | Out-Null
+
+    # Set 'tempPassword' key in $envVars
+    $envVars = @{
+        tempPassword = Set-TempPassword
+        UserID = $null
+    }
+    # Convert the hashtable to a list of strings
+    $envVarsList = "`$envVars = @{}" + ($envVars.GetEnumerator() | ForEach-Object { "`n`$envVars['$($_.Key)'] = '$($_.Value)'" })
+    # Write the environmental variables to the $AdminConfig file
+    Set-Content -Path $AdminConfig -Value $envVarsList
+}
+
+# Create a hashtable to store the environmental variables
+$envVars = @{
+    tempPassword = $envVars['tempPassword']
+    UserID = $null
+}
+Write-Host "Admin User: $($AdminUser.SamAccountName)"
+Write-Host "Temp Password: $($envVars['tempPassword'])"
+
+# Function to set the UserID in the $AdminConfig file to an empty string
+function Remove-UserId {
+    param (
+        [string]$AdminConfig
+    )
+
+    # Set 'UserID' key in $envVars to null
+    $envVars['UserID'] = $null
+
+    # Convert the updated hashtable to a list of strings
+    $envVarsList = "`$envVars = @{}" + ($envVars.GetEnumerator() | ForEach-Object { "`n`$envVars['$($_.Key)'] = '$($_.Value)'" })
+
+    # Write the updated environmental variables to the $AdminConfig file
+    Set-Content -Path $AdminConfig -Value ($envVarsList -join "`n")
+}
 
 # Function to test domain controllers for ADWS service
 function Test-DomainControllers {
@@ -42,8 +130,8 @@ function Test-DomainControllers {
 
     # Export variables to env.ps1 file
     $exportScript = @"
-`$PSDomains = @('{0}')
-`$cmdDomains = @('{1}')
+    `$PSDomains = @('{0}')
+    `$cmdDomains = @('{1}')
 "@ -f ($PSDomains -join "', '"), ($cmdDomains -join "', '")
 
     $exportScript | Out-File -FilePath ".\env_$currentDomain.ps1"
@@ -58,18 +146,26 @@ if (-not (Test-Path ".\env_$currentDomain.ps1")) {
 
 # Function to get User ID with error handling
 function Get-UserId {
-    while ($true) {
-        $userId = (Read-Host "Enter User ID").Replace(' ', '')
-        try {
-            Get-ADUser -Identity $userId -ErrorAction Stop | Out-Null
-            return $userId
-        } catch {
-            #Clear-Host
-            Write-Host "Cannot find an object with the given identity. Try again."
+    if ($null -eq $envVars['UserID']) {
+        while ($true) {
+            $UserID = (Read-Host "Enter User ID").Replace(' ', '')
+            try {
+                Get-ADUser -Identity $UserID -ErrorAction Stop | Out-Null
+                $envVars['UserID'] = $UserID
+                # Convert the updated hashtable to a list of strings
+                $envVarsList = "`$envVars = @{}" + ($envVars.GetEnumerator() | ForEach-Object { "`n`$envVars['$($_.Key)'] = '$($_.Value)'" })
+                # Write the updated environmental variables to the $AdminConfig file
+                Set-Content -Path $AdminConfig -Value ($envVarsList -join "`n")
+                return $UserID
+            } catch {
+                #Clear-Host
+                Write-Host "Cannot find an object with the given identity. Try again."
+            }
         }
+    } else {
+        return $envVars['UserID']
     }
 }
-
 # Function to get specific AD properties for a given User ID
 function Get-ADUserProperties {
     param (
@@ -225,21 +321,26 @@ function Unlock-ADAccountOnAllDomainControllers {
                 net user $userID /active:yes /Domain
             }
             if ($unlockError) {
-                Write-Host "Error unlocking account: $unlockError" -ForegroundColor Red
-
+                "Error unlocking account: $unlockError"
             } else {
                 Write-Host ("Unlocked in " + $targetDC) -BackgroundColor DarkGreen
             }
         } -ArgumentList $userId, $targetDC, $PSDomains, $cmdDomains
     }
 
-    # Wait for all jobs to complete
-    $jobs | Wait-Job | Out-Null
-
-    # Receive and remove completed jobs without displaying job information
+    # Receive and print job outputs as they complete
     $jobs | ForEach-Object {
-        Receive-Job -Job $_ | Out-Null
-        Remove-Job -Job $_ | Out-Null
+        while ($_ -ne $null -and $_.State -ne 'Completed') {
+            if ($_.State -eq 'Failed') {
+                Write-Host "Job failed"
+                break
+            }
+            Start-Sleep -Seconds 1
+        }
+        if ($_.State -eq 'Completed') {
+            Receive-Job -Job $_
+            Remove-Job -Job $_
+        }
     }
 }
 
@@ -543,22 +644,22 @@ function Add-NetworkPrinter {
 
 # Main loop function
 function Main-Loop {
-    param (
-        [string]$userId
-    )
     while ($true) {
         # If the restart flag is set, perform the '0' action and restart the loop
         if ($global:restartScript) {
-            $userId = $null
+            Remove-UserId -AdminConfig $AdminConfig
             Clear-Host
             $global:restartScript = $false
-            continue
+            return $null
         }
 
         # Clears the console
         Clear-Host
-
+        
+        # Get User ID before entering the main menu
+        $userId = Get-UserID
         # Get AD properties for the provided User ID
+        $userId = $envVars['UserID']
         $adUser = Get-ADUserProperties -userId $userId
 
         # Display AD properties above the menu
@@ -583,40 +684,27 @@ function Main-Loop {
 
         $choice = Read-Host "Enter your choice"
 
+
         switch ($choice) {
             '0' {
-                # If the restart flag is set, perform the '0' action and restart the loop
-                if ($global:restartScript) {
-                    $userId = $null
-                    Clear-Host
-                    $global:restartScript = $false
-                    return
-                }
-        
-                # Clear the console, reset User ID, and restart the script
-                $userId = $null
+                Remove-UserId -AdminConfig $AdminConfig
                 Clear-Host
-                return
+                return $null
             }
             '1' {
                 # Unlock AD account on all domain controllers
                 Unlock-ADAccountOnAllDomainControllers -userId $userId
             }
             '2' {
-                # Prompt for setting a temporary or permanent password
-                $passwordChoice = Read-Host "Do you want to set a temporary (T), permanent (P), or cancel (C) password? Enter T, P, or C"
+                $passwordChoice = Read-Host "Do you want to set temporary (T), permanent (P), or cancel (C) password? Enter T, P, or C"
                 switch ($passwordChoice) {
                     'T' {
-                        # Set Temporary Password based on the season and year
-                        $currentMonth = (Get-Date).Month
-                        $season = switch ($currentMonth) {
-                            { $_ -in 3..5 } { 'Spring' }
-                            { $_ -in 6..8 } { 'Summer' }
-                            { $_ -in 9..11 } { 'Fall' }
-                            { $_ -in 1, 2, 12 } { 'Winter' }
+                        if (-not $envVars.ContainsKey('tempPassword')) {
+                            Write-Host "Temporary password is not set. Please set it first."
+                            break
                         }
             
-                        $temporaryPassword = "$season$(Get-Date -UFormat '%Y')"
+                        $temporaryPassword = $envVars['tempPassword']
                         Write-Host "Setting Temporary Password for User ID: $userId to $temporaryPassword (User Must Change)"
                         try {
                             Set-ADAccountPassword -Identity $userId -Reset -NewPassword (ConvertTo-SecureString -AsPlainText $temporaryPassword -Force) -ErrorAction Stop
@@ -625,7 +713,6 @@ function Main-Loop {
                         } catch {
                             Write-Host "Error: $_"
                         }
-
                         break
                     }
                     'P' {
@@ -659,6 +746,8 @@ function Main-Loop {
         
                 # Check if the script should be restarted
                 if ($global:restartScript) {
+                    # Assuming Remove-UserId is updated to work with hashtable
+                    $envVars = Remove-UserId -envVars $envVars
                     $userId = $null
                     Clear-Host
                     $global:restartScript = $false
@@ -672,14 +761,11 @@ function Main-Loop {
 # Main loop
 while ($true) {
     # Get User ID before entering the main menu
-    $userId = Get-UserId
+    $envVars['UserID'] = Get-UserId
 
     # Initialize $logFilePath inside the main loop
-    $logFilePath = "\\hssserver037\login-tracking\$userId.log"
+    $logFilePath = "\\hssserver037\login-tracking\$($envVars['UserID']).log"
 
     # Call the main loop function
-    Main-Loop -userId $userId
+    Main-Loop
 }
-
-
-
