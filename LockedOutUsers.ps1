@@ -50,6 +50,13 @@ do {
     # Display the restart count
     Display-RestartCount
 
+    # Display the number of probable locked-out users
+    if ($probableLockedOutUsers.Count -gt 0) {
+        Write-Host "Number of locked-out users: $($probableLockedOutUsers.Count)" -ForegroundColor Red
+    } else {
+        Write-Host "Number of locked-out users: 0" -ForegroundColor Green
+    }
+
     # Get probable locked-out users
     $probableLockedOutUsers = Get-ProbableLockedOutUsers
 
