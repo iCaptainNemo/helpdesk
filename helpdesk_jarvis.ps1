@@ -31,19 +31,19 @@ $envVars = @{}
 . .\functions\Unlock-ADAccountOnAllDomainControllers.ps1
 
 # Call the function to create the env.ps1 file
-if (-not (Test-Path ".\env_$currentDomain.ps1")) {
+if (-not (Test-Path ".\.env\.env_$currentDomain.ps1")) {
     Test-DomainControllers
 }
 
 # Import variables from env.ps1 file
-. .\env_$currentDomain.ps1
+. .\.env\.env_$currentDomain.ps1
 
 function SetGlobalVariable {
     $global:AdminConfig = ".\.env_$($AdminUser.SamAccountName).ps1"
 }
 
 # Check if the .env_$AdminConfig.ps1 file exists
-$AdminConfig = ".\.env_$($AdminUser.SamAccountName).ps1"
+$AdminConfig = ".\.env\.env_$($AdminUser.SamAccountName).ps1"
 if (Test-Path $AdminConfig) {
     Write-Host "Admin config file exists. Importing."
     . $AdminConfig
@@ -54,7 +54,7 @@ if (Test-Path $AdminConfig) {
         # Convert the updated hashtable to a list of strings
         $envVarsList = "`$envVars = @{}" + ($envVars.GetEnumerator() | ForEach-Object { "`n`$envVars['$($_.Key)'] = '$($_.Value)'" })
         # Write the updated environmental variables to the $AdminConfig file
-        Set-Content -Path $AdminConfig -Value $envVarsList
+        Set-Content -Path ".\.env\$AdminConfig" -Value $envVarsList
     }
 } else {
     Write-Host "Admin Config does not exist. Creating."
@@ -68,7 +68,7 @@ if (Test-Path $AdminConfig) {
     # Convert the hashtable to a list of strings
     $envVarsList = "`$envVars = @{}" + ($envVars.GetEnumerator() | ForEach-Object { "`n`$envVars['$($_.Key)'] = '$($_.Value)'" })
     # Write the environmental variables to the $AdminConfig file
-    Set-Content -Path $AdminConfig -Value $envVarsList
+    Set-Content -Path ".\.env\$AdminConfig" -Value $envVarsList
 }
 
 # Create a hashtable to store the environmental variables

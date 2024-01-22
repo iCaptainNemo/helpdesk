@@ -1,8 +1,8 @@
 # Function to test domain controllers for ADWS service
 function Test-DomainControllers {
     # Check if env.ps1 file already exists
-    if (Test-Path ".\env_$currentDomain.ps1") {
-        Write-Host "env_$currentDomain.ps1 file already exists. continuing."
+    if (Test-Path ".\.env_$currentDomain.ps1") {
+        Write-Host ".env_$currentDomain.ps1 file already exists. continuing."
         return
     }
 
@@ -33,5 +33,5 @@ function Test-DomainControllers {
     `$cmdDomains = @('{1}')
 "@ -f ($PSDomains -join "', '"), ($cmdDomains -join "', '")
 
-    $exportScript | Out-File -FilePath ".\env_$currentDomain.ps1"
+    $exportScript | Out-File -FilePath ".\.env\.env_$currentDomain.ps1"
 }

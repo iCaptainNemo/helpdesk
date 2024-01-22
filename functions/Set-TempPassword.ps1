@@ -24,7 +24,7 @@ function Set-TempPassword {
     # Convert the updated hashtable to a list of strings
     $envVarsList = "`$envVars = @{}" + ($envVars.GetEnumerator() | ForEach-Object { "`n`$envVars['$($_.Key)'] = '$($_.Value)'" })
     # Write the updated environmental variables to the $AdminConfig file
-    Set-Content -Path $AdminConfig -Value ($envVarsList -join "`n")
+    Set-Content -Path ".\.env\$AdminConfig" -Value ($envVarsList -join "`n")
 
     return $tempPassword
 }
