@@ -53,7 +53,7 @@ function Main-Loop {
             }
             '2' {
                 # Password Reset submenu
-                Write-Host "1. Set Temporary to $temporaryPassword"
+                Write-Host "1. Set Temporary to " -NoNewline; Write-Host $temporaryPassword -NoNewline -ForegroundColor Yellow; Write-Host ""
                 Write-Host "2. Set Permanent"
                 Write-Host "3. Force Password Change at Next Logon"
                 Write-Host "0. Cancel"
