@@ -45,7 +45,7 @@ function SetGlobalVariable {
 # Check if the .env_$AdminConfig.ps1 file exists
 $AdminConfig = ".\.env\.env_$($AdminUser.SamAccountName).ps1"
 if (Test-Path $AdminConfig) {
-    Write-Host "Admin config file exists. Importing."
+    Write-Host "Admin config file exists. " -NoNewline; Write-Host "Imported." -ForegroundColor Green
     . $AdminConfig
 
     # Check if 'tempPassword' key in $envVars is null
@@ -76,8 +76,8 @@ $envVars = @{
     tempPassword = $envVars['tempPassword']
     UserID = $null
 }
-Write-Host "Admin User: $($AdminUser.SamAccountName)"
-Write-Host "Temp Password: $($envVars['tempPassword'])"
+Write-Host "Admin User: " -NoNewline; Write-Host "$($AdminUser.SamAccountName)" -ForegroundColor Cyan
+Write-Host "Temp Password: " -NoNewline; Write-Host "$($envVars['tempPassword'])" -ForegroundColor Yellow
 
 
 # Main loop
