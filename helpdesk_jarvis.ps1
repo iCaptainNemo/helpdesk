@@ -30,6 +30,14 @@ $envVars = @{}
 . .\functions\Test-DomainControllers.ps1
 . .\functions\Unlock-ADAccountOnAllDomainControllers.ps1
 
+# Call the function to create the env.ps1 file
+if (-not (Test-Path ".\env_$currentDomain.ps1")) {
+    Test-DomainControllers
+}
+
+# Import variables from env.ps1 file
+. .\env_$currentDomain.ps1
+
 function SetGlobalVariable {
     $global:AdminConfig = ".\.env_$($AdminUser.SamAccountName).ps1"
 }
@@ -71,13 +79,6 @@ $envVars = @{
 Write-Host "Admin User: $($AdminUser.SamAccountName)"
 Write-Host "Temp Password: $($envVars['tempPassword'])"
 
-# Call the function to create the env.ps1 file
-if (-not (Test-Path ".\env_$currentDomain.ps1")) {
-    Test-DomainControllers
-}
-
-# Import variables from env.ps1 file
-. .\env_$currentDomain.ps1
 
 # Main loop
 while ($true) {

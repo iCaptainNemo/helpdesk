@@ -40,7 +40,7 @@ function Main-Loop {
 
         $choice = Read-Host "Enter your choice"
 
-
+        $temporaryPassword = $envVars['tempPassword']
         switch ($choice) {
             '0' {
                 Remove-UserId -AdminConfig $AdminConfig
@@ -52,9 +52,16 @@ function Main-Loop {
                 Unlock-ADAccountOnAllDomainControllers -userId $userId
             }
             '2' {
-                $passwordChoice = Read-Host "Do you want to set temporary (T), permanent (P), or cancel (C) password? Enter T, P, or C"
+                # Password Reset submenu
+                Write-Host "1. Set Temporary to $temporaryPassword"
+                Write-Host "2. Set Permanent"
+                Write-Host "3. Force Password Change at Next Logon"
+                Write-Host "0. Cancel"
+
+                
+                $passwordChoice = Read-Host "Enter Choice"
                 switch ($passwordChoice) {
-                    'T' {
+                    '1' {
                         if (-not $envVars.ContainsKey('tempPassword')) {
                             Write-Host "Temporary password is not set. Please set it first."
                             break
@@ -72,7 +79,7 @@ function Main-Loop {
                         }
                         break
                     }
-                    'P' {
+                    '2' {
                         # Prompt for a permanent password
                         $permanentPassword = Read-Host "Enter the permanent password for User ID: $userId"
                         Write-Host "Setting Permanent Password for User ID: $userId"
@@ -86,7 +93,18 @@ function Main-Loop {
                         }
                         break
                     }
-                    'C' {
+                    '3' {
+                        Write-Host "Setting User ID: $userId to change password at next logon"
+                        try {
+                            Set-ADUser -Identity $userId -ChangePasswordAtLogon $true -ErrorAction Stop
+                            Write-Host "User ID: $userId must change the password at the next login."
+                            Read-Host "Press any key to continue"
+                        } catch {
+                            Write-Host "Error: $_"
+                        }
+                        break
+                    }
+                    '0' {
                         # Cancel password change
                         Write-Host "Password change canceled."
                         break
