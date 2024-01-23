@@ -17,7 +17,7 @@ $envVars = @{}
 
 # Import functions from functions directory
 . .\functions\Asset-Control.ps1
-. .\functions\dd-NetworkPrinter.ps1
+. .\functions\Add-NetworkPrinter.ps1
 . .\functions\Test-AssetConnection.ps1
 . .\functions\Get-ADUserProperties.ps1
 . .\functions\Get-UserId.ps1

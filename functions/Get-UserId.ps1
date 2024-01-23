@@ -1,4 +1,6 @@
-# Description: This function prompts the user for a User ID and validates that it exists in Active Directory. If the User ID is valid, it is stored in the $envVars hashtable and the $AdminConfig file is updated with the new value.
+# Description: This function prompts the user for a User ID and validates that it exists in Active Directory. 
+# If the User ID is valid, 
+# it is stored in the $envVars hashtable and the $AdminConfig file is updated with the new value.
 function Get-UserId {
     if ($null -eq $envVars['UserID']) {
         while ($true) {
