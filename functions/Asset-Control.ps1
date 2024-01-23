@@ -11,11 +11,44 @@ function Asset-Control {
 
     # Display possible computers as a numbered list
     Write-Host "Possible Computers:"
-    for ($i = 0; $i -lt $possibleComputers.Count; $i++) {
-        Write-Host "$($i + 1). $($possibleComputers[$i])"
+    $psLoggedOnPath = ".\Tools\PsLoggedon.exe"
+    $computerStatus = @{}
     
+    for ($i = 0; $i -lt $possibleComputers.Count; $i++) {
+        $computerName = $possibleComputers[$i]
+    
+        # Check if the computer is part of the domain
+        $computerInDomain = Get-ADComputer -Filter {Name -eq $computerName} -ErrorAction SilentlyContinue
+    
+        if ($null -eq $computerInDomain) {
+            Write-Host "$($i + 1). $computerName - Not part of the domain" -ForegroundColor Gray
+            continue
+        }
+    
+        # If the computer has already been checked, use the stored status
+        if ($computerStatus.ContainsKey($computerName)) {
+            $isUserLoggedIn = $computerStatus[$computerName]
+        } else {
+            # Check if the user is logged on to the computer
+            try {
+                $output = & $psLoggedOnPath -l -x \\$computerName | Out-String
+                $isUserLoggedIn = $output -match $userID
+    
+                # Store the status for this computer
+                $computerStatus[$computerName] = $isUserLoggedIn
+            } catch {
+                Write-Host ("Error running PsLoggedOn for " + $computerName + ": " + $_.Exception.Message) -ForegroundColor Red
+                continue
+            }
+        }
+    
+        if ($isUserLoggedIn) {
+            Write-Host "$($i + 1). $computerName" -ForegroundColor Green
+        } else {
+            Write-Host "$($i + 1). $computerName"
+        }
     }
-
+    $computerStatus.Clear()
     # Prompt for Computer Name or number
     $input = Read-Host "Enter Computer Name or number from the list above"
 
