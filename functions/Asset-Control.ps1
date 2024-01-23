@@ -21,7 +21,7 @@ function Asset-Control {
         $computerInDomain = Get-ADComputer -Filter {Name -eq $computerName} -ErrorAction SilentlyContinue
     
         if ($null -eq $computerInDomain) {
-            Write-Host "$($i + 1). $computerName - Not part of the domain" -ForegroundColor  DarkGray
+            Write-Host "$($i + 1). $computerName - Not part of domain" -ForegroundColor  DarkGray
             continue
         }
     
