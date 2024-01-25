@@ -51,17 +51,17 @@ function Asset-Control {
     # Prompt for Computer Name or number
     $input = Read-Host "Enter Computer Name or number from the list above"
 
-        # Check if the user wants to cancel
-    if ($input -eq 'C' -or $input -eq 'c') {
-        Write-Host "Operation cancelled by user."
-        return
-    }
-    # Check if the input is a number and within the range of the list
-    if ($input -match '^\d+$' -and $input -le $possibleComputers.Count) {
-        $computerName = $possibleComputers[[int]$input - 1]
-    } else {
-        $computerName = $input
-    }
+        # Check if the input is a number and within the range of the list
+        if ($input -match '^\d+$' -and $input -le $possibleComputers.Count) {
+            if ($input -gt 0) {
+                $computerName = $possibleComputers[[int]$input - 1]
+            } else {
+                Write-Host "Invalid input. Please enter a number from the list above."
+                return
+            }
+        } else {
+            $computerName = $input
+        }
 
     # Add a line break or additional Write-Host statements for space
     Write-Host "`n"  # This adds a line break
