@@ -51,22 +51,29 @@ if (Test-Path $AdminConfig) {
     # Check if 'tempPassword' key in $envVars is null
     if ($null -eq $envVars['tempPassword']) {
         $envVars['tempPassword'] = Set-TempPassword
-        # Convert the updated hashtable to a list of strings
-        $envVarsList = "`$envVars = @{}" + ($envVars.GetEnumerator() | ForEach-Object { "`n`$envVars['$($_.Key)'] = '$($_.Value)'" })
-        # Write the updated environmental variables to the $AdminConfig file
-        Set-Content -Path ".\.env\$AdminConfig" -Value $envVarsList
     }
+
+    # Check if 'logFilePath' key in $envVars is null
+    if ($null -eq $envVars['logFileBasePath']) {
+        $envVars['logFileBasePath'] = Read-Host "Log Path not set. Enter Log Path"
+    }
+
+    # Convert the updated hashtable to a list of strings
+    $envVarsList = "`$envVars = @{}" + ($envVars.GetEnumerator() | ForEach-Object { "`n`$envVars['$($_.Key)'] = `"$($_.Value)`"" })
+    # Write the updated environmental variables to the $AdminConfig file
+    Set-Content -Path "$AdminConfig" -Value $envVarsList
 } else {
     Write-Host "Admin Config does not exist. Creating."
     New-Item -Path $AdminConfig -ItemType File | Out-Null
 
-    # Set 'tempPassword' key in $envVars
+    # Set 'tempPassword' and 'logFilePath' keys in $envVars
     $envVars = @{
         tempPassword = Set-TempPassword
+        logFilePath = Read-Host "Log Path not set. Enter Log Path"
         UserID = $null
     }
     # Convert the hashtable to a list of strings
-    $envVarsList = "`$envVars = @{}" + ($envVars.GetEnumerator() | ForEach-Object { "`n`$envVars['$($_.Key)'] = '$($_.Value)'" })
+    $envVarsList = "`$envVars = @{}" + ($envVars.GetEnumerator() | ForEach-Object { "`n`$envVars['$($_.Key)'] = `"$($_.Value)`"" })
     # Write the environmental variables to the $AdminConfig file
     Set-Content -Path ".\.env\$AdminConfig" -Value $envVarsList
 }
@@ -74,10 +81,12 @@ if (Test-Path $AdminConfig) {
 # Create a hashtable to store the environmental variables
 $envVars = @{
     tempPassword = $envVars['tempPassword']
+    logFileBasePath = $envVars['logFileBasePath']
     UserID = $null
 }
 Write-Host "Admin User: " -NoNewline; Write-Host "$($AdminUser.SamAccountName)" -ForegroundColor Cyan
 Write-Host "Temp Password: " -NoNewline; Write-Host "$($envVars['tempPassword'])" -ForegroundColor Yellow
+Write-Host "Logfile Path: " -NoNewline; Write-Host "$($envVars['logFileBasePath'])" -ForegroundColor Yellow
 
 
 # Main loop
@@ -86,7 +95,8 @@ while ($true) {
     $envVars['UserID'] = Get-UserId
 
     # Initialize $logFilePath inside the main loop
-    $logFilePath = "\\hssserver037\login-tracking\$($envVars['UserID']).log"
+    #$logFilePath = "\\hssserver037\login-tracking\$($envVars['UserID']).log"
+    $logFilePath = $envVars['logFileBasePath'] + $envVars['UserID'] + '.log'
 
     # Call the main loop function
     Main-Loop

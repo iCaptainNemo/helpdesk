@@ -48,7 +48,6 @@ function Asset-Control {
             Write-Host "$($i + 1). $computerName"
         }
     }
-    $computerStatus.Clear()
     # Prompt for Computer Name or number
     $input = Read-Host "Enter Computer Name or number from the list above"
 
@@ -58,7 +57,7 @@ function Asset-Control {
         return
     }
     # Check if the input is a number and within the range of the list
-    if ($input -match '^\d+$' -and $input -le ($possibleComputers.Count - 1)) {
+    if ($input -match '^\d+$' -and $input -le $possibleComputers.Count) {
         $computerName = $possibleComputers[[int]$input - 1]
     } else {
         $computerName = $input
@@ -66,6 +65,10 @@ function Asset-Control {
 
     # Add a line break or additional Write-Host statements for space
     Write-Host "`n"  # This adds a line break
+
+    # Display the selected computer
+    Write-Host "Selected computer: $computerName"
+
     # Get computer properties
     try {
         $computer = Get-ADComputer $computerName -Properties MemberOf
@@ -97,35 +100,36 @@ function Asset-Control {
         #Line break for space
         Write-Host "`n"
 
-    if ($properties.'Computer Reachable' -eq 'True' -and $currentDomain -eq 'hs.gov') {
-        try {
-            # Get LastBootUpTime using CIM instance
-            $lastBootUpTime = Get-CimInstance -ClassName Win32_OperatingSystem -ComputerName $computerName -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LastBootUpTime
-        
-            # Check if $lastBootUpTime is not null before trying to calculate $uptime
-            if ($null -ne $lastBootUpTime) {
-                # Calculate the uptime
-                $uptime = (Get-Date) - $lastBootUpTime
-                Write-Host "Last Boot Up Time: $lastBootUpTime"
-            } else {
-                throw
-            }
-            } catch {
-            $uptime = "Unable to get uptime, an error occurred"
-            }
-        # Color coding for computer uptime
-            if ($uptime -is [TimeSpan]) {
-                if ($uptime.TotalDays -gt 5) {
-                    Write-Host "Uptime: More than 5 days" -ForegroundColor Red
-                } elseif ($uptime.TotalDays -gt 3) {
-                    Write-Host "Uptime: More than 3 days" -ForegroundColor Yellow
+        # Get LastBootUpTime and calculate uptime
+        if ($properties.'Computer Reachable' -eq 'True' -and $currentDomain -eq 'hs.gov') {
+            try {
+                # Get LastBootUpTime using CIM instance
+                $lastBootUpTime = Get-CimInstance -ClassName Win32_OperatingSystem -ComputerName $computerName -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LastBootUpTime
+            
+                # Check if $lastBootUpTime is not null before trying to calculate $uptime
+                if ($null -ne $lastBootUpTime) {
+                    # Calculate the uptime
+                    $uptime = (Get-Date) - $lastBootUpTime
+                    Write-Host "Last Boot Up Time: $lastBootUpTime"
                 } else {
-                    Write-Host "Uptime: Less than or equal to 3 days" -ForegroundColor Green
+                    throw
                 }
-            } else {
-                Write-Host $uptime -ForegroundColor Red
+                } catch {
+                $uptime = "Unable to get uptime, an error occurred"
+                }
+            # Color coding for computer uptime
+                if ($uptime -is [TimeSpan]) {
+                    if ($uptime.TotalDays -gt 5) {
+                        Write-Host "Uptime: More than 5 days" -ForegroundColor Red
+                    } elseif ($uptime.TotalDays -gt 3) {
+                        Write-Host "Uptime: More than 3 days" -ForegroundColor Yellow
+                    } else {
+                        Write-Host "Uptime: Less than or equal to 3 days" -ForegroundColor Green
+                    }
+                } else {
+                    Write-Host $uptime -ForegroundColor Red
+                }
             }
-        }
     } else {
         Write-Host "Computer not found: $computerName" -ForegroundColor Red
         return
@@ -259,6 +263,7 @@ function Asset-Control {
             }
             '0' {
                 # Back to main menu
+                $computerStatus.Clear()
                 return
             }
             '00' {
