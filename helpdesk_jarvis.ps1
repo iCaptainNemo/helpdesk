@@ -29,6 +29,7 @@ $envVars = @{}
 . .\functions\Show-LastLogEntries.ps1
 . .\functions\Test-DomainControllers.ps1
 . .\functions\Unlock-ADAccountOnAllDomainControllers.ps1
+. .\functions\Clear-Browsers.ps1
 
 # Call the function to create the env.ps1 file
 if (-not (Test-Path ".\.env\.env_$currentDomain.ps1")) {

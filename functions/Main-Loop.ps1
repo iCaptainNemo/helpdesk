@@ -50,6 +50,7 @@ function Main-Loop {
             '1' {
                 # Unlock AD account on all domain controllers
                 Unlock-ADAccountOnAllDomainControllers -userId $userId
+                Read-Host "Press any key to continue"
             }
             '2' {
                 # Password Reset submenu

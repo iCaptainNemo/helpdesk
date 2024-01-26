@@ -53,12 +53,7 @@ function Asset-Control {
 
         # Check if the input is a number and within the range of the list
         if ($input -match '^\d+$' -and $input -le $possibleComputers.Count) {
-            if ($input -gt 0) {
-                $computerName = $possibleComputers[[int]$input - 1]
-            } else {
-                Write-Host "Invalid input. Please enter a number from the list above."
-                return
-            }
+            $computerName = $possibleComputers[[int]$input - 1]
         } else {
             $computerName = $input
         }
@@ -169,6 +164,7 @@ function Asset-Control {
         Write-Host "5. PSEXEC Console"
         Write-Host "6. Add Network Printer"
         Write-Host "7. Get Print Jobs"
+        Write-Host "8. Clear IE Browser"
         Write-Host "0. Back to Main Menu"
 
         $assetChoice = Read-Host "Enter your choice"
@@ -260,6 +256,34 @@ function Asset-Control {
             Write-Host "Getting Print Jobs for $printerName on $computerName"
             Get-PrintJobsForComputer -ComputerName $computerName
             break
+            }
+            '8' {
+                # Clear Browser
+                $browserChoice = Read-Host "Enter the browser to clear (IE, Chrome, Edge, All, Cancel)"
+                switch ($browserChoice) {
+                    'IE' {
+                        Clear-BrowserIE -userID $envVars['UserID'] -computer $computer -TempIEFiles -Cookies -History
+                    }
+                    'Chrome' {
+                        Clear-ChromeCacheRemote -userID $envVars['UserID'] -computer $computer
+                    }
+                    'Edge' {
+                        Clear-EdgeCacheRemote -userID $envVars['UserID'] -computer $computer
+                    }
+                    'All' {
+                        Clear-BrowserIE -userID $envVars['UserID'] -computer $computer -TempIEFiles -Cookies -History
+                        Clear-ChromeCacheRemote -userID $envVars['UserID'] -computer $computer
+                        Clear-EdgeCacheRemote -userID $envVars['UserID'] -computer $computer
+                    }
+                    'Cancel' {
+                        Write-Host "Browser cache clear operation cancelled."
+                        break
+                    }
+                    default {
+                        Write-Host "Invalid choice. Please enter IE, Chrome, Edge, All, or Cancel."
+                    }
+                }
+                break
             }
             '0' {
                 # Back to main menu
