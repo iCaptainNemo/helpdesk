@@ -13,12 +13,12 @@ function Unlock-ADAccountOnAllDomainControllers {
             if ($targetDC -in $PSDomains) {
                 Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorAction SilentlyContinue -ErrorVariable unlockError
             } elseif ($targetDC -in $cmdDomains) {
-                net user $userID /active:yes /Domain
+                net user $userID /active:yes /Domain > $null 2>&1
             }
             if ($unlockError) {
                 "Error unlocking account: $unlockError"
             } else {
-                Write-Host ("Unlocked in " + $targetDC) -BackgroundColor DarkGreen
+                Write-Host ($targetDC) -BackgroundColor DarkGreen
             }
         } -ArgumentList $userId, $targetDC, $PSDomains, $cmdDomains
     }

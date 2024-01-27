@@ -164,7 +164,7 @@ function Asset-Control {
         Write-Host "5. PSEXEC Console"
         Write-Host "6. Add Network Printer"
         Write-Host "7. Get Print Jobs"
-        Write-Host "8. Clear IE Browser"
+        Write-Host "8. Clear Browsers"
         Write-Host "0. Back to Main Menu"
 
         $assetChoice = Read-Host "Enter your choice"
