@@ -238,7 +238,7 @@ function Asset-Control {
                 Write-Host "Starting PsExec to open a command prompt on $computerName"
                 
                 # Execute the PsExec command
-                Start-Process -FilePath "cmd.exe" -ArgumentList "/c $psexecCommand" -Wait
+                Start-Process -FilePath "cmd.exe" -ArgumentList "/c $psexecCommand"
                 
                 Write-Host "PsExec command completed for $computerName"
                 break
