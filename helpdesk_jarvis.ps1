@@ -6,11 +6,24 @@ Clear-Host
 Import-Module ActiveDirectory
 
 # Get the current domain
-$currentDomain = (Get-ADDomain).DNSRoot
+try {
+    $currentDomain = (Get-ADDomain -ErrorAction SilentlyContinue -WarningAction SilentlyContinue).DNSRoot
+} catch {
+    Write-Host "Error getting domain. Setting default domain to 403." -ForegroundColor Red
+    $currentDomain = 403
+}
 Write-Host "Current domain: $currentDomain"
 
 # Get the current user with specific properties
-$AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name
+try {
+    $AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name -ErrorAction SilentlyContinue
+} catch {
+    Write-Host "Error getting user. Setting default AdminUserID to 404."
+    $AdminUser = New-Object PSObject -Property @{
+        SamAccountName = 404
+        Name = "Unkown"
+    }
+}
 
 # Initialize $envVars hashtable
 $envVars = @{}
@@ -56,8 +69,11 @@ if (Test-Path $AdminConfig) {
 
     # Check if 'logFilePath' key in $envVars is null
     if ($null -eq $envVars['logFileBasePath']) {
-        $envVars['logFileBasePath'] = Read-Host "Log Path not set. Enter Log Path"
+        $envVars['logFileBasePath'] = Read-Host "Log Path not set. Enter Log Path or leave blank to disable log parsing."
     }
+
+    # Set 'logPathBoolean' key in $envVars
+    $envVars['logPathBoolean'] = $null -ne $envVars['logFileBasePath'] -and $envVars['logFileBasePath'] -ne ""
 
     # Convert the updated hashtable to a list of strings
     $envVarsList = "`$envVars = @{}" + ($envVars.GetEnumerator() | ForEach-Object { "`n`$envVars['$($_.Key)'] = `"$($_.Value)`"" })
@@ -67,16 +83,25 @@ if (Test-Path $AdminConfig) {
     Write-Host "Admin Config does not exist. Creating."
     New-Item -Path $AdminConfig -ItemType File | Out-Null
 
+    # Check if 'logFilePath' key in $envVars is null
+    if ($null -eq $envVars['logFileBasePath']) {
+        $envVars['logFileBasePath'] = Read-Host "Log Path not set. Enter Log Path or leave blank to disable log parsing."
+    }
+
+    # Set 'logPathBoolean' key in $envVars
+    $envVars['logPathBoolean'] = $null -ne $envVars['logFileBasePath'] -and $envVars['logFileBasePath'] -ne "" -as [bool]
+
     # Set 'tempPassword' and 'logFilePath' keys in $envVars
     $envVars = @{
         tempPassword = Set-TempPassword
-        logFilePath = Read-Host "Log Path not set. Enter Log Path"
+        logFilePath = $envVars['logFileBasePath']
         UserID = $null
+        logPathBoolean = $envVars['logPathBoolean']
     }
     # Convert the hashtable to a list of strings
     $envVarsList = "`$envVars = @{}" + ($envVars.GetEnumerator() | ForEach-Object { "`n`$envVars['$($_.Key)'] = `"$($_.Value)`"" })
     # Write the environmental variables to the $AdminConfig file
-    Set-Content -Path ".\.env\$AdminConfig" -Value $envVarsList
+    Set-Content -Path "$AdminConfig" -Value $envVarsList
 }
 
 # Create a hashtable to store the environmental variables
@@ -84,7 +109,9 @@ $envVars = @{
     tempPassword = $envVars['tempPassword']
     logFileBasePath = $envVars['logFileBasePath']
     UserID = $null
+    logPathBoolean = $null -ne $envVars['logFileBasePath'] -and $envVars['logFileBasePath'] -ne ""
 }
+
 Write-Host "Admin User: " -NoNewline; Write-Host "$($AdminUser.SamAccountName)" -ForegroundColor Cyan
 Write-Host "Temp Password: " -NoNewline; Write-Host "$($envVars['tempPassword'])" -ForegroundColor Yellow
 Write-Host "Logfile Path: " -NoNewline; Write-Host "$($envVars['logFileBasePath'])" -ForegroundColor Yellow
@@ -96,8 +123,9 @@ while ($true) {
     $envVars['UserID'] = Get-UserId
 
     # Initialize $logFilePath inside the main loop
-    #$logFilePath = "\\hssserver037\login-tracking\$($envVars['UserID']).log"
-    $logFilePath = $envVars['logFileBasePath'] + $envVars['UserID'] + '.log'
+    if ($envVars['logPathBoolean']) {
+        $logFilePath = $envVars['logFileBasePath'] + $envVars['UserID'] + '.log'
+    }
 
     # Call the main loop function
     Main-Loop
