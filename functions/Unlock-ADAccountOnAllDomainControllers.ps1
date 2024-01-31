@@ -5,22 +5,24 @@ function Unlock-ADAccountOnAllDomainControllers {
     )
 
     $dcList = $PSDomains + $cmdDomains
+    $netUserCommandExecuted = $false
 
     $jobs = foreach ($targetDC in $dcList) {
         Start-Job -ScriptBlock {
-            param ($userId, $targetDC, $PSDomains, $cmdDomains)
+            param ($userId, $targetDC, $PSDomains, $cmdDomains, $netUserCommandExecuted)
             $error.Clear()
             if ($targetDC -in $PSDomains) {
                 Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorAction SilentlyContinue -ErrorVariable unlockError
-            } elseif ($targetDC -in $cmdDomains) {
-                net user $userID /active:yes /Domain > $null 2>&1
+            } elseif ($targetDC -in $cmdDomains -and !$netUserCommandExecuted) {
+                net user $userID /active:yes > $null 2>&1
+                $netUserCommandExecuted = $true
             }
             if ($unlockError) {
                 "Error unlocking account: $unlockError"
             } else {
                 Write-Host ($targetDC) -BackgroundColor DarkGreen
             }
-        } -ArgumentList $userId, $targetDC, $PSDomains, $cmdDomains
+        } -ArgumentList $userId, $targetDC, $PSDomains, $cmdDomains, $netUserCommandExecuted
     }
 
     # Receive and print job outputs as they complete

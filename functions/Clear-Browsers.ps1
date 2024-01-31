@@ -10,11 +10,15 @@ function Clear-BrowserCacheRemote
         [Parameter(Mandatory = $true,
                    HelpMessage = 'Computer Name')]
         [string]
-        $computer
+        $computerName,  # Changed from $computer to $computerName
+        [Parameter(Mandatory = $true,
+                   HelpMessage = 'Browser to clear')]
+        [ValidateSet('Chrome', 'Edge', 'All')]
+        [string]
+        $browser
     )
 
-    $browserChoice = Read-Host "Enter the browser to clear (Chrome, Edge, All)"
-    switch ($browserChoice) {
+    switch ($browser) {
         'Chrome' {
             $cacheDir = "C:\Users\$userID\AppData\Local\Google\Chrome\User Data\Default\Cache\*"
         }
@@ -24,17 +28,13 @@ function Clear-BrowserCacheRemote
         'All' {
             $cacheDir = "C:\Users\$userID\AppData\Local\Google\Chrome\User Data\Default\Cache\*", "C:\Users\$userID\AppData\Local\Microsoft\Edge\User Data\Default\Cache\*"
         }
-        default {
-            Write-Host "Invalid choice. Please enter Chrome, Edge, or All."
-            return
-        }
     }
 
     foreach ($dir in $cacheDir) {
-        $psexecCommand = "psexec.exe \\$computer -u $userID -p password cmd.exe /c `"`"del /s /q /f $dir`"`""
-        Write-Host "Starting PsExec to clear browser cache on $computer"
+        $psexecCommand = "psexec.exe \\$computerName -u $userID -p password cmd.exe /c `"`"del /s /q /f $dir`"`""  # Changed $computer to $computerName
+        Write-Host "Starting PsExec to clear browser cache on $computerName"  # Changed $computer to $computerName
         Start-Process -FilePath "cmd.exe" -ArgumentList "/c $psexecCommand" -Wait
     }
 
-    Write-Host "PsExec command completed for $computer"
+    Write-Host "PsExec command completed for $computerName"  # Changed $computer to $computerName
 }

@@ -15,7 +15,7 @@ function Set-TempPassword {
             }
             $tempPassword = "$season$(Get-Date -UFormat '%Y')"
         }
-        $confirm = Read-Host "You entered '$tempPassword'. Is this correct? (press enter for yes, n for no)"
+        $confirm = Read-Host "You entered '$tempPassword'. Is this correct? (n to redo)"
     } while ($confirm -eq 'n')
 
     # Update the tempPassword in the $envVars hashtable
@@ -24,7 +24,7 @@ function Set-TempPassword {
     # Convert the updated hashtable to a list of strings
     $envVarsList = "`$envVars = @{}" + ($envVars.GetEnumerator() | ForEach-Object { "`n`$envVars['$($_.Key)'] = '$($_.Value)'" })
     # Write the updated environmental variables to the $AdminConfig file
-    Set-Content -Path ".\.env\$AdminConfig" -Value ($envVarsList -join "`n")
+    Set-Content -Path "$AdminConfig" -Value ($envVarsList -join "`n")
 
     return $tempPassword
 }
