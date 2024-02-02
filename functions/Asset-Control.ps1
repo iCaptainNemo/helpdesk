@@ -9,22 +9,27 @@ function Asset-Control {
     $result = Show-LastLogEntries -logFilePath $logFilePath
     $possibleComputers = $result.PossibleComputers
 
+    # Remove duplicates from the $possibleComputers array
+    $possibleComputers = $possibleComputers | Sort-Object | Get-Unique
+
     # Display possible computers as a numbered list
     Write-Host "Possible Computers:"
     $psLoggedOnPath = ".\Tools\PsLoggedon.exe"
     $computerStatus = @{}
-    
+
     for ($i = 0; $i -lt $possibleComputers.Count; $i++) {
         $computerName = $possibleComputers[$i]
-    
+
         # Check if the computer is part of the domain
         $computerInDomain = Get-ADComputer -Filter {Name -eq $computerName} -ErrorAction SilentlyContinue
-    
+
         if ($null -eq $computerInDomain) {
-            Write-Host "$($i + 1). $computerName - Not part of domain" -ForegroundColor  DarkGray
+            Write-Host "$($i + 1). $computerName - Not part of domain" -ForegroundColor DarkGray
             continue
         }
-    
+
+
+
         # If the computer has already been checked, use the stored status
         if ($computerStatus.ContainsKey($computerName)) {
             $isUserLoggedIn = $computerStatus[$computerName]
@@ -33,7 +38,7 @@ function Asset-Control {
             try {
                 $output = & $psLoggedOnPath -l -x \\$computerName | Out-String
                 $isUserLoggedIn = $output -match $userID
-    
+
                 # Store the status for this computer
                 $computerStatus[$computerName] = $isUserLoggedIn
             } catch {
@@ -41,19 +46,23 @@ function Asset-Control {
                 continue
             }
         }
-    
+
         if ($isUserLoggedIn) {
             Write-Host "$($i + 1). $computerName" -ForegroundColor Green
         } else {
             Write-Host "$($i + 1). $computerName"
         }
     }
+
     # Prompt for Computer Name or number
     $input = Read-Host "Enter Computer Name, number from the list above, or 'C' to cancel"
 
     # Check if the input is a number and within the range of the list
     if ($input -match '^\d+$' -and $input -ge 1 -and $input -le $possibleComputers.Count) {
-        $computerName = $possibleComputers[[int]$input - 1] # Subtract 1 here
+
+        # Look up the computer name in the array
+        $computerName = $possibleComputers[$input - 1]
+
     } elseif ($input -eq 'C' -or $input -eq 'c') {
         Write-Host "Selection cancelled."
         $computerName = $null
