@@ -56,7 +56,6 @@ do {
     } else {
         Write-Host "Number of locked-out users: 0" -ForegroundColor Green
     }
-
     # Get probable locked-out users
     $probableLockedOutUsers = Get-ProbableLockedOutUsers
 

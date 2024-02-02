@@ -15,6 +15,7 @@ try {
 Write-Host "Current domain: $currentDomain"
 
 # Get the current user with specific properties
+
 try {
     $AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name -ErrorAction SilentlyContinue
 } catch {
@@ -61,6 +62,7 @@ $AdminConfig = ".\.env\.env_$($AdminUser.SamAccountName).ps1"
 if (Test-Path $AdminConfig) {
     Write-Host "Admin config file exists. " -NoNewline; Write-Host "Imported." -ForegroundColor Green
     . $AdminConfig
+
 
     # Check if 'tempPassword' key in $envVars is null
     if ($null -eq $envVars['tempPassword']) {
@@ -126,6 +128,7 @@ while ($true) {
     if ($envVars['logPathBoolean']) {
         $logFilePath = $envVars['logFileBasePath'] + $envVars['UserID'] + '.log'
     }
+
 
     # Call the main loop function
     Main-Loop
