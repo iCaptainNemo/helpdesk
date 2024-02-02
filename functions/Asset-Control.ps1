@@ -8,7 +8,7 @@ function Asset-Control {
 
     $result = Show-LastLogEntries -logFilePath $logFilePath
     $possibleComputers = $result.PossibleComputers
-    
+
     # Remove duplicates from the $possibleComputers array
     $possibleComputers = $possibleComputers | Sort-Object | Get-Unique
 
@@ -27,6 +27,8 @@ function Asset-Control {
             Write-Host "$($i + 1). $computerName - Not part of domain" -ForegroundColor DarkGray
             continue
         }
+
+
 
         # If the computer has already been checked, use the stored status
         if ($computerStatus.ContainsKey($computerName)) {
@@ -57,8 +59,10 @@ function Asset-Control {
 
     # Check if the input is a number and within the range of the list
     if ($input -match '^\d+$' -and $input -ge 1 -and $input -le $possibleComputers.Count) {
+
         # Look up the computer name in the array
         $computerName = $possibleComputers[$input - 1]
+
     } elseif ($input -eq 'C' -or $input -eq 'c') {
         Write-Host "Selection cancelled."
         $computerName = $null
