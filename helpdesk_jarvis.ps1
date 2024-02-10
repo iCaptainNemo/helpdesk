@@ -1,6 +1,15 @@
 $Host.UI.RawUI.WindowTitle = Split-Path -Path $MyInvocation.MyCommand.Definition -Leaf
 Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope CurrentUser
 
+Write-Host "Do you want to enable debugging? (Y/N)"
+$debugChoice = Read-Host
+
+if ($debugChoice -eq 'Y' -or $debugChoice -eq 'y') {
+    $global:debugging = $true
+} else {
+    $global:debugging = $false
+}
+
 Clear-Host
 # Import required modules
 Import-Module ActiveDirectory

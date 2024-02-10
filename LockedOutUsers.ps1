@@ -52,11 +52,11 @@ Function Show-Graph {
         $Row = ''
         For($j=0;$j -lt $NumOfDatapoints;$j++){
             $Cell = $Array[$i,$j]
-            $String = If([String]::IsNullOrWhiteSpace($Cell)){'  '}else{$Cell + ' '}
+            $String = If([String]::IsNullOrWhiteSpace($Cell)){'  '}else{$Cell + ''}
             $Row = [string]::Concat($Row,$String)          
         }
         
-        $YAxisLabel = $i*5 
+        $YAxisLabel = $i*5
         
         # Condition to fix the spacing issue of a 3 digit vs 2 digit number [like 100 vs 90]  on the Y-Axis
         If("$YAxisLabel".length -lt 3){$YAxisLabel = (" "*(3-("$YAxisLabel".length)))+$YAxisLabel}
@@ -125,9 +125,6 @@ function Get-ProbableLockedOutUsers {
     return $probableLockedOutUsers
 }
 
-# Get the current user
-$AdminUser = Get-ADUser -Identity $env:USERNAME -Properties *
-
 function Display-RestartCount {
     $script:restartCount++
     Write-Host "Script has restarted $($script:restartCount) times."
@@ -170,33 +167,6 @@ do {
         $lockedOutUserCounts = $lockedOutUserCounts | Select-Object -Last $dataPointsToKeep
     }
 
-    # Display the number of probable locked-out users
-    if ($probableLockedOutUsers.Count -gt 0) {
-       ### Write-Host "Number of locked-out users: $($probableLockedOutUsers.Count)" -ForegroundColor Red
-    } else {
-        ### Write-Host "Number of locked-out users: 0" -ForegroundColor Green
-    }
-
-    # Users who are locked out and password is expired
-    $lockedoutusersB = $probableLockedOutUsers | Where-Object {
-        $_.PasswordExpired -eq $true
-    }
-
-    # The rest of the users
-    $lockedoutusersA = $probableLockedOutUsers | Where-Object {
-        $_ -notin $lockedoutusersB
-    }
-
-    # Display the properties of users in $lockedoutusersA and $lockedoutusersB in separate tables
-    if ($lockedoutusersA.Count -gt 0) {
-       ### Write-Host "Locked-out users within the last 24 hours:"
-        ### $lockedoutusersA | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, AccountLockoutTime -AutoSize
-    }
-    if ($lockedoutusersB.Count -gt 0) {
-       ### Write-Host "Locked-out users Password Expired within the last 24 hours:"
-       ###  $lockedoutusersB | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, AccountLockoutTime -AutoSize
-    }
-
     # Display the graph
     Show-Graph -Datapoints $lockedOutUserCounts -XAxisTitle "$(Get-Date -Format "hh:mm tt")" -YAxisTitle "$($probableLockedOutUsers.Count)"
 
@@ -205,8 +175,4 @@ do {
 
     # Wait for specified minutes
     Start-Sleep -Seconds ($refreshInterval * 60)
-
-    #$Datapoints = (1..50|Get-Random -Count 50)
-    #Show-Graph -Datapoints $Datapoints -XAxisTitle "Avg. CPU utilization" -YAxisTitle "Percentage"
-
 } while ($true)
