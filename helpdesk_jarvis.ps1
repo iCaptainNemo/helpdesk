@@ -5,24 +5,42 @@ Clear-Host
 # Import required modules
 Import-Module ActiveDirectory
 
-# Get the current domain
+# Get the current domain and enviroment type
 try {
     $currentDomain = (Get-ADDomain -ErrorAction SilentlyContinue -WarningAction SilentlyContinue).DNSRoot
+    $env:CommandType = "Power"
 } catch {
-    Write-Host "Error getting domain. Setting default domain to 403." -ForegroundColor Red
-    $currentDomain = 403
+    try {
+        $currentDomain = (Get-WmiObject -Class Win32_ComputerSystem).Domain
+        $env:CommandType = "WMI"
+    } catch {
+        Write-Host "Error getting domain. Due to restrictive environment this script is unable to perform. Press any key to exit." -ForegroundColor Red
+        $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        exit
+    }
 }
+
 Write-Host "Current domain: $currentDomain"
+# Write to host the current command type
+if ($env:CommandType -eq "POWER") {
+    Write-Host "Command type: $env:CommandType" -ForegroundColor Green
+} elseif ($env:CommandType -eq "WMI") {
+    Write-Host "Command type: $env:CommandType" -ForegroundColor Red
+} else {
+    Write-Host "Command type: $env:CommandType"
+}
 
 # Get the current user with specific properties
-
+Write-Host "USERNAME environment variable: $env:USERNAME"
 try {
-    $AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name -ErrorAction SilentlyContinue
+    # Assign the USERNAME environment variable to $AdminUser
+    $AdminUser = $env:USERNAME
+    Write-Host "AdminUser Set to: $AdminUser"
 } catch {
     Write-Host "Error getting user. Setting default AdminUserID to 404."
     $AdminUser = New-Object PSObject -Property @{
         SamAccountName = 404
-        Name = "Unkown"
+        Name = "Unknown"
     }
 }
 
@@ -54,11 +72,11 @@ if (-not (Test-Path ".\.env\.env_$currentDomain.ps1")) {
 . .\.env\.env_$currentDomain.ps1
 
 function SetGlobalVariable {
-    $global:AdminConfig = ".\.env_$($AdminUser.SamAccountName).ps1"
+    $global:AdminConfig = ".\.env_$env:USERNAME.ps1"
 }
 
 # Check if the .env_$AdminConfig.ps1 file exists
-$AdminConfig = ".\.env\.env_$($AdminUser.SamAccountName).ps1"
+$AdminConfig = ".\.env\.env_$env:USERNAME.ps1"
 if (Test-Path $AdminConfig) {
     Write-Host "Admin config file exists. " -NoNewline; Write-Host "Imported." -ForegroundColor Green
     . $AdminConfig
@@ -114,7 +132,7 @@ $envVars = @{
     logPathBoolean = $null -ne $envVars['logFileBasePath'] -and $envVars['logFileBasePath'] -ne ""
 }
 
-Write-Host "Admin User: " -NoNewline; Write-Host "$($AdminUser.SamAccountName)" -ForegroundColor Cyan
+Write-Host "Admin User: " -NoNewline; Write-Host "$env:USERNAME" -ForegroundColor Cyan
 Write-Host "Temp Password: " -NoNewline; Write-Host "$($envVars['tempPassword'])" -ForegroundColor Yellow
 Write-Host "Logfile Path: " -NoNewline; Write-Host "$($envVars['logFileBasePath'])" -ForegroundColor Yellow
 

@@ -11,11 +11,25 @@ function Unlock-ADAccountOnAllDomainControllers {
         Start-Job -ScriptBlock {
             param ($userId, $targetDC, $PSDomains, $cmdDomains, $netUserCommandExecuted)
             $error.Clear()
-            if ($targetDC -in $PSDomains) {
-                Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorAction SilentlyContinue -ErrorVariable unlockError
-            } elseif ($targetDC -in $cmdDomains -and !$netUserCommandExecuted) {
-                net user $userID /active:yes > $null 2>&1
-                $netUserCommandExecuted = $true
+            if ($env:CommandType -eq 'Power') {
+                if ($targetDC -in $PSDomains) {
+                    Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorAction SilentlyContinue -ErrorVariable unlockError
+                } elseif ($targetDC -in $cmdDomains -and !$netUserCommandExecuted) {
+                    net user $userID /active:yes > $null 2>&1
+                    $netUserCommandExecuted = $true
+                }
+            } else {
+                $searcher = New-Object System.DirectoryServices.DirectorySearcher
+                $searcher.Filter = "(sAMAccountName=$userId)"
+                $domainComponents = $currentDomain -split '\.'
+                $searcher.SearchRoot = "LDAP://$targetDC/DC=$($domainComponents[0]),DC=$($domainComponents[1])"
+                $user = $searcher.FindOne()
+                if ($user) {
+                    $user.GetDirectoryEntry().InvokeSet("LockOutTime", 0)
+                    $user.GetDirectoryEntry().CommitChanges()
+                } else {
+                    "Error unlocking account: User not found"
+                }
             }
             if ($unlockError) {
                 "Error unlocking account: $unlockError"

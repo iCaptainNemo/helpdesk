@@ -27,9 +27,6 @@ function Asset-Control {
             Write-Host "$($i + 1). $computerName - Not part of domain" -ForegroundColor DarkGray
             continue
         }
-
-
-
         # If the computer has already been checked, use the stored status
         if ($computerStatus.ContainsKey($computerName)) {
             $isUserLoggedIn = $computerStatus[$computerName]
@@ -37,6 +34,7 @@ function Asset-Control {
             # Check if the user is logged on to the computer
             try {
                 $output = & $psLoggedOnPath -l -x \\$computerName | Out-String
+               # Write-Host "Output of PsLoggedOn for ${computerName}: $output"  # Debugging line
                 $isUserLoggedIn = $output -match $userID
 
                 # Store the status for this computer
@@ -55,22 +53,15 @@ function Asset-Control {
     }
 
     # Prompt for Computer Name or number
-    $input = Read-Host "Enter Computer Name, number from the list above, or 'C' to cancel"
+    $input = Read-Host "Enter Computer Name (C to cancel):"
 
-    # Check if the input is a number and within the range of the list
-    if ($input -match '^\d+$' -and $input -ge 1 -and $input -le $possibleComputers.Count) {
-
-        # Look up the computer name in the array
-        $computerName = $possibleComputers[$input - 1]
-
-    } elseif ($input -eq 'C' -or $input -eq 'c') {
+    # Check if the input is 'C' or 'c' to cancel
+    if ($input -eq 'C' -or $input -eq 'c') {
         Write-Host "Selection cancelled."
         $computerName = $null
     } else {
-        # Only assign $input to $computerName if it's not a number
-        if ($input -notmatch '^\d+$') {
-            $computerName = $input
-        }
+        # Assign $input to $computerName
+        $computerName = $input
     }
     # Add a line break or additional Write-Host statements for space
     Write-Host "`n"  # This adds a line break
