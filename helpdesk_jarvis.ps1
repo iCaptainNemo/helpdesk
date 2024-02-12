@@ -1,7 +1,7 @@
 $Host.UI.RawUI.WindowTitle = Split-Path -Path $MyInvocation.MyCommand.Definition -Leaf
 Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope CurrentUser
 
-Write-Host "Do you want to enable debugging? (Y/N)"
+Write-Host "Enable debugging? Default false. (y/n):" -NoNewline
 $debugChoice = Read-Host
 
 if ($debugChoice -eq 'Y' -or $debugChoice -eq 'y') {
@@ -18,10 +18,14 @@ Import-Module ActiveDirectory
 try {
     $currentDomain = (Get-ADDomain -ErrorAction SilentlyContinue -WarningAction SilentlyContinue).DNSRoot
     $env:CommandType = "Power"
+    $powershell = $true
+    $WMI = $false
 } catch {
     try {
         $currentDomain = (Get-WmiObject -Class Win32_ComputerSystem).Domain
         $env:CommandType = "WMI"
+        $powershell = $false
+        $WMI = $true
     } catch {
         Write-Host "Error getting domain. Due to restrictive environment this script is unable to perform. Press any key to exit." -ForegroundColor Red
         $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")

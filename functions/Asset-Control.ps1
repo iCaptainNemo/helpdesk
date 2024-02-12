@@ -13,42 +13,48 @@ function Asset-Control {
     $possibleComputers = $possibleComputers | Sort-Object | Get-Unique
 
     # Display possible computers as a numbered list
-    Write-Host "Possible Computers:"
+    if ($powershell -eq $true) { Write-Host "Possible Computers:" }
     $psLoggedOnPath = ".\Tools\PsLoggedon.exe"
     $computerStatus = @{}
 
-    for ($i = 0; $i -lt $possibleComputers.Count; $i++) {
-        $computerName = $possibleComputers[$i]
+    # Cast Into Array
+    $possibleComputers = [array]$possibleComputers
 
-        # Check if the computer is part of the domain
-        $computerInDomain = Get-ADComputer -Filter {Name -eq $computerName} -ErrorAction SilentlyContinue
+    # Check $powershell boolean
+    if ($powershell -eq $true) {
+        for ($i = 0; $i -lt $possibleComputers.Count; $i++) {
+            $computerName = $possibleComputers[$i]
 
-        if ($null -eq $computerInDomain) {
-            Write-Host "$($i + 1). $computerName - Not part of domain" -ForegroundColor DarkGray
-            continue
-        }
-        # If the computer has already been checked, use the stored status
-        if ($computerStatus.ContainsKey($computerName)) {
-            $isUserLoggedIn = $computerStatus[$computerName]
-        } else {
-            # Check if the user is logged on to the computer
-            try {
-                $output = & $psLoggedOnPath -l -x \\$computerName | Out-String
-               # Write-Host "Output of PsLoggedOn for ${computerName}: $output"  # Debugging line
-                $isUserLoggedIn = $output -match $userID
+            # Check if the computer is part of the domain
+            $computerInDomain = Get-ADComputer -Filter {Name -eq $computerName} -ErrorAction SilentlyContinue
 
-                # Store the status for this computer
-                $computerStatus[$computerName] = $isUserLoggedIn
-            } catch {
-                Write-Host ("Error running PsLoggedOn for " + $computerName + ": " + $_.Exception.Message) -ForegroundColor Red
+            if ($null -eq $computerInDomain) {
+                Write-Host "$($i + 1). $computerName - Not part of domain" -ForegroundColor DarkGray
                 continue
             }
-        }
+            # If the computer has already been checked, use the stored status
+            if ($computerStatus.ContainsKey($computerName)) {
+                $isUserLoggedIn = $computerStatus[$computerName]
+            } else {
+                # Check if the user is logged on to the computer
+                try {
+                    $output = & $psLoggedOnPath -l -x \\$computerName | Out-String
+                    # Write-Host "Output of PsLoggedOn for ${computerName}: $output"  # Debugging line
+                    $isUserLoggedIn = $output -match $userID
 
-        if ($isUserLoggedIn) {
-            Write-Host "$($i + 1). $computerName" -ForegroundColor Green
-        } else {
-            Write-Host "$($i + 1). $computerName"
+                    # Store the status for this computer
+                    $computerStatus[$computerName] = $isUserLoggedIn
+                } catch {
+                    Write-Host ("Error running PsLoggedOn for " + $computerName + ": " + $_.Exception.Message) -ForegroundColor Red
+                    continue
+                }
+            }
+
+            if ($isUserLoggedIn) {
+                Write-Host "$($i + 1). $computerName" -ForegroundColor Green
+            } else {
+                Write-Host "$($i + 1). $computerName"
+            }
         }
     }
 
@@ -58,7 +64,8 @@ function Asset-Control {
     # Check if the input is 'C' or 'c' to cancel
     if ($input -eq 'C' -or $input -eq 'c') {
         Write-Host "Selection cancelled."
-        $computerName = $null
+        break
+       # $computerName = $null
     } else {
         # Assign $input to $computerName
         $computerName = $input
@@ -69,75 +76,82 @@ function Asset-Control {
     # Display the selected computer
     Write-Host "Selected computer: $computerName"
 
-    # Get computer properties
-    try {
-        $computer = Get-ADComputer $computerName -Properties MemberOf
-        if ($computer) {
-            $memberOf = $computer.MemberOf -join ', '
-
-        # Check if the required groups are present in MemberOf
-        $isHSRemoteComputers = $memberOf -like '*HSRemoteComputers*'
-        $isHSRemoteMFAComputers = $memberOf -like '*HSRemoteMFAComputers*'
-
-        # Display properties in a table
-        $properties = @{
-            'HSRemoteComputers'      = if ($isHSRemoteComputers) { 'True' } else { 'False' }
-            'HSRemoteMFAComputers'   = if ($isHSRemoteMFAComputers) { 'True' } else { 'False' }
-            'Computer Reachable'     = if (Test-Connection -Count 1 -ComputerName $computerName -Quiet) { 'True' } else { 'False' }
-        }
-
-        # Color coding for properties
-        $properties.GetEnumerator() | ForEach-Object {
-            $propertyName = $_.Key
-            $propertyValue = $_.Value
-
-            if ($propertyValue -eq 'True') {
-                Write-Host "${propertyName}: ${propertyValue}" -ForegroundColor Green
-            } else {
-                Write-Host "${propertyName}: ${propertyValue}" -ForegroundColor Red
-            }
-        }
-        #Line break for space
-        Write-Host "`n"
-
-    # Get LastBootUpTime and calculate uptime
-    if ($properties.'Computer Reachable' -eq 'True' -and $currentDomain -eq 'hs.gov') {
+    # Check if $powershell is true
+    if ($powershell -eq $true) {
+        # Get computer properties
         try {
-            # Get LastBootUpTime using CIM instance
-            $lastBootUpTime = Get-CimInstance -ClassName Win32_OperatingSystem -ComputerName $computerName -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LastBootUpTime
-        
-            # Check if $lastBootUpTime is not null before trying to calculate $uptime
-            if ($null -ne $lastBootUpTime) {
-                # Calculate the uptime
-                $uptime = (Get-Date) - $lastBootUpTime
-                $days = [math]::Round($uptime.TotalDays, 0)
-                Write-Host "Last Boot Up Time: $lastBootUpTime"
-            } else {
-                throw
+            $computer = Get-ADComputer $computerName -Properties MemberOf
+            if ($computer) {
+                $memberOf = $computer.MemberOf -join ', '
+
+                # Check if the required groups are present in MemberOf
+                $isHSRemoteComputers = $memberOf -like '*HSRemoteComputers*'
+                $isHSRemoteMFAComputers = $memberOf -like '*HSRemoteMFAComputers*'
+
+                # Display properties in a table
+                $properties = @{
+                    'HSRemoteComputers'      = if ($isHSRemoteComputers) { 'True' } else { 'False' }
+                    'HSRemoteMFAComputers'   = if ($isHSRemoteMFAComputers) { 'True' } else { 'False' }
+                    'Computer Reachable'     = if (Test-Connection -Count 1 -ComputerName $computerName -Quiet) { 'True' } else { 'False' }
+                }
+
+                # Color coding for properties
+                $properties.GetEnumerator() | ForEach-Object {
+                    $propertyName = $_.Key
+                    $propertyValue = $_.Value
+
+                    if ($propertyValue -eq 'True') {
+                        Write-Host "${propertyName}: ${propertyValue}" -ForegroundColor Green
+                    } else {
+                        Write-Host "${propertyName}: ${propertyValue}" -ForegroundColor Red
+                    }
+                }
+                #Line break for space
+                Write-Host "`n"
             }
         } catch {
-            $uptime = "Unable to get uptime, an error occurred"
+            Write-Host "Error getting properties for $computerName $_" -ForegroundColor Red
         }
-        # Color coding for computer uptime
-        if ($uptime -is [TimeSpan]) {
-            if ($days -gt 5) {
-                Write-Host "Uptime: $days days" -ForegroundColor Red
-            } elseif ($days -gt 3) {
-                Write-Host "Uptime: $days days" -ForegroundColor Yellow
+    }
+
+    # Check powershell boolean
+    if ($powershell -eq $true) {
+        try {
+            # Get LastBootUpTime and calculate uptime
+            if ($properties.'Computer Reachable' -eq 'True') {
+                # Get LastBootUpTime using CIM instance
+                $lastBootUpTime = Get-CimInstance -ClassName Win32_OperatingSystem -ComputerName $computerName -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LastBootUpTime
+            
+                # Check if $lastBootUpTime is not null before trying to calculate $uptime
+                if ($null -ne $lastBootUpTime) {
+                    # Calculate the uptime
+                    $uptime = (Get-Date) - $lastBootUpTime
+                    $days = [math]::Round($uptime.TotalDays, 0)
+                    Write-Host "Last Boot Up Time: $lastBootUpTime"
+                } else {
+                    throw "Last boot up time is null"
+                }
+                
+                # Color coding for computer uptime
+                if ($uptime -is [TimeSpan]) {
+                    if ($days -gt 5) {
+                        Write-Host "Uptime: $days days" -ForegroundColor Red
+                    } elseif ($days -gt 3) {
+                        Write-Host "Uptime: $days days" -ForegroundColor Yellow
+                    } else {
+                        Write-Host "Uptime: $days days" -ForegroundColor Green
+                    }
+                } else {
+                    Write-Host $uptime -ForegroundColor Red
+                }
             } else {
-                Write-Host "Uptime: $days days" -ForegroundColor Green
+                Write-Host "Computer not found: $computerName" -ForegroundColor Red
+                return
             }
-        } else {
-            Write-Host $uptime -ForegroundColor Red
+        } catch {
+            Write-Host "Error retrieving computer properties: $_" -ForegroundColor Red
+            return
         }
-    }
-    } else {
-        Write-Host "Computer not found: $computerName" -ForegroundColor Red
-        return
-    }
-    } catch {
-        Write-Host "Error retrieving computer properties" -ForegroundColor Red
-        return
     }
 
     # Function to get print jobs for a specific computer
@@ -177,11 +191,24 @@ function Asset-Control {
 
         switch ($assetChoice) {
             '1' {
-                # Test connection
-                if (Test-AssetConnection -ComputerName $computerName) {
-                    Write-Host "Connection to $computerName successful" -ForegroundColor Green
+                # Check if $powershell is true
+                if ($powershell -eq $true) {
+                    # Test connection using Test-Connection
+                    try {
+                        if (Test-Connection -ComputerName $ComputerName -Count 1 -ErrorAction Stop) {
+                            Write-Host "Connection to $computerName successful" -ForegroundColor Green
+                        }
+                    } catch {
+                        Write-Host "Connection to $computerName failed" -ForegroundColor Red
+                    }
                 } else {
-                    Write-Host "Connection to $computerName failed" -ForegroundColor Red
+                    # Test connection using WMI
+                    try {
+                        $computer = Get-WmiObject -Class Win32_ComputerSystem -ComputerName $computerName -ErrorAction Stop
+                        Write-Host "Connection to $computerName successful" -ForegroundColor Green
+                    } catch {
+                        Write-Host "Connection to $computerName failed" -ForegroundColor Red
+                    }
                 }
                 break
             }

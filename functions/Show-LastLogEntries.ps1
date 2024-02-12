@@ -34,7 +34,7 @@ function Show-LastLogEntries {
         # Check if the log file exists
         if (Test-Path $logFilePath -PathType Leaf) {
             $logEntries = Get-Content $logFilePath -Tail 10
-            Write-Host "Last 10 login entries with parsed information:"
+            Write-Host "Last 10 login entries.:"
             # Add a line break or additional Write-Host statements for space
             Write-Host "`n"
             foreach ($entry in $logEntries) {
