@@ -52,7 +52,7 @@ Function Show-Graph {
         $Row = ''
         For($j=0;$j -lt $NumOfDatapoints;$j++){
             $Cell = $Array[$i,$j]
-            $String = If([String]::IsNullOrWhiteSpace($Cell)){'  '}else{$Cell + ''}
+            $String = If([String]::IsNullOrWhiteSpace($Cell)){'  '}else{$Cell + ' '}
             $Row = [string]::Concat($Row,$String)          
         }
         
