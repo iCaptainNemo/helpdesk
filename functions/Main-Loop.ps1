@@ -16,7 +16,7 @@ function Main-Loop {
         $userId = Get-UserId
         # Get AD properties for the provided User ID
         $userId = $envVars['UserID']
-        $adUser = Get-ADUserProperties -userId $userId
+        $adUser = Get-ADUserProperties -userId $userId -powershell $true
 
         # Display AD properties above the menu
         Show-ADUserProperties -adUser $adUser
