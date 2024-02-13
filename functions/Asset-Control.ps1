@@ -3,6 +3,9 @@ function Asset-Control {
     param (
         [string]$userId
     )
+    # Check $powershell boolean
+    if ($powershell -eq $true) {
+
     # Add a line break or additional Write-Host statements for space
     Write-Host "`n"  # This adds a line break
 
@@ -20,8 +23,6 @@ function Asset-Control {
     # Cast Into Array
     $possibleComputers = [array]$possibleComputers
 
-    # Check $powershell boolean
-    if ($powershell -eq $true) {
         for ($i = 0; $i -lt $possibleComputers.Count; $i++) {
             $computerName = $possibleComputers[$i]
 

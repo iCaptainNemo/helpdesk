@@ -44,7 +44,7 @@ if ($env:CommandType -eq "POWER") {
 }
 
 # Get the current user with specific properties
-Write-Host "USERNAME environment variable: $env:USERNAME"
+#Write-Host "USERNAME environment variable: $env:USERNAME"
 try {
     # Assign the USERNAME environment variable to $AdminUser
     $AdminUser = $env:USERNAME
@@ -64,13 +64,12 @@ $envVars = @{}
 . .\functions\Asset-Control.ps1
 . .\functions\Add-NetworkPrinter.ps1
 . .\functions\Test-AssetConnection.ps1
-. .\functions\Get-ADUserProperties.ps1
+. .\functions\ADUserProp.ps1
 . .\functions\Get-UserId.ps1
 . .\functions\Invoke-SCCMRemoteTool.ps1
 . .\functions\Main-Loop.ps1
 . .\functions\Remove-UserId.ps1
 . .\functions\Set-TempPassword.ps1
-. .\functions\Show-ADUserProperties.ps1
 . .\functions\Show-LastLogEntries.ps1
 . .\functions\Test-DomainControllers.ps1
 . .\functions\Unlock-ADAccountOnAllDomainControllers.ps1
@@ -91,7 +90,7 @@ function SetGlobalVariable {
 # Check if the .env_$AdminConfig.ps1 file exists
 $AdminConfig = ".\.env\.env_$env:USERNAME.ps1"
 if (Test-Path $AdminConfig) {
-    Write-Host "Admin config file exists. " -NoNewline; Write-Host "Imported." -ForegroundColor Green
+    Write-Host "Admin config exists. " -NoNewline; Write-Host "Imported." -ForegroundColor Green
     . $AdminConfig
 
 
