@@ -63,7 +63,6 @@ $envVars = @{}
 # Import functions from functions directory
 . .\functions\Asset-Control.ps1
 . .\functions\Add-NetworkPrinter.ps1
-. .\functions\Test-AssetConnection.ps1
 . .\functions\ADUserProp.ps1
 . .\functions\Get-UserId.ps1
 . .\functions\Invoke-SCCMRemoteTool.ps1
