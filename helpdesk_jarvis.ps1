@@ -34,21 +34,24 @@ try {
 }
 
 Write-Host "Current domain: $currentDomain"
-# Write to host the current command type
-if ($env:CommandType -eq "POWER") {
-    Write-Host "Command type: $env:CommandType" -ForegroundColor Green
-} elseif ($env:CommandType -eq "WMI") {
-    Write-Host "Command type: $env:CommandType" -ForegroundColor Red
+
+# Environment type
+if ($powershell) {
+    Write-Host "Powershell Commands: Enabled" -ForegroundColor Green
 } else {
-    Write-Host "Command type: $env:CommandType"
+    Write-Host "Powershell Commands: Dsiabled" -ForegroundColor DarkGray
+}
+
+if ($wmi) {
+    Write-Host "WMI Commands: Enabled" -ForegroundColor Red
+} else {
+    Write-Host "WMI Commands: Disabled" -ForegroundColor DarkGray
 }
 
 # Get the current user with specific properties
-#Write-Host "USERNAME environment variable: $env:USERNAME"
 try {
     # Assign the USERNAME environment variable to $AdminUser
     $AdminUser = $env:USERNAME
-    Write-Host "AdminUser Set to: $AdminUser"
 } catch {
     Write-Host "Error getting user. Setting default AdminUserID to 404."
     $AdminUser = New-Object PSObject -Property @{
@@ -74,7 +77,7 @@ $envVars = @{}
 . .\functions\Unlock-ADAccountOnAllDomainControllers.ps1
 . .\functions\Clear-Browsers.ps1
 
-# Call the function to create the env.ps1 file
+# Create env.ps1 file if missing and test domain controllers
 if (-not (Test-Path ".\.env\.env_$currentDomain.ps1")) {
     Test-DomainControllers
 }
