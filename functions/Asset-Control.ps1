@@ -184,7 +184,7 @@ function Asset-Control {
         Write-Host "4. PS Console"
         Write-Host "5. PSEXEC Console"
         Write-Host "6. Add Network Printer"
-        Write-Host "7. Get Print Jobs"
+        Write-Host "7. Open File Explorer"
         Write-Host "8. Clear Browsers"
         Write-Host "0. Back to Main Menu"
 
@@ -285,11 +285,10 @@ function Asset-Control {
                 break
             }
             '7' {
-            # Prompt for printer name before getting print jobs
-            $printerName = Read-Host "Enter Printer Name"
-            Write-Host "Getting Print Jobs for $printerName on $computerName"
-            Get-PrintJobsForComputer -ComputerName $computerName
-            break
+                # Open file explorer for the user's profile on the remote computer
+                Write-Host "Opening File Explorer for $userid on $computerName"
+                Invoke-Expression "explorer.exe /e,\\$computerName\c$\Users\$userid"
+                break
             }
             '8' {
                 # Clear Browser

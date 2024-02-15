@@ -16,10 +16,12 @@ Import-Module ActiveDirectory
 
 # Get the current domain and enviroment type
 try {
+    Write-Host "Checking if powershell AD Module is enabled..." -ForegroundColor Yellow
     $currentDomain = (Get-ADDomain -ErrorAction SilentlyContinue -WarningAction SilentlyContinue).DNSRoot
     $env:CommandType = "Power"
     $powershell = $true
     $WMI = $false
+    cls
 } catch {
     try {
         $currentDomain = (Get-WmiObject -Class Win32_ComputerSystem).Domain
@@ -39,7 +41,7 @@ Write-Host "Current domain: $currentDomain"
 if ($powershell) {
     Write-Host "Powershell Commands: Enabled" -ForegroundColor Green
 } else {
-    Write-Host "Powershell Commands: Dsiabled" -ForegroundColor DarkGray
+    Write-Host "Powershell Commands: Disabled" -ForegroundColor DarkGray
 }
 
 if ($wmi) {
