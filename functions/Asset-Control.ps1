@@ -116,44 +116,44 @@ function Asset-Control {
     }
 
     # Check powershell boolean
-    if ($powershell -eq $true) {
-        try {
-            # Get LastBootUpTime and calculate uptime
-            if ($properties.'Computer Reachable' -eq 'True') {
-                # Get LastBootUpTime using CIM instance
-                $lastBootUpTime = Get-CimInstance -ClassName Win32_OperatingSystem -ComputerName $computerName -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LastBootUpTime
+    # if ($powershell -eq $true) {
+    #     try {
+    #         # Get LastBootUpTime and calculate uptime
+    #         if ($properties.'Computer Reachable' -eq 'True') {
+    #             # Get LastBootUpTime using CIM instance
+    #             $lastBootUpTime = Get-CimInstance -ClassName Win32_OperatingSystem -ComputerName $computerName -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LastBootUpTime
             
-                # Check if $lastBootUpTime is not null before trying to calculate $uptime
-                if ($null -ne $lastBootUpTime) {
-                    # Calculate the uptime
-                    $uptime = (Get-Date) - $lastBootUpTime
-                    $days = [math]::Round($uptime.TotalDays, 0)
-                    Write-Host "Last Boot Up Time: $lastBootUpTime"
-                } else {
-                    throw "Last boot up time is null"
-                }
+    #             # Check if $lastBootUpTime is not null before trying to calculate $uptime
+    #             if ($null -ne $lastBootUpTime) {
+    #                 # Calculate the uptime
+    #                 $uptime = (Get-Date) - $lastBootUpTime
+    #                 $days = [math]::Round($uptime.TotalDays, 0)
+    #                 Write-Host "Last Boot Up Time: $lastBootUpTime"
+    #             } else {
+    #                 throw "Last boot up time is null"
+    #             }
                 
-                # Color coding for computer uptime
-                if ($uptime -is [TimeSpan]) {
-                    if ($days -gt 5) {
-                        Write-Host "Uptime: $days days" -ForegroundColor Red
-                    } elseif ($days -gt 3) {
-                        Write-Host "Uptime: $days days" -ForegroundColor Yellow
-                    } else {
-                        Write-Host "Uptime: $days days" -ForegroundColor Green
-                    }
-                } else {
-                    Write-Host $uptime -ForegroundColor Red
-                }
-            } else {
-                Write-Host "Computer not found: $computerName" -ForegroundColor Red
-                return
-            }
-        } catch {
-            Write-Host "Error retrieving computer properties: $_" -ForegroundColor Red
-            return
-        }
-    }
+    #             # Color coding for computer uptime
+    #             if ($uptime -is [TimeSpan]) {
+    #                 if ($days -gt 5) {
+    #                     Write-Host "Uptime: $days days" -ForegroundColor Red
+    #                 } elseif ($days -gt 3) {
+    #                     Write-Host "Uptime: $days days" -ForegroundColor Yellow
+    #                 } else {
+    #                     Write-Host "Uptime: $days days" -ForegroundColor Green
+    #                 }
+    #             } else {
+    #                 Write-Host $uptime -ForegroundColor Red
+    #             }
+    #         } else {
+    #             Write-Host "Computer not found: $computerName" -ForegroundColor Red
+    #             return
+    #         }
+    #     } catch {
+    #         Write-Host "Error retrieving computer properties: $_" -ForegroundColor Red
+    #         return
+    #     }
+    # }
 
     # Function to get print jobs for a specific computer
     function Get-PrintJobsForComputer {
@@ -256,16 +256,11 @@ function Asset-Control {
                 break
             }
             '4' {
-                # Check if the current domain is part of "hs.gov"
-                if ($currentDomain -notlike "*hs.gov") {
-                    Write-Host "Error: This domain doesn't have WinRM enabled." -ForegroundColor Red
-                    break
-                }
-
                 # Open PowerShell console session in a new window
                 Start-Process powershell -ArgumentList "-NoExit -Command Enter-PSSession -ComputerName $computerName"
                 break
             }
+
             '5' {
                 # Start PsExec to open a command prompt on the remote computer
                 $psexecCommand = "psexec.exe \\$computerName cmd.exe"
@@ -281,7 +276,7 @@ function Asset-Control {
                 # Add network printer
                 $printServer = Read-Host "Enter Print Server Name"
                 $printerName = Read-Host "Enter Printer Name"
-                Add-NetworkPrinter -PrintServer $printServer -PrinterName $printerName
+                Add-NetworkPrinter -ComputerName $computername -PrintServer $printServer -PrinterName $printerName
                 break
             }
             '7' {
@@ -330,5 +325,6 @@ function Asset-Control {
                 Write-Host "Invalid choice. Please enter a valid option."
             }
         }
+        pause
     } 
 }
