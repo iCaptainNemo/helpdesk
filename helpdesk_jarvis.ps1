@@ -152,6 +152,54 @@ Write-Host "Admin User: " -NoNewline; Write-Host "$env:USERNAME" -ForegroundColo
 Write-Host "Temp Password: " -NoNewline; Write-Host "$($envVars['tempPassword'])" -ForegroundColor Yellow
 Write-Host "Logfile Path: " -NoNewline; Write-Host "$($envVars['logFileBasePath'])" -ForegroundColor Yellow
 
+Write-Host "Enable panes? Default false. (y/n):" -NoNewline
+$paneChoice = Read-Host
+
+if ($paneChoice -eq 'Y' -or $paneChoice -eq 'y') {
+    $global:panesEnabled = $true
+} else {
+    $global:panesEnabled = $false
+}
+
+if ($global:panesEnabled) {
+    Write-Host "Panes: Enabled" -ForegroundColor Green
+    Write-Host "Select a function to run in the pane:"
+    Write-Host "1. Asset-Control"
+    Write-Host "2. Add-NetworkPrinter"
+    Write-Host "3. ADUserProp"
+    Write-Host "4. Get-UserId"
+    Write-Host "5. Invoke-SCCMRemoteTool"
+    Write-Host "6. Main-Loop"
+    Write-Host "7. Remove-UserId"
+    Write-Host "8. Set-TempPassword"
+    Write-Host "9. Show-LastLogEntries"
+    Write-Host "10. Test-DomainControllers"
+    Write-Host "11. Unlock-ADAccountOnAllDomainControllers"
+    Write-Host "12. Clear-Browsers"
+
+    $functionChoice = Read-Host
+
+    switch ($functionChoice) {
+        '1' { . .\functions\Asset-Control.ps1 }
+        '2' { . .\functions\Add-NetworkPrinter.ps1 }
+        '3' { . .\functions\ADUserProp.ps1 }
+        '4' { . .\functions\Get-UserId.ps1 }
+        '5' { . .\functions\Invoke-SCCMRemoteTool.ps1 }
+        '6' { . .\functions\Main-Loop.ps1 }
+        '7' { . .\functions\Remove-UserId.ps1 }
+        '8' { . .\functions\Set-TempPassword.ps1 }
+        '9' { . .\functions\Show-LastLogEntries.ps1 }
+        '10' { . .\functions\Test-DomainControllers.ps1 }
+        '11' { . .\functions\Unlock-ADAccountOnAllDomainControllers.ps1 }
+        '12' { . .\functions\Clear-Browsers.ps1 }
+        default {
+            Write-Host "Invalid choice. Please select a valid function."
+        }
+    }
+} else {
+    Write-Host "Panes: Disabled" -ForegroundColor DarkGray
+}
+
 
 # Main loop
 while ($true) {
