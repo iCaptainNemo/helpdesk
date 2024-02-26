@@ -10,6 +10,14 @@ function Get-CurrentTime {
 # Get the current user
 $AdminUser = Get-ADUser -Identity $env:USERNAME -Properties *
 
+# Prompt user for userIDs to watch for
+$watchedUserIDsInput = Read-Host "Enter the userIDs to watch for, separated by commas (e.g., userID1,userID2,userID3):"
+$watchedUserIDsArray = $watchedUserIDsInput.Split(',')
+$watchedUserIDs = @{}
+foreach ($userID in $watchedUserIDsArray) {
+    $watchedUserIDs[$userID.Trim()] = $true
+}
+
 function Display-RestartCount {
     $script:restartCount++
     Write-Host "Script has restarted $($script:restartCount) times."
@@ -20,6 +28,7 @@ do {
     $refreshInterval = Read-Host "Enter the refresh interval in minutes (e.g., 1, 5, 10):"
     $refreshInterval = [int]$refreshInterval
 } while ($refreshInterval -le 0)
+
 
 # Initialize restart count
 $script:restartCount = 0
@@ -32,6 +41,9 @@ do {
     $currentTime = Get-CurrentTime
     Write-Host "Current Time: $currentTime"
 
+    # Initialize the list of watched locked-out users
+    $watchedLockedOutUsers = @()
+
     # Display the restart count
     Display-RestartCount
 
@@ -41,9 +53,21 @@ do {
     # Iterate through all locked-out users and get additional AD properties
     $probableLockedOutUsers = foreach ($lockedOutUser in $lockedOutUsers) {
         $adUser = Get-ADUser -Identity $lockedOutUser.SamAccountName -Properties *
+
+                # If the user is in the watched list, add them to the watched locked-out users list
+                if ($watchedUserIDs.ContainsKey($adUser.SamAccountName)) {
+                    $watchedLockedOutUsers += $adUser
+                }
+        
         $adUser
     }
-
+    # Display the properties of watched locked-out users in a separate table
+    if ($watchedLockedOutUsers.Count -gt 0) {
+        Write-Host "Watched locked-out users within the last 24 hours:" -ForegroundColor Yellow
+        $watchedLockedOutUsers | Sort-Object AccountLockoutTime -Descending | Format-Table @{Name='ID';Expression={$_.SamAccountName}}, Name, LockedOut, @{Name='Expired';Expression={$_.PasswordExpired}}, AccountLockoutTime -AutoSize
+    } else {
+        Write-Host "No recent watched locked-out users found." -ForegroundColor Yellow
+    }
     # Filter locked-out users whose lockoutTime is within 2 days of the current date and Enabled is True
     $probableLockedOutUsers = $probableLockedOutUsers | Where-Object {
         $_.AccountlockoutTime -ge (Get-Date).AddDays(-1) -and
@@ -70,7 +94,7 @@ do {
     # Display the properties of probable locked-out users in a separate table
     if ($probableLockedOutUsers.Count -gt 0) {
         Write-Host "Locked-out users within the last 24 hours:"
-        $probableLockedOutUsers | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, Enabled, LockedOut, PasswordExpired, badPwdCount, AccountLockoutTime -AutoSize
+        $probableLockedOutUsers | Sort-Object AccountLockoutTime -Descending | Format-Table @{Name='ID';Expression={$_.SamAccountName}}, Name, LockedOut, @{Name='Expired';Expression={$_.PasswordExpired}}, AccountLockoutTime -AutoSize
     } else {
         Write-Host "No recent locked-out users found."
     }
