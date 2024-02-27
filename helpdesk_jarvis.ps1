@@ -62,8 +62,9 @@ try {
     }
 }
 
-# Initialize $envVars hashtable
+# Initialize variables hashtable
 $envVars = @{}
+$UserVars = @{}
 
 # Import functions from functions directory
 . .\functions\Asset-Control.ps1
@@ -176,6 +177,7 @@ if ($global:panesEnabled) {
     Write-Host "10. Test-DomainControllers"
     Write-Host "11. Unlock-ADAccountOnAllDomainControllers"
     Write-Host "12. Clear-Browsers"
+    Write-Host "13. Exit"
 
     $functionChoice = Read-Host
 
@@ -192,6 +194,7 @@ if ($global:panesEnabled) {
         '10' { . .\functions\Test-DomainControllers.ps1 }
         '11' { . .\functions\Unlock-ADAccountOnAllDomainControllers.ps1 }
         '12' { . .\functions\Clear-Browsers.ps1 }
+        '13' { break }
         default {
             Write-Host "Invalid choice. Please select a valid function."
         }

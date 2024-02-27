@@ -1,3 +1,19 @@
+# Set up the FileSystemWatcher
+if ($global:panesEnabled -eq $true) {
+    $AdminConfig = Resolve-Path ".\.env\.env_$env:USERNAME.ps1"
+    $watcher = New-Object System.IO.FileSystemWatcher
+    $watcher.Path = [System.IO.Path]::GetDirectoryName($AdminConfig)
+    $watcher.Filter = [System.IO.Path]::GetFileName($AdminConfig)
+    $watcher.EnableRaisingEvents = $true
+
+    Register-ObjectEvent -InputObject $watcher -EventName Changed -Action {
+        # Update the function when the $AdminConfig file changes
+        . $AdminConfig
+        $logFilePath = $envVars['logFileBasePath'] + $envVars['UserID']
+    }
+}
+
+
 # Function to display last 10 log entries with parsed information
 function Show-LastLogEntries {
     param (
@@ -10,7 +26,7 @@ function Show-LastLogEntries {
             [string]$logEntry
         )
 
-        # Assuming $logEntry has the format "TAD062DT379527 Tue 12/19/2023 14:49:26.98"
+        # Assuming $logEntry has the format "<computername> Tue 12/19/2023 14:49:26.98"
         $components = $logEntry -split ' '
         $PossibleComputerName = $components[0]
         $day = $components[1]

@@ -1,4 +1,22 @@
 # Description: This function will return all AD properties of user
+
+if ($global:panesEnabled -eq $true) {
+    $AdminConfig = Resolve-Path ".\.env\.env_$env:USERNAME.ps1"
+    $watcher = New-Object System.IO.FileSystemWatcher
+    $watcher.Path = [System.IO.Path]::GetDirectoryName($AdminConfig)
+    $watcher.Filter = [System.IO.Path]::GetFileName($AdminConfig)
+    $watcher.EnableRaisingEvents = $true
+
+    Register-ObjectEvent -InputObject $watcher -EventName Changed -Action {
+        # Update the function when the $AdminConfig file changes
+        . $AdminConfig
+        $logFilePath = $envVars['logFileBasePath'] + $envVars['UserID']
+
+        # Re-run the Get-ADUserProperties and Show-ADUserProperties functions
+        $adUser = Get-ADUserProperties -userId $envVars['UserID']
+        Show-ADUserProperties -adUser $adUser
+    }
+}
 function Get-ADUserProperties {
     param (
         [string]$userId
@@ -47,6 +65,17 @@ function Get-ADUserProperties {
                 throw
             }
         }
+
+        # Convert $adUser to a hashtable
+        $UserVars = @{}
+        $adUser.PSObject.Properties | ForEach-Object { $UserVars[$_.Name] = $_.Value }
+
+        # Store the $adUser hashtable
+        $UserConfig = ".\.users\$userId.ps1"
+        $UserProps = "`$UserVars = @{}" + ($UserVars.GetEnumerator() | ForEach-Object { "`n`$UserVars['$($_.Key)'] = '$($_.Value)'" })
+        Set-Content -Path $UserConfig -Value ($UserProps -join "`n")
+
+
         return $adUser
     } catch {
         Write-Host "Error: $_"
