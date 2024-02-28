@@ -1,8 +1,9 @@
 # Description: This function prompts the user for a User ID and validates that it exists in Active Directory. 
 
 function Get-UserId {
-    if ($global:panesEnabled -eq $true) {
+    if ($panesEnabled -eq $true -and $GetUserId -eq $true) {
         while ($true) {
+            Clear-Host
             $UserID = (Read-Host "Enter User ID").Replace(' ', '')
             try {
                 if ($powershell -eq $true) {

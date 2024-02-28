@@ -1,21 +1,34 @@
-# Description: This function will return all AD properties of user
 
-if ($global:panesEnabled -eq $true) {
-    $AdminConfig = Resolve-Path ".\.env\.env_$env:USERNAME.ps1"
-    $watcher = New-Object System.IO.FileSystemWatcher
-    $watcher.Path = [System.IO.Path]::GetDirectoryName($AdminConfig)
-    $watcher.Filter = [System.IO.Path]::GetFileName($AdminConfig)
-    $watcher.EnableRaisingEvents = $true
+if ($debugging) { Write-Host "Value of panesEnabled: $panesEnabled" -ForegroundColor Magenta }
+if ($debugging) { Write-Host "Value of ADUserProp: $ADUserProp" -ForegroundColor Magenta }
+if ($debugging) { pause }
 
-    Register-ObjectEvent -InputObject $watcher -EventName Changed -Action {
-        # Update the function when the $AdminConfig file changes
-        . $AdminConfig
-        $logFilePath = $envVars['logFileBasePath'] + $envVars['UserID']
-
-        # Re-run the Get-ADUserProperties and Show-ADUserProperties functions
-        $adUser = Get-ADUserProperties -userId $envVars['UserID']
-        Show-ADUserProperties -adUser $adUser
+#This is an infinite loop that will keep running until you stop the script
+while ($panesEnabled -eq $true -and $ADUserProp -eq $true) {
+    if ($debugging) { 
+        Write-Host "All conditions met, proceeding..." -ForegroundColor Magenta 
     }
+    Clear-Host
+
+    # Resolve the path to the AdminConfig file
+    $AdminConfig = Resolve-Path ".\.env\.env_$env:USERNAME.ps1"
+
+    if ($debugging) { Write-Host "AdminConfig file changed, re-running functions..." -ForegroundColor Magenta}
+
+    # Source the AdminConfig file to get the updated variables
+    . $AdminConfig
+
+    # Get the updated UserID
+    $userId = $envVars['UserID']
+    if ($debugging) { Write-Host "$userID" -ForegroundColor Magenta}
+
+    # Re-run the Get-ADUserProperties and Show-ADUserProperties functions with the updated UserID
+    $adUser = Get-ADUserProperties -userId $envVars['UserID']
+    Show-ADUserProperties -userId $envVars['UserID'] -adUser $adUser
+
+    # Wait until the Changed event is triggered
+    Start-Sleep -seconds 3
+
 }
 function Get-ADUserProperties {
     param (
@@ -85,18 +98,9 @@ function Get-ADUserProperties {
 # Description: Show AD user properties with color coding
 function Show-ADUserProperties {
     param (
+        [string]$userId,
         $adUser
     )
-
-    if ($debugging) {
-        if ($adUser -is [Microsoft.ActiveDirectory.Management.ADUser]) {
-            Write-Host "AD User Type: Microsoft.ActiveDirectory.Management.ADUser"
-        } elseif ($adUser -is [System.DirectoryServices.DirectoryEntry]) {
-            Write-Host "AD User Type: System.DirectoryServices.DirectoryEntry"
-        } else {
-            Write-Host "AD User Type: $($adUser.GetType().FullName)"
-        }
-    }
 
     if ($adUser -is [Microsoft.ActiveDirectory.Management.ADUser]) {
         # Process $adUser as Microsoft.ActiveDirectory.Management.ADUser

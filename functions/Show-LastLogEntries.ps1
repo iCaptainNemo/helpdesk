@@ -1,18 +1,28 @@
-# Set up the FileSystemWatcher
-if ($global:panesEnabled -eq $true) {
-    $AdminConfig = Resolve-Path ".\.env\.env_$env:USERNAME.ps1"
-    $watcher = New-Object System.IO.FileSystemWatcher
-    $watcher.Path = [System.IO.Path]::GetDirectoryName($AdminConfig)
-    $watcher.Filter = [System.IO.Path]::GetFileName($AdminConfig)
-    $watcher.EnableRaisingEvents = $true
 
-    Register-ObjectEvent -InputObject $watcher -EventName Changed -Action {
-        # Update the function when the $AdminConfig file changes
-        . $AdminConfig
-        $logFilePath = $envVars['logFileBasePath'] + $envVars['UserID']
+while ($panesEnabled -eq $true -and $ShowLastLogEntries -eq $true) {
+    if ($debugging) { 
+        Write-Host "All conditions met, proceeding..." -ForegroundColor Magenta 
     }
-}
+    Clear-Host
 
+    # Resolve the path to the AdminConfig file
+    $AdminConfig = Resolve-Path ".\.env\.env_$env:USERNAME.ps1"
+
+    if ($debugging) { Write-Host "AdminConfig file changed, re-running functions..." -ForegroundColor Magenta}
+
+    # Source the AdminConfig file to get the updated variables
+    . $AdminConfig
+
+    # Get the updated UserID
+    $userId = $envVars['UserID']
+    if ($debugging) { Write-Host "$userID" -ForegroundColor Magenta}
+
+    # Update the logFilePath
+    $logFilePath = $envVars['logFileBasePath'] + $envVars['UserID']
+
+    # Wait until the Changed event is triggered
+    Start-Sleep -seconds 3
+}
 
 # Function to display last 10 log entries with parsed information
 function Show-LastLogEntries {

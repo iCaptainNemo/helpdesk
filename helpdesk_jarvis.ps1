@@ -5,12 +5,13 @@ Write-Host "Enable debugging? Default false. (y/n):" -NoNewline
 $debugChoice = Read-Host
 
 if ($debugChoice -eq 'Y' -or $debugChoice -eq 'y') {
-    $global:debugging = $true
+    $debugging = $true
+    Write-Host "Debugging is enabled" -ForegroundColor Green
 } else {
-    $global:debugging = $false
+    $debugging = $false
+    Write-Host "Debugging is disabled" -ForegroundColor DarkGray
 }
 
-Clear-Host
 # Import required modules
 Import-Module ActiveDirectory
 
@@ -21,7 +22,6 @@ try {
     $env:CommandType = "Power"
     $powershell = $true
     $WMI = $false
-    cls
 } catch {
     try {
         $currentDomain = (Get-WmiObject -Class Win32_ComputerSystem).Domain
@@ -157,12 +157,12 @@ Write-Host "Enable panes? Default false. (y/n):" -NoNewline
 $paneChoice = Read-Host
 
 if ($paneChoice -eq 'Y' -or $paneChoice -eq 'y') {
-    $global:panesEnabled = $true
+    $panesEnabled = $true
 } else {
-    $global:panesEnabled = $false
+    $panesEnabled = $false
 }
 
-if ($global:panesEnabled) {
+if ($panesEnabled) {
     Write-Host "Panes: Enabled" -ForegroundColor Green
     Write-Host "Select a function to run in the pane:"
     Write-Host "1. Asset-Control"
@@ -181,26 +181,39 @@ if ($global:panesEnabled) {
 
     $functionChoice = Read-Host
 
+    $AssetControl = $false
+    $AddNetworkPrinter = $false
+    $ADUserProp = $false
+    $GetUserId = $false
+    $InvokeSCCMRemoteTool = $false
+    $MainLoop = $false
+    $RemoveUserId = $false
+    $SetTempPassword = $false
+    $ShowLastLogEntries = $false
+    $TestDomainControllers = $false
+    $UnlockADAccountOnAllDomainControllers = $false
+    $ClearBrowsers = $false
+
     switch ($functionChoice) {
-        '1' { . .\functions\Asset-Control.ps1 }
-        '2' { . .\functions\Add-NetworkPrinter.ps1 }
-        '3' { . .\functions\ADUserProp.ps1 }
-        '4' { . .\functions\Get-UserId.ps1 }
-        '5' { . .\functions\Invoke-SCCMRemoteTool.ps1 }
-        '6' { . .\functions\Main-Loop.ps1 }
-        '7' { . .\functions\Remove-UserId.ps1 }
-        '8' { . .\functions\Set-TempPassword.ps1 }
-        '9' { . .\functions\Show-LastLogEntries.ps1 }
-        '10' { . .\functions\Test-DomainControllers.ps1 }
-        '11' { . .\functions\Unlock-ADAccountOnAllDomainControllers.ps1 }
-        '12' { . .\functions\Clear-Browsers.ps1 }
+        '1' { $AssetControl = $true; . .\functions\Asset-Control.ps1 }
+        '2' { $AddNetworkPrinter = $true; . .\functions\Add-NetworkPrinter.ps1 }
+        '3' { $ADUserProp = $true; . .\functions\ADUserProp.ps1 }
+        '4' { $GetUserId = $true; . .\functions\Get-UserId.ps1 }
+        '5' { $InvokeSCCMRemoteTool = $true; . .\functions\Invoke-SCCMRemoteTool.ps1 }
+        '6' { $MainLoop = $true; . .\functions\Main-Loop.ps1 }
+        '7' { $RemoveUserId = $true; . .\functions\Remove-UserId.ps1 }
+        '8' { $SetTempPassword = $true; . .\functions\Set-TempPassword.ps1 }
+        '9' { $ShowLastLogEntries = $true; . .\functions\Show-LastLogEntries.ps1 }
+        '10' { $TestDomainControllers = $true; . .\functions\Test-DomainControllers.ps1 }
+        '11' { $UnlockADAccountOnAllDomainControllers = $true; . .\functions\Unlock-ADAccountOnAllDomainControllers.ps1 }
+        '12' { $ClearBrowsers = $true; . .\functions\Clear-Browsers.ps1 }
         '13' { break }
         default {
             Write-Host "Invalid choice. Please select a valid function."
         }
     }
 } else {
-    Write-Host "Panes: Disabled" -ForegroundColor DarkGray
+Write-Host "Panes: Disabled" -ForegroundColor DarkGray
 }
 
 
