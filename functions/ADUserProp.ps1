@@ -84,7 +84,7 @@ function Get-ADUserProperties {
         $adUser.PSObject.Properties | ForEach-Object { $UserVars[$_.Name] = $_.Value }
 
         # Store the $adUser hashtable
-        $UserConfig = ".\.users\$userId.ps1"
+       # $UserConfig = ".\.users\$userId.ps1"
         $UserProps = "`$UserVars = @{}" + ($UserVars.GetEnumerator() | ForEach-Object { "`n`$UserVars['$($_.Key)'] = '$($_.Value)'" })
         Set-Content -Path $UserConfig -Value ($UserProps -join "`n")
 
