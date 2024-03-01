@@ -4,6 +4,7 @@ function Get-UserId {
     if ($panesEnabled -eq $true -and $GetUserId -eq $true) {
         while ($true) {
             Clear-Host
+            Write-Debug "Panes enabled and GetUserId is true"
             $UserID = (Read-Host "Enter User ID").Replace(' ', '')
             try {
                 if ($powershell -eq $true) {

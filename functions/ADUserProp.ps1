@@ -34,7 +34,6 @@ function Get-ADUserProperties {
     param (
         [string]$userId
     )
-
     try {
         if ($powershell -eq $true) {
             $adUser = Get-ADUser -Identity $userId -Properties *
@@ -85,8 +84,8 @@ function Get-ADUserProperties {
 
         # Store the $adUser hashtable
        # $UserConfig = ".\.users\$userId.ps1"
-        $UserProps = "`$UserVars = @{}" + ($UserVars.GetEnumerator() | ForEach-Object { "`n`$UserVars['$($_.Key)'] = '$($_.Value)'" })
-        Set-Content -Path $UserConfig -Value ($UserProps -join "`n")
+       # $UserProps = "`$UserVars = @{}" + ($UserVars.GetEnumerator() | ForEach-Object { "`n`$UserVars['$($_.Key)'] = '$($_.Value)'" })
+        #Set-Content -Path $UserConfig -Value ($UserProps -join "`n")
 
 
         return $adUser

@@ -1,14 +1,23 @@
 $Host.UI.RawUI.WindowTitle = Split-Path -Path $MyInvocation.MyCommand.Definition -Leaf
 Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope CurrentUser
 
-Write-Host "Enable debugging? Default false. (y/n):" -NoNewline
-$debugChoice = Read-Host
+# Ask the user if they want to enable debugging
+$debugChoice = Read-Host "Do you want to enable debugging? (Y/N)"
 
 if ($debugChoice -eq 'Y' -or $debugChoice -eq 'y') {
-    $debugging = $true
-    Write-Host "Debugging is enabled" -ForegroundColor Green
+    # Ask the user if they want to see debugging lines or debug
+    $debugPreferenceChoice = Read-Host "Do you want to see debugging lines (Continue) or debug (Inquire)? (C/I)"
+
+    if ($debugPreferenceChoice -eq 'C' -or $debugPreferenceChoice -eq 'c') {
+        $DebugPreference = 'Continue'
+        Write-Host "Debugging is enabled with Continue preference" -ForegroundColor Green
+    } elseif ($debugPreferenceChoice -eq 'I' -or $debugPreferenceChoice -eq 'i') {
+        $DebugPreference = 'Inquire'
+        Write-Host "Debugging is enabled with Inquire preference" -ForegroundColor Green
+    } else {
+        Write-Host "Invalid choice. Debugging preference not set." -ForegroundColor Red
+    }
 } else {
-    $debugging = $false
     Write-Host "Debugging is disabled" -ForegroundColor DarkGray
 }
 
@@ -220,6 +229,7 @@ Write-Host "Panes: Disabled" -ForegroundColor DarkGray
 # Main loop
 while ($true) {
     # Get User ID before entering the main menu
+    Clear-Host
     $envVars['UserID'] = Get-UserId
 
     # Initialize $logFilePath inside the main loop
