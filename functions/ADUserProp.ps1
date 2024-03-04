@@ -1,26 +1,23 @@
-
-if ($debugging) { Write-Host "Value of panesEnabled: $panesEnabled" -ForegroundColor Magenta }
-if ($debugging) { Write-Host "Value of ADUserProp: $ADUserProp" -ForegroundColor Magenta }
-if ($debugging) { pause }
+Write-Debug "Value of panesEnabled: $panesEnabled" -ForegroundColor Magenta
+Write-Debug "Value of ADUserProp: $ADUserProp" -ForegroundColor Magenta
+Write-Debug pause
 
 #This is an infinite loop that will keep running until you stop the script
 while ($panesEnabled -eq $true -and $ADUserProp -eq $true) {
-    if ($debugging) { 
-        Write-Host "All conditions met, proceeding..." -ForegroundColor Magenta 
-    }
+    Write-Debug "All conditions met, proceeding..." -ForegroundColor Magenta 
     Clear-Host
 
     # Resolve the path to the AdminConfig file
     $AdminConfig = Resolve-Path ".\.env\.env_$env:USERNAME.ps1"
 
-    if ($debugging) { Write-Host "AdminConfig file changed, re-running functions..." -ForegroundColor Magenta}
+    Write-Debug "AdminConfig file changed, re-running functions..." -ForegroundColor Magenta
 
     # Source the AdminConfig file to get the updated variables
     . $AdminConfig
 
     # Get the updated UserID
     $userId = $envVars['UserID']
-    if ($debugging) { Write-Host "$userID" -ForegroundColor Magenta}
+    Write-Debug "$userID" -ForegroundColor Magenta
 
     # Re-run the Get-ADUserProperties and Show-ADUserProperties functions with the updated UserID
     $adUser = Get-ADUserProperties -userId $envVars['UserID']
@@ -37,7 +34,7 @@ function Get-ADUserProperties {
     try {
         if ($powershell -eq $true) {
             $adUser = Get-ADUser -Identity $userId -Properties *
-            if ($debugging) { Write-Host "Get-ADUser returned: $adUser" }
+            Write-Debug "Get-ADUser returned: $adUser"
         } else {
             # Use System.DirectoryServices.DirectorySearcher to get the user properties from Active Directory
             $searcher = New-Object System.DirectoryServices.DirectorySearcher
@@ -72,7 +69,7 @@ function Get-ADUserProperties {
 
                 $adUser = $user
 
-                if ($debugging) { Write-Host "DirectorySearcher returned: $adUser" }
+                Write-Debug "DirectorySearcher returned: $adUser"
             } else {
                 throw
             }
