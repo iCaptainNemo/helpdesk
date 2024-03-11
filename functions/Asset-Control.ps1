@@ -183,9 +183,10 @@ function Asset-Control {
         Write-Host "3. Remote Assistance"
         Write-Host "4. PS Console"
         Write-Host "5. PSEXEC Console"
-        Write-Host "6. Remote Logoff"
-        Write-Host "7. Open File Explorer"
-        Write-Host "8. Clear Browsers"
+        Write-Host "6. Group Policy Update"
+        Write-Host "7. Remote Logoff"
+        Write-Host "8. Open File Explorer"
+        Write-Host "9. Clear Browsers"
         Write-Host "0. Back to Main Menu"
 
         $assetChoice = Read-Host "Enter your choice"
@@ -273,19 +274,29 @@ function Asset-Control {
                 break
             }
             '6' {
+                # Run Group Policy Update
+                Write-Host "Running Group Policy Update on $computerName"
+                try {
+                    Start-Process powershell -ArgumentList "-NoExit -Command {Invoke-GPUpdate -Computer $computerName -Force}"
+                } catch {
+                    Write-Host "An error occurred while running Group Policy Update: $_"
+                }
+                break
+            }
+            '7' {
                 # Get the session ID of the user with the provided userID
                 $sessionId = (quser /server:$computername | Where-Object { $_ -match $userID }).Split(' ')[2]
 
                 # Log off the user with the provided userID
                 logoff $sessionId /server:$computername
             }
-            '7' {
+            '8' {
                 # Open file explorer for the user's profile on the remote computer
                 Write-Host "Opening File Explorer for $userid on $computerName"
                 Invoke-Expression "explorer.exe /e,\\$computerName\c$\Users\$userid"
                 break
             }
-            '8' {
+            '9' {
                 # Clear Browser
                 $browserChoice = Read-Host "Enter the browser to clear (IE, Chrome, Edge, All, Cancel)"
                 switch ($browserChoice) {

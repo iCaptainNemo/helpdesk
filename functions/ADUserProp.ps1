@@ -1,23 +1,21 @@
-Write-Debug "Value of panesEnabled: $panesEnabled" -ForegroundColor Magenta
-Write-Debug "Value of ADUserProp: $ADUserProp" -ForegroundColor Magenta
-Write-Debug pause
+Write-Debug "Value of panesEnabled: $panesEnabled"
 
 #This is an infinite loop that will keep running until you stop the script
 while ($panesEnabled -eq $true -and $ADUserProp -eq $true) {
-    Write-Debug "All conditions met, proceeding..." -ForegroundColor Magenta 
+    Write-Debug "All conditions met, proceeding..."
     Clear-Host
 
     # Resolve the path to the AdminConfig file
     $AdminConfig = Resolve-Path ".\.env\.env_$env:USERNAME.ps1"
 
-    Write-Debug "AdminConfig file changed, re-running functions..." -ForegroundColor Magenta
+    Write-Debug "AdminConfig file changed, re-running functions..."
 
     # Source the AdminConfig file to get the updated variables
     . $AdminConfig
 
     # Get the updated UserID
     $userId = $envVars['UserID']
-    Write-Debug "$userID" -ForegroundColor Magenta
+    Write-Debug "$userID"
 
     # Re-run the Get-ADUserProperties and Show-ADUserProperties functions with the updated UserID
     $adUser = Get-ADUserProperties -userId $envVars['UserID']

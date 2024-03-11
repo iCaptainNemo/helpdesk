@@ -1,19 +1,19 @@
 
 while ($panesEnabled -eq $true -and $ShowLastLogEntries -eq $true) {
-    Write-Debug "All conditions met, proceeding..." -ForegroundColor Magenta
+    Write-Debug "All conditions met, proceeding..."
     Clear-Host
 
     # Resolve the path to the AdminConfig file
     $AdminConfig = Resolve-Path ".\.env\.env_$env:USERNAME.ps1"
 
-    Write-Debug "AdminConfig file changed, re-running functions..." -ForegroundColor Magenta
+    Write-Debug "AdminConfig file changed, re-running functions..."
 
     # Source the AdminConfig file to get the updated variables
     . $AdminConfig
 
     # Get the updated UserID
     $userId = $envVars['UserID']
-    Write-Debug "$userID" -ForegroundColor Magenta
+    Write-Debug "$userID"
 
     # Update the logFilePath
     $logFilePath = $envVars['logFileBasePath'] + $envVars['UserID']
