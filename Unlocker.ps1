@@ -1,219 +1,314 @@
-﻿$Host.UI.RawUI.WindowTitle = Split-Path -Path $MyInvocation.MyCommand.Definition -Leaf
-Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope CurrentUser
+$Host.UI.RawUI.WindowTitle = Split-Path -Path $MyInvocation.MyCommand.Definition -Leaf
 
-# Import the ActiveDirectory module
-Import-Module ActiveDirectory
+# Ask the user if they want to enable debugging
+$debugChoice = Read-Host "Do you want to enable debugging? (Y/N)"
 
-# Get the current user with specific properties
-$AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name
+if ($debugChoice -eq 'Y' -or $debugChoice -eq 'y') {
+    # Ask the user if they want to see debugging lines or debug
+    $debugPreferenceChoice = Read-Host "Do you want to see debugging lines (Continue) or debug (Inquire)? (C/I)"
 
-# Get the current domain
-$currentDomain = (Get-ADDomain).DNSRoot
-Write-Host "Current domain: $currentDomain"
-function Get-CurrentTime {
-    Get-Date -Format "yyyy-MM-dd hh:mm:ss tt"
+    if ($debugPreferenceChoice -eq 'C' -or $debugPreferenceChoice -eq 'c') {
+        $DebugPreference = 'Continue'
+        Write-Host "Debugging is enabled with Continue preference" -ForegroundColor Green
+    } elseif ($debugPreferenceChoice -eq 'I' -or $debugPreferenceChoice -eq 'i') {
+        $DebugPreference = 'Inquire'
+        Write-Host "Debugging is enabled with Inquire preference" -ForegroundColor Green
+    } else {
+        Write-Host "Invalid choice. Debugging preference not set." -ForegroundColor Red
+    }
+} else {
+    Write-Host "Debugging is disabled" -ForegroundColor DarkGray
+}
+function Get-DomainRoot {
+    try {
+        $currentDomain = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain()
+        $rootDSE = New-Object System.DirectoryServices.DirectoryEntry("LDAP://$($currentDomain.Name)/RootDSE")
+        $domainRoot = $rootDSE.defaultNamingContext
+        $ldapPath = "LDAP://OU=Domain Controllers,$($currentDomain.distinguishedName)"
+        if ($debugging) {
+            Write-Host "LDAP path: $ldapPath"
+            Write-Host "Domain root: $domainRoot"
+        }
+        return @{
+            DomainRoot = $domainRoot
+            LdapPath = $ldapPath
+        }
+    } catch {
+        Write-Host "Error: $_"
+    }
 }
 
-# Import variables from env.ps1 file
-. .\env_$currentDomain.ps1
+# Call the function and store the result in a variable
+$domainRoot = Get-DomainRoot
+function Get-DomainControllers {
+    $dcList = @{}
+    try {
+        $currentDomain = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain()
+        if ($debugging) { Write-Host "Current Domain: $($currentDomain)" }
 
-$unlockedUsersCount = 0
+        $currentDomain.DomainControllers | ForEach-Object {
+            $dcList[$_.Name] = $_
+        }
 
-# Function to unlock AD account on all domain controllers
-function Unlock-ADAccountOnAllDomainControllers {
+        # Retrieve the primary domain controller (PDC) emulator role owner DN
+        $PDC = $currentDomain.PdcRoleOwner
+        if ($debugging) { Write-Host "Primary DC: $($PDC)" }
+
+        # Retrieve the distinguished name of the DDC
+        $DDC = $currentDomain.RidRoleOwner
+        if ($debugging) { Write-Host "Distributed DC: $($DDC)" }
+
+        if ($debugging) { Write-Host "Number of domain controllers found: $($dcList.Count)" }
+        return @{
+            DcList = $dcList
+            PDC = $PDC
+            DDC = $DDC
+        }
+    } catch {
+        Write-Host "Error: $_"
+    }
+}
+
+# Call the function and store the result in a variable
+$result = Get-DomainControllers
+
+# Access the DcList, PDC, and DDC from the result
+$dcList = $result.DcList
+$PDC = $result.PDC
+$DDC = $result.DDC
+
+# Function: Get-User - Prompt for a user ID and return the sanitized valuefunction Get-User {
+function Get-User {
+    do {
+        do {
+            $userId = Read-Host "Enter Locked UserID"
+            $userId = $userId.Trim() -replace '[^a-zA-Z0-9]', ''
+
+            if ([string]::IsNullOrEmpty($userId)) {
+                Write-Host "User ID cannot be empty. Please enter a valid user ID."
+                Pause
+                cls
+            }
+        } while ([string]::IsNullOrEmpty($userId))
+
+        $searcher = New-Object System.DirectoryServices.DirectorySearcher
+        $searcher.Filter = "(sAMAccountName=$userId)"
+        $user = $searcher.FindOne()
+        Write-Debug "Get-User: User search result - $user"
+
+        if ($user) {
+            Write-Host "User found: $($user.Properties['displayName'])"
+        } else {
+            Write-Host "User does not exist, check ID and try again."
+            Pause
+            cls
+        }
+    } while (-not $user)
+
+    return $userId
+}
+
+# Debug: Print the domain controllers
+if ($debugging) {
+    Write-Host "Domain Controllers:"
+    foreach ($dc in $dcList.Values) {
+        Write-Host $dc.Name
+    }
+}
+
+# Function: Get-OU - Get the OU for the user
+function Get-OU {
     param (
         [string]$userId
     )
 
-    $dcList = $PSDomains + $cmdDomains
+    try {
+        $searcher = New-Object System.DirectoryServices.DirectorySearcher
+        $searcher.Filter = "(sAMAccountName=$userId)"
+        $user = $searcher.FindOne()
+        Write-Debug "Get-OU: User search result - $user"
 
-    $jobs = foreach ($targetDC in $dcList) {
-        Start-Job -ScriptBlock {
-            param ($userId, $targetDC, $PSDomains, $cmdDomains)
-            $error.Clear()
-            if ($targetDC -in $PSDomains) {
-                Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorAction SilentlyContinue -ErrorVariable unlockError
-            } elseif ($targetDC -in $cmdDomains) {
-                net user $userID /active:yes /Domain
-            }
-            if ($unlockError) {
-                "Error unlocking account: $unlockError"
-            } else {
-                Write-Host ("Unlocked in " + $targetDC) -BackgroundColor DarkGreen
-            }
-        } -ArgumentList $userId, $targetDC, $PSDomains, $cmdDomains
-    }
+        if ($user) {
+            $userEntry = $user.GetDirectoryEntry()
+            $distinguishedName = $userEntry.distinguishedName
 
-    # Receive and print job outputs as they complete
-    $jobs | ForEach-Object {
-        while ($_ -ne $null -and $_.State -ne 'Completed') {
-            if ($_.State -eq 'Failed') {
-                Write-Host "Job failed"
-                break
-            }
-            Start-Sleep -Seconds 1
+            # The distinguishedName is in the format: CN=<username>,OU=<ou>,DC=<domain>,DC=<com>
+            # Split the distinguishedName by the comma character to get the individual parts
+            $parts = $distinguishedName.Split(',')
+
+            # The first OU will be the second part of the distinguishedName
+            $firstOU = $parts[1].Replace('OU=', '')
+
+            if ($debugging) { Write-Host "OU: $firstOU" }
+            return $firstOU  # Return the OU
+        } else {
+            Write-Host "User does not exist, check ID and try again."
         }
-        if ($_.State -eq 'Completed') {
-            Receive-Job -Job $_
-            Remove-Job -Job $_
-        }
+    } catch {
+        Write-Host "Error: $_"
     }
 }
-$unlockedUsersCount = 0
-# Function to get probable locked-out users
-function Get-ProbableLockedOutUsers {
-# Search for all locked-out user accounts
-$lockedOutUsers = Search-ADAccount -LockedOut -UsersOnly
-
-    # Iterate through all locked-out users and get additional AD properties
-    $probableLockedOutUsers = foreach ($lockedOutUser in $lockedOutUsers) {
-        Get-ADUser -Identity $lockedOutUser.SamAccountName -Properties *
-    }
-
-    # Filter locked-out users whose lockoutTime is within X days of the current date, Enabled is True, PasswordExpired is False, and badPwdCount is greater than 0
-    $probableLockedOutUsers = $probableLockedOutUsers | Where-Object {
-        $_.AccountlockoutTime -ge (Get-Date).AddDays(-1) -and
-        $_.Enabled -eq $true
-    }
-    # Users who are locked out and password is expired
-    $lockedoutusersB = $probableLockedOutUsers | Where-Object {
-        $_.PasswordExpired -eq $true
-    }
-
-    # The rest of the users
-    $lockedoutusersA = $probableLockedOutUsers | Where-Object {
-        $_ -notin $lockedoutusersB
-    }
-    return @{
-        'ProbableLockedOutUsers' = $probableLockedOutUsers
-        'LockedOutUsersA' = $lockedoutusersA
-        'LockedOutUsersB' = $lockedoutusersB
-    }
-}
-
-function Unlock-Users {
+function Check-LockedOut {
     param (
-        [Parameter(Mandatory=$true)]
-        [array]$lockedoutusers
+        [string]$userId,
+        [string]$targetDC,
+        [string]$domainRoot
     )
 
-    Clear-Host
-
-    $jobs = @()
-    $failedUserIds = @()
-    $unlockedCount = 0
-    foreach ($user in $lockedoutusers) {
-        # Skip if the user ID is in the failedUserIds array
-        if ($failedUserIds -contains $user.SamAccountName) {
-            continue
-        }
-        $job = Start-Job -ScriptBlock {
-            param ($user)
-            function Unlock-ADAccountOnAllDomainControllers {
-                param (
-                    [string]$userId
-                )
-
-                $dcList = Get-ADDomainController -Filter *
-                foreach ($targetDC in $dcList.Name) {
-                    Unlock-ADAccount -Identity $userId -Server $targetDC -ErrorAction SilentlyContinue
-                }
-            }
-
-            try {
-                Unlock-ADAccountOnAllDomainControllers -userId $user.SamAccountName
-                return $user.SamAccountName
-            } catch {
-                return $false
-            }
-        } -ArgumentList $user
-        $jobs += $job
-    }
-
-    # Wait for all jobs to complete
-    $jobs | Wait-Job | Out-Null
-
-    # Receive and remove completed jobs without displaying job information
-    $jobs | ForEach-Object {
-        $job = $_
-        $result = Receive-Job -Job $job
-        Remove-Job -Job $job | Out-Null
-        if ($result -ne $false) {
-            $unlockedCount++
-            Write-Host ("User $result unlocked.") -BackgroundColor DarkGreen
+    try {
+        $searcher = New-Object System.DirectoryServices.DirectorySearcher
+        $searcher.Filter = "(sAMAccountName=$userId)"
+        
+        # Check if targetDC is not null before setting the SearchRoot
+        if ($targetDC -ne 0) {
+            $searcher.SearchRoot = "LDAP://$targetDC/$domainRoot"
         } else {
-            # Ensure that the job has an argument before trying to access it
-            if ($job.Command.Arguments) {
-                $failedUser = $job.Command.Arguments[0].SamAccountName
-                $failedUserIds += $failedUser
-                Write-Host "Failed to unlock $failedUser." -ForegroundColor White -BackgroundColor Red
-            }
+            Write-Debug "Skipping check for user on null Domain Controller" -ForegroundColor Yellow
+            return
         }
-    }
 
-    Write-Host "$($failedUserIds.Count) user(s) failed to unlock."
-    return $unlockedCount
+        $user = $searcher.FindOne()
+        Write-Debug "Check-LockedOut: User search result - $user"
+
+        if ($user -ne $null) {
+            $userEntry = $user.GetDirectoryEntry()
+            $isLockedOut = $userEntry.InvokeGet("IsAccountLocked")
+            if ($isLockedOut) {
+                Write-Host "Locked Out: True" -ForegroundColor Red
+            } else {
+                Write-Host "Locked Out: False" -ForegroundColor Green
+            }
+        } else {
+            Write-Host "User not found on the target Domain Controller" -ForegroundColor Yellow
+        }
+    } catch {
+        Write-Host "Error: $_"
+    }
 }
 
-$restartScript = $true
+function Match-OUtoDC {
+    param (
+        [string]$OU,
+        [hashtable]$dcList
+    )
 
-while ($restartScript) {
-    Clear-Host
-    # Display the current time
-    $currentTime = Get-CurrentTime
-    Write-Host "Current Time: $currentTime"
-    Write-Host "Unlocked Users Count: $unlockedCount"  -ForegroundColor Green
+    # Define a regular expression pattern to extract the desired part
+    $pattern = "^\d+"
 
-    #Line break for space
-    Write-Host "`n"
+    # Create a list of all the matches in the DC names
+    $matches = $dcList.Values.Name | Select-String -Pattern $pattern -AllMatches | ForEach-Object { $_.Matches.Value }
 
-    # Get probable locked-out users
-    $result = Get-ProbableLockedOutUsers
-    $probableLockedOutUsers = $result.ProbableLockedOutUsers
-    $lockedoutusersA = $result.LockedOutUsersA
-    $lockedoutusersB = $result.LockedOutUsersB
+    # Check if the OU is in the list of matches
+    if ($matches -contains $OU) {
 
-    # Display the properties of users in $lockedoutusersA, $lockedoutusersB in separate tables
-    $noUsersToUnlock = $true
+        # If the OU is in the list, find the corresponding DC
+        foreach ($dc in $dcList.Values) {
+            # Use Select-String to match the pattern and extract the matches
+            $dcName = $dc.Name | Select-String -Pattern $pattern -AllMatches | ForEach-Object { $_.Matches.Value }
 
-    if ($lockedoutusersA.Count -gt 0) {
-        Write-Host "Locked-out users within the last 24 hours:"
-        $lockedoutusersA | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, AccountLockoutTime -AutoSize
-        $noUsersToUnlock = $false
-    }
-    
-    if ($lockedoutusersB.Count -gt 0) {
-        Write-Host "Locked-out users Password Expired within the last 24 hours:"
-        $lockedoutusersB | Sort-Object AccountLockoutTime -Descending | Format-Table -Property SamAccountName, Name, AccountLockoutTime -AutoSize
-        $noUsersToUnlock = $false
-    }
-    
-    if ($noUsersToUnlock) {
-        Write-Host "No users to unlock" -ForegroundColor Green
+            # Check if the extracted part of the DC name matches the OU
+            if ($dcName -contains $OU) {
+                Write-Host "Matched DC: $($dc.Name)" -ForegroundColor Green
+                return $dc.Name
+            }
+        }
+    } else {
+        Write-Host "OU $OU not found in the list."
     }
 
-    #Line break for space
-    Write-Host "`n"
+    Write-Host "No matching DC found for OU: $OU" 
+    return "0"  # Return "0" when no OU is matched
+}
 
-    # Display the menu for unlocking accounts
-    Write-Host "Unlock Account Menu:"
-    Write-Host "1. Unlock All Users"
-    Write-Host "2. Unlock All With Password Expired Only"
+function Unlock-User {
+    param (
+        [string]$userId,
+        [string]$targetDC,
+        [hashtable]$dcList,
+        [string]$domainRoot
+    )
 
-    $choice = Read-Host "Select an option"
+    $searcher = New-Object System.DirectoryServices.DirectorySearcher
+    $searcher.Filter = "(sAMAccountName=$userId)"
 
-    # Process user's choice
-    switch ($choice) {
-        1 {
-            # Unlock all users
-            #Clear-Host
-            $unlockedCount += Unlock-Users -lockedoutusers $lockedoutusersA
+    if ($targetDC -eq "0") {
+        foreach ($dc in $dcList.Values) {
+            $searcher.SearchRoot = "LDAP://$($dc.Name)/$domainRoot"
+            $user = $searcher.FindOne()
+            Write-Debug "Unlock-User: User search result - $user"
+
+            if ($user) {
+                $userEntry = $user.GetDirectoryEntry()
+                $userEntry.Properties["lockoutTime"].Value = 0
+                $userEntry.CommitChanges()
+                Write-Host "Account unlocked on $($dc.Name)" -BackgroundColor DarkGreen
+            } else {
+                Write-Host "Error unlocking account on $($dc.Name): User not found"
+            }
+        }
+    } else {
+        if ($dcList.ContainsKey($targetDC)) {
+            $searcher.SearchRoot = "LDAP://$targetDC/$domainRoot"
+            try {
+                $user = $searcher.FindOne()
+                Write-Debug "Unlock-User2: User search result - $user"
+                if ($user) {
+                    $userEntry = $user.GetDirectoryEntry()
+                    $userEntry.Properties["lockoutTime"].Value = 0
+                    $userEntry.CommitChanges()
+                    Write-Host "Account unlocked on $targetDC" -BackgroundColor DarkGreen
+                } else {
+                    Write-Host "Error unlocking account on $targetDC User not found"
+                }
+            } catch {
+                Write-Host "Error unlocking account on $targetDC $_"
+            }
+        } else {
+            Write-Host "Error: $targetDC not found in domain controller list"
+        }
+    }
+}
+
+
+while ($true) {
+    # Function: Get-User - Prompt for a user ID and return the sanitized value
+    $userId = Get-User
+
+    # Function: Get-OU - Get the OU for the user
+    $OU = Get-OU -userId $userId
+
+    # Function: Match-OUtoDC - Match the OU to a domain controller
+    $targetDC = Match-OUtoDC -OU $OU -dcList $dcList
+
+    # Function: Check-LockedOut - Check if the user is locked out
+    Check-LockedOut -userId $userId -targetDC $targetDC -domainRoot $domainRoot.DomainRoot
+
+    function Unlock-UserWrapper {
+        param (
+            [string]$userId,
+            [string]$targetDC,
+            [hashtable]$dcList,
+            [string]$domainRoot
+        )
+
+        # $unlockPrompt = Read-Host "Unlock user? Enter to continue, 0 to cancel"
+        # if ($unlockPrompt -eq '0') {
+        #     Write-Host "Unlock operation cancelled."
+        #     return
+        # }
+
+        Unlock-User -userId $userId -targetDC $targetDC -dcList $dcList -domainRoot $domainRoot
+        if ($targetDC -ne '0') {
+            Unlock-User -userId $userId -targetDC $PDC -dcList $dcList -domainRoot $domainRoot
+            Unlock-User -userId $userId -targetDC $DDC -dcList $dcList -domainRoot $domainRoot
         }
 
-        2 {
-            # Unlock all users with password expired
-            #Clear-Host
-            $unlockedCount += Unlock-Users -lockedoutusers $lockedoutusersB
-        }
     }
+
+    # Call the wrapper function instead of Unlock-User directly
+    Unlock-UserWrapper -userId $userId -targetDC $targetDC -dcList $dcList -domainRoot $domainRoot.DomainRoot
+
+    # Prompt the user to press Enter to reset
+    # Read-Host "Press Enter to reset..."
+    cls
 }
