@@ -163,7 +163,7 @@ function Check-LockedOut {
         if ($targetDC -ne 0) {
             $searcher.SearchRoot = "LDAP://$targetDC/$domainRoot"
         } else {
-            Write-Debug "Skipping check for user on null Domain Controller" -ForegroundColor Yellow
+            Write-Debug "Skipping check for user on null Domain Controller"
             return
         }
 
@@ -310,5 +310,7 @@ while ($true) {
 
     # Prompt the user to press Enter to reset
     # Read-Host "Press Enter to reset..."
+    # pause
+    Start-Sleep -Seconds 1
     cls
 }
