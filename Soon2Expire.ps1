@@ -56,10 +56,7 @@ do {
     $timeUntilMidnight = (New-TimeSpan -Start (Get-Date) -End (Get-Date).Date.AddDays(1)).TotalSeconds
     Write-Debug "Time until midnight: $timeUntilMidnight seconds"
 
-    # Display the countdown message
-    Write-Host "Refreshing at midnight..."
-
-    # Wait until midnight
-    Start-Sleep -Seconds $timeUntilMidnight
+    # Pause Until any key is pressed then refresh
+    pause
 
 } while ($true)
