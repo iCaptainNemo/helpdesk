@@ -1,7 +1,7 @@
 $Host.UI.RawUI.WindowTitle = Split-Path -Path $MyInvocation.MyCommand.Definition -Leaf
 
 # Ask the user if they want to enable debugging
-$debugChoice = Read-Host "Do you want to enable debugging? (Y/N)"
+$debugChoice = Read-Host "Do you want to enable debugging? Default no. (Y)"
 
 if ($debugChoice -eq 'Y' -or $debugChoice -eq 'y') {
     # Ask the user if they want to see debugging lines or debug
