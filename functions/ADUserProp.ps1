@@ -102,6 +102,7 @@ function Show-ADUserProperties {
                 'User ID'                   = $adUser.SamAccountName
                 'Given Name'                = $adUser.GivenName
                 'Display Name'              = $adUser.DisplayName
+                'HomeShare'                 = $adUser.HomeDirectory
                 'Email'                     = $adUser.EmailAddress
                 'Department'                = $adUser.Department
                 'Telephone'                 = $adUser.telephoneNumber
