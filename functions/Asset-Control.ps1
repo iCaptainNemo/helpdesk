@@ -183,10 +183,11 @@ function Asset-Control {
         Write-Host "3. Remote Assistance"
         Write-Host "4. PS Console"
         Write-Host "5. PSEXEC Console"
-        Write-Host "6. Group Policy Update"
-        Write-Host "7. Remote Logoff"
-        Write-Host "8. Open File Explorer"
-        Write-Host "9. Clear Browsers"
+        Write-Host "6. Re-Enable RDP"
+        Write-Host "7. Group Policy Update"
+        Write-Host "8. Remote Logoff"
+        Write-Host "9. Open File Explorer"
+        Write-Host "10. Clear Browsers"
         Write-Host "0. Back to Main Menu"
 
         $assetChoice = Read-Host "Enter your choice"
@@ -274,6 +275,26 @@ function Asset-Control {
                 break
             }
             '6' {
+                # Re-Enable RDP Fix
+                Write-Host "Re-Enabling RDP and setting firewall rules on $computerName"
+            
+                # Define the commands to be executed on the remote computer
+                $command1 = 'reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f'
+                $command2 = 'netsh advfirewall firewall set rule group="remote desktop" new enable=yes'
+                $command3 = 'shutdown /r /t 0'
+            
+                # Execute the commands on the remote computer using PsExec
+                try {
+                    Start-Process -FilePath "cmd.exe" -ArgumentList "/c psexec.exe \\$computerName $command1"
+                    Start-Process -FilePath "cmd.exe" -ArgumentList "/c psexec.exe \\$computerName $command2"
+                    Start-Process -FilePath "cmd.exe" -ArgumentList "/c psexec.exe \\$computerName $command3"
+                    Write-Host "RDP re-enabled, firewall rules set, and computer restarted on $computerName"
+                } catch {
+                    Write-Host "An error occurred while re-enabling RDP, setting firewall rules, or restarting the computer: $_" -ForegroundColor Red
+                }
+                break
+            }
+            '7' {
                 # Run Group Policy Update
                 Write-Host "Running Group Policy Update on $computerName"
                 try {
@@ -283,20 +304,20 @@ function Asset-Control {
                 }
                 break
             }
-            '7' {
+            '8' {
                 # Get the session ID of the user with the provided userID
                 $sessionId = (quser /server:$computername | Where-Object { $_ -match $userID }).Split(' ')[2]
 
                 # Log off the user with the provided userID
                 logoff $sessionId /server:$computername
             }
-            '8' {
+            '9' {
                 # Open file explorer for the user's profile on the remote computer
                 Write-Host "Opening File Explorer for $userid on $computerName"
                 Invoke-Expression "explorer.exe /e,\\$computerName\c$\Users\$userid"
                 break
             }
-            '9' {
+            '10' {
                 # Clear Browser
                 $browserChoice = Read-Host "Enter the browser to clear (IE, Chrome, Edge, All, Cancel)"
                 switch ($browserChoice) {
