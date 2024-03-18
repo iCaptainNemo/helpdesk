@@ -1,20 +1,22 @@
 $Host.UI.RawUI.WindowTitle = Split-Path -Path $MyInvocation.MyCommand.Definition -Leaf
 
 # Ask the user if they want to enable debugging
+$debugging = $false
 $debugChoice = Read-Host "Do you want to enable debugging? Default no. (Y)"
-
 if ($debugChoice -eq 'Y' -or $debugChoice -eq 'y') {
-    # Ask the user if they want to see debugging lines or debug
-    $debugPreferenceChoice = Read-Host "Do you want to see debugging lines (Continue) or debug (Inquire)? (C/I)"
+    $debugging = $true
+    # Ask the user if they want to see debugging lines (Continue), debug (Inquire), or cancel debugging (Cancel)
+    $debugPreferenceChoice = Read-Host "See debugging lines (default), debug (Inquire), or cancel debugging (Cancel)? (I/C/Enter)"
 
-    if ($debugPreferenceChoice -eq 'C' -or $debugPreferenceChoice -eq 'c') {
-        $DebugPreference = 'Continue'
-        Write-Host "Debugging is enabled with Continue preference" -ForegroundColor Green
-    } elseif ($debugPreferenceChoice -eq 'I' -or $debugPreferenceChoice -eq 'i') {
+    if ($debugPreferenceChoice -eq 'I' -or $debugPreferenceChoice -eq 'i') {
         $DebugPreference = 'Inquire'
         Write-Host "Debugging is enabled with Inquire preference" -ForegroundColor Green
+    } elseif ($debugPreferenceChoice -eq 'C' -or $debugPreferenceChoice -eq 'c') {
+        $debugging = $false
+        Write-Host "Debugging is cancelled" -ForegroundColor DarkGray
     } else {
-        Write-Host "Invalid choice. Debugging preference not set." -ForegroundColor Red
+        $DebugPreference = 'Continue'
+        Write-Host "Debugging is enabled with Continue preference" -ForegroundColor Green
     }
 } else {
     Write-Host "Debugging is disabled" -ForegroundColor DarkGray
@@ -108,12 +110,16 @@ function Get-User {
     return $userId
 }
 
-# Debug: Print the domain controllers
-if ($debugging) {
+function PrintDebugInfo($dcList) {
     Write-Host "Domain Controllers:"
     foreach ($dc in $dcList.Values) {
         Write-Host $dc.Name
     }
+}
+
+# Debug: Print the domain controllers
+if ($debugging) {
+    PrintDebugInfo($dcList)
 }
 
 # Function: Get-OU - Get the OU for the user
@@ -213,10 +219,10 @@ function Match-OUtoDC {
             }
         }
     } else {
-        Write-Host "OU $OU not found in the list."
+        Write-Debug "OU $OU not found in the list."
     }
 
-    Write-Host "No matching DC found for OU: $OU" 
+    Write-Debug "No matching DC found for OU: $OU" 
     return "0"  # Return "0" when no OU is matched
 }
 
@@ -311,6 +317,10 @@ while ($true) {
     # Prompt the user to press Enter to reset
     # Read-Host "Press Enter to reset..."
     # pause
-    Start-Sleep -Seconds 1
+    if ($debugging) {
+        Read-Host "Press Enter to continue"
+    } else {
+        Start-Sleep -Seconds 1
+    }
     cls
 }
