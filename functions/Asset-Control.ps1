@@ -185,9 +185,10 @@ function Asset-Control {
         Write-Host "5. PSEXEC Console"
         Write-Host "6. Re-Enable RDP"
         Write-Host "7. Group Policy Update"
-        Write-Host "8. Remote Logoff"
-        Write-Host "9. Open File Explorer"
-        Write-Host "10. Clear Browsers"
+        Write-Host "8. Stop Cisco AWG Service"
+        Write-Host "9. Remote Logoff"
+        Write-Host "10. Open File Explorer"
+        Write-Host "11. Clear Browsers"
         Write-Host "0. Back to Main Menu"
 
         $assetChoice = Read-Host "Enter your choice"
@@ -305,19 +306,25 @@ function Asset-Control {
                 break
             }
             '8' {
+                Write-Host "Stopping Cisco AWG Service on $computername"
+                Invoke-Command -ComputerName $computername -ScriptBlock {
+                    Stop-Service -Name 'csc_swgagent' -Force -ErrorAction Stop
+                }
+            }
+            '9' {
                 # Get the session ID of the user with the provided userID
                 $sessionId = (quser /server:$computername | Where-Object { $_ -match $userID }).Split(' ')[2]
 
                 # Log off the user with the provided userID
                 logoff $sessionId /server:$computername
             }
-            '9' {
+            '10' {
                 # Open file explorer for the user's profile on the remote computer
                 Write-Host "Opening File Explorer for $userid on $computerName"
                 Invoke-Expression "explorer.exe /e,\\$computerName\c$\Users\$userid"
                 break
             }
-            '10' {
+            '11' {
                 # Clear Browser
                 $browserChoice = Read-Host "Enter the browser to clear (IE, Chrome, Edge, All, Cancel)"
                 switch ($browserChoice) {
