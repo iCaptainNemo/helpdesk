@@ -60,13 +60,15 @@ function Asset-Control {
     }
 
     # Prompt for Computer Name or number
-    $input = Read-Host "Enter Computer Name (C to cancel):"
+    $input = Read-Host "Enter Computer Name or number (1-10, C to cancel):"
 
     # Check if the input is 'C' or 'c' to cancel
     if ($input -eq 'C' -or $input -eq 'c') {
         Write-Host "Selection cancelled."
         break
-       # $computerName = $null
+    } elseif ($input -match '^[1-9]$|^10$') {
+        # If the input is a number between 1 and 10, map it to the corresponding computer
+        $computerName = $possibleComputers[$input - 1]
     } else {
         # Assign $input to $computerName
         $computerName = $input
