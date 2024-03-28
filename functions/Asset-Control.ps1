@@ -315,10 +315,14 @@ function Asset-Control {
             }
             '9' {
                 # Get the session ID of the user with the provided userID
-                $sessionId = (quser /server:$computername | Where-Object { $_ -match $userID }).Split(' ')[2]
-
+                $sessionId = (quser /server:$computername | Where-Object { $_ -match $userID }) -replace '.*\s+(\d+)\s+.*', '$1'
+            
                 # Log off the user with the provided userID
-                logoff $sessionId /server:$computername
+                if ($sessionId) {
+                    logoff $sessionId /server:$computername
+                } else {
+                    Write-Host "No session ID found for user $userID on server $computername."
+                }
             }
             '10' {
                 # Open file explorer for the user's profile on the remote computer
