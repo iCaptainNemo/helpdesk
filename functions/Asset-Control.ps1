@@ -3,6 +3,7 @@ function Asset-Control {
     param (
         [string]$userId
     )
+
     # Check $powershell boolean
     if ($powershell -eq $true) {
 
@@ -177,6 +178,7 @@ function Asset-Control {
             Write-Host "Error getting print jobs: $_" -ForegroundColor Red
         }
     }
+
     # Asset Control submenu
     while ($true) {
         Write-Host "`nAsset Control Menu"
@@ -371,5 +373,5 @@ function Asset-Control {
             }
         }
         pause
-    } 
+    }
 }
