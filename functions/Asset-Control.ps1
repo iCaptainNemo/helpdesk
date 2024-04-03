@@ -292,6 +292,7 @@ function Asset-Control {
                 try {
                     Start-Process -FilePath "cmd.exe" -ArgumentList "/c psexec.exe \\$computerName $command1"
                     Start-Process -FilePath "cmd.exe" -ArgumentList "/c psexec.exe \\$computerName $command2"
+                    Read-Host "Press Enter to continue"
                     Start-Process -FilePath "cmd.exe" -ArgumentList "/c psexec.exe \\$computerName $command3"
                     Write-Host "RDP re-enabled, firewall rules set, and computer restarted on $computerName"
                 } catch {
