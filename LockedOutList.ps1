@@ -63,17 +63,34 @@ do {
     }
     # Display the properties of watched locked-out users in a separate table
     if ($watchedLockedOutUsers.Count -gt 0) {
-        Write-Host "Watched locked-out users within the last 24 hours:" -ForegroundColor Yellow
-        $watchedLockedOutUsers | Sort-Object AccountLockoutTime -Descending | Format-Table @{Name='ID';Expression={$_.SamAccountName}}, Name, LockedOut, @{Name='Expired';Expression={$_.PasswordExpired}}, AccountLockoutTime -AutoSize
+        Write-Host "Watched locked-out users within the last 24 hours:"
+        $tableOutput = $watchedLockedOutUsers | Sort-Object AccountLockoutTime -Descending | Format-Table @{Name='ID';Expression={$_.SamAccountName}}, Name, @{Name='Expired';Expression={$_.PasswordExpired}}, AccountLockoutTime -AutoSize | Out-String
+        $tableOutput -split "`n" | ForEach-Object { Write-Host $_ -ForegroundColor Red }
     } else {
-        Write-Host "No recent watched locked-out users found." -ForegroundColor Yellow
+        Write-Host "No recent watched locked-out users found." -ForegroundColor Green
     }
-    # Filter locked-out users whose lockoutTime is within 2 days of the current date and Enabled is True
+    # Filter locked-out users whose lockoutTime is within X days of the current date and Enabled is True
     $probableLockedOutUsers = $probableLockedOutUsers | Where-Object {
         $_.AccountlockoutTime -ge (Get-Date).AddDays(-1) -and
         $_.Enabled -eq $true
     }
 
+    # Filter users whose AccountLockoutTime and LastBadPasswordAttempt do not match within a 5-minute interval
+    # or if the LastBadPasswordAttempt is null
+    $usersWithMismatchedTimes = $probableLockedOutUsers | Where-Object {
+        if ($_.AccountLockoutTime -and $_.LastBadPasswordAttempt) {
+            [Math]::Abs(($_.AccountLockoutTime - $_.LastBadPasswordAttempt).TotalMinutes) -gt 5
+        } elseif ($null -eq $_.LastBadPasswordAttempt) {
+            $true
+        } else {
+            $false
+        }
+    }
+
+    # Create a list of all locked out users that are not in $usersWithMismatchedTimes
+    $lockedOut = $probableLockedOutUsers | Where-Object {
+        $_.SamAccountName -notin $usersWithMismatchedTimes.SamAccountName
+    }
     # Post data to Power BI API for each locked-out user
 #    foreach ($user in $probableLockedOutUsers) {
 #        $payload = @{
@@ -91,12 +108,20 @@ do {
 #        Invoke-RestMethod -Method Post -Uri $endpoint -Body (ConvertTo-Json @($payload))
 #git    }
 
-    # Display the properties of probable locked-out users in a separate table
-    if ($probableLockedOutUsers.Count -gt 0) {
-        Write-Host "Locked-out users within the last 24 hours:"
-        $probableLockedOutUsers | Sort-Object AccountLockoutTime -Descending | Format-Table @{Name='ID';Expression={$_.SamAccountName}}, Name, LockedOut, @{Name='Expired';Expression={$_.PasswordExpired}}, AccountLockoutTime -AutoSize
+    # Display the properties of locked-out users in a separate table
+    if ($lockedOut.Count -gt 0) {
+        Write-Host "Locked-out users within the last 24 hours:" -ForegroundColor Red
+        $lockedOut | Sort-Object AccountLockoutTime -Descending | Format-Table @{Name='ID';Expression={$_.SamAccountName}}, Name, @{Name='Expired';Expression={$_.PasswordExpired}}, AccountLockoutTime -AutoSize
     } else {
-        Write-Host "No recent locked-out users found."
+        Write-Host "0 recent locked-out users" -ForegroundColor Green
+    }
+
+    # Display the properties of users with mismatched times in a separate table
+    if ($usersWithMismatchedTimes.Count -gt 0) {
+        Write-Host "Mismatched AccountLockoutTime and LastBadPasswordAttempt:" -ForegroundColor Yellow
+        $usersWithMismatchedTimes | Sort-Object AccountLockoutTime -Descending | Format-Table @{Name='ID';Expression={$_.SamAccountName}}, Name, @{Name='Expired';Expression={$_.PasswordExpired}}, LastBadPasswordAttempt, AccountLockoutTime -AutoSize
+    } else {
+        Write-Host "0 users with mismatched AccountLockoutTime and LastBadPasswordAttempt found." -ForegroundColor Green
     }
 
     # Display the countdown message
