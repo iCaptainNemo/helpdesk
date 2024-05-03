@@ -28,8 +28,8 @@ do {
 } while ($refreshInterval -le 0)
 
 # Prompt user for auto unlock
-$autoUnlockInput = Read-Host "Do you want to enable auto unlock for mismatched accounts? (yes/no):"
-$autoUnlock = $autoUnlockInput.Trim().ToLower() -eq 'yes'
+$autoUnlockInput = Read-Host "Do you want to enable auto unlock for mismatched accounts? (y/n):"
+$autoUnlock = $autoUnlockInput.Trim().ToLower() -eq 'y'
 
 
 # Initialize restart count
