@@ -4,8 +4,6 @@ function Get-CurrentTime {
     Get-Date -Format "yyyy-MM-dd hh:mm:ss tt"
 }
 
-#Login-PowerBI
-
 
 # Get the current user
 $AdminUser = Get-ADUser -Identity $env:USERNAME -Properties *
@@ -29,9 +27,19 @@ do {
     $refreshInterval = [int]$refreshInterval
 } while ($refreshInterval -le 0)
 
+# Prompt user for auto unlock
+$autoUnlockInput = Read-Host "Do you want to enable auto unlock for mismatched accounts? (yes/no):"
+$autoUnlock = $autoUnlockInput.Trim().ToLower() -eq 'yes'
+
 
 # Initialize restart count
 $script:restartCount = 0
+
+$unlockable = @()
+$unlocked = @()
+$problemUsers = @()
+$unlockedCounts = @{}
+
 
 do {
     # Clear the host
@@ -47,8 +55,13 @@ do {
     # Display the restart count
     Display-RestartCount
 
+    #Display the count of unlocked users
+    Write-Host "Number of users unlocked: $($unlocked.Count)" -ForegroundColor Yellow
+
     # Search for all locked-out user accounts
-    $lockedOutUsers = Search-ADAccount -LockedOut -UsersOnly
+    $lockedOutUsers = Search-ADAccount -LockedOut -UsersOnly | Where-Object {
+        $_.SamAccountName -notin $unlockable
+    }
 
     # Iterate through all locked-out users and get additional AD properties
     $probableLockedOutUsers = foreach ($lockedOutUser in $lockedOutUsers) {
@@ -67,7 +80,7 @@ do {
         $tableOutput = $watchedLockedOutUsers | Sort-Object AccountLockoutTime -Descending | Format-Table @{Name='ID';Expression={$_.SamAccountName}}, Name, @{Name='Expired';Expression={$_.PasswordExpired}}, AccountLockoutTime -AutoSize | Out-String
         $tableOutput -split "`n" | ForEach-Object { Write-Host $_ -ForegroundColor Red }
     } else {
-        Write-Host "No recent watched locked-out users found." -ForegroundColor Green
+        Write-Host "0 watched locked-out users found." -ForegroundColor Green
     }
     # Filter locked-out users whose lockoutTime is within X days of the current date and Enabled is True
     $probableLockedOutUsers = $probableLockedOutUsers | Where-Object {
@@ -78,15 +91,15 @@ do {
     # Filter users whose AccountLockoutTime and LastBadPasswordAttempt do not match within a 5-minute interval
     # or if the LastBadPasswordAttempt is null
     $usersWithMismatchedTimes = $probableLockedOutUsers | Where-Object {
-        if ($_.AccountLockoutTime -and $_.LastBadPasswordAttempt) {
-            [Math]::Abs(($_.AccountLockoutTime - $_.LastBadPasswordAttempt).TotalMinutes) -gt 5
-        } elseif ($null -eq $_.LastBadPasswordAttempt) {
-            $true
-        } else {
-            $false
+        if ($_.AccountLockoutTime) {
+            if ($_.LastBadPasswordAttempt) {
+                return [Math]::Abs(($_.AccountLockoutTime - $_.LastBadPasswordAttempt).TotalMinutes) -gt 5
+            } else {
+                return $true
+            }
         }
+        return $false
     }
-
     # Create a list of all locked out users that are not in $usersWithMismatchedTimes
     $lockedOut = $probableLockedOutUsers | Where-Object {
         $_.SamAccountName -notin $usersWithMismatchedTimes.SamAccountName
@@ -121,7 +134,57 @@ do {
         Write-Host "Mismatched AccountLockoutTime and LastBadPasswordAttempt:" -ForegroundColor Yellow
         $usersWithMismatchedTimes | Sort-Object AccountLockoutTime -Descending | Format-Table @{Name='ID';Expression={$_.SamAccountName}}, Name, @{Name='Expired';Expression={$_.PasswordExpired}}, LastBadPasswordAttempt, AccountLockoutTime -AutoSize
     } else {
-        Write-Host "0 users with mismatched AccountLockoutTime and LastBadPasswordAttempt found." -ForegroundColor Green
+        Write-Host "0 users with mismatched found." -ForegroundColor Green
+    }
+
+    if ($autoUnlock -and $usersWithMismatchedTimes.Count -gt 0) {
+        # Filter out users who are in the $unlockable array
+        $usersWithMismatchedTimes = $usersWithMismatchedTimes | Where-Object {
+            $_.SamAccountName -notin $unlockable
+        }
+    
+        foreach ($user in $usersWithMismatchedTimes) {
+            try {
+                & '.\Unlocker.ps1' -UserID $user.SamAccountName
+                $unlocked += $user.SamAccountName
+        
+                # Update the count for this user
+                if ($unlockedCounts.ContainsKey($user.SamAccountName)) {
+                    $unlockedCounts[$user.SamAccountName]++
+                } else {
+                    $unlockedCounts[$user.SamAccountName] = 1
+                }
+        
+                # Check if this user is a problem user
+                if ($unlockedCounts[$user.SamAccountName] -ge 3) {
+                    $problemUsers += $user.SamAccountName
+                }
+            } catch {
+                if ($_.Exception.Message -like "*Access is denied*") {
+                    $unlockable += $user.SamAccountName
+                }
+            }
+        }
+    }
+    
+    # Display the list of users who could not be unlocked
+    if ($unlockable.Count -gt 0) {
+        Write-Host "Users who could not be unlocked due to insufficient permissions:" -ForegroundColor Yellow
+        $unlockableUsers = foreach ($user in $unlockable) {
+            Get-ADUser -Identity $user -Properties *
+        }
+        $unlockableUsers | Sort-Object Name | Format-Table @{Name='ID';Expression={$_.SamAccountName}}, Name, Department -AutoSize
+    }
+
+    # Display the list of problem users
+    if ($problemUsers.Count -gt 0) {
+        Write-Host "Problem users who have been unlocked 3 or more times:" -ForegroundColor Yellow
+        $problemUsersDetails = foreach ($user in $problemUsers) {
+            Get-ADUser -Identity $user -Properties *
+        }
+        $problemUsersDetails | Sort-Object Name | Format-Table @{Name='ID';Expression={$_.SamAccountName}}, Name, Department -AutoSize
+    } else {
+        Write-Host "No problem users found." -ForegroundColor Green
     }
 
     # Display the countdown message

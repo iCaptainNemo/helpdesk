@@ -1,9 +1,17 @@
+
+param (
+    [string]$UserID,
+    [switch]$StopLoop
+)
+
 $Host.UI.RawUI.WindowTitle = Split-Path -Path $MyInvocation.MyCommand.Definition -Leaf
 
 # Ask the user if they want to enable debugging
 $debugging = $false
-$debugChoice = Read-Host "Do you want to enable debugging? Default no. (Y)"
-if ($debugChoice -eq 'Y' -or $debugChoice -eq 'y') {
+if ($stoploop) {
+    $debugChoice = Read-Host "Do you want to enable debugging? Default no. (Y)"
+}
+if (($debugChoice -eq 'Y' -or $debugChoice -eq 'y') -and $stoploop) {
     $debugging = $true
     # Ask the user if they want to see debugging lines (Continue), debug (Inquire), or cancel debugging (Cancel)
     $debugPreferenceChoice = Read-Host "See debugging lines (default), debug (Inquire), or cancel debugging (Cancel)? (I/C/Enter)"
@@ -18,9 +26,8 @@ if ($debugChoice -eq 'Y' -or $debugChoice -eq 'y') {
         $DebugPreference = 'Continue'
         Write-Host "Debugging is enabled with Continue preference" -ForegroundColor Green
     }
-} else {
-    Write-Host "Debugging is disabled" -ForegroundColor DarkGray
-}
+} 
+
 function Get-DomainRoot {
     try {
         $currentDomain = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain()
@@ -278,7 +285,9 @@ function Unlock-User {
 
 while ($true) {
     # Function: Get-User - Prompt for a user ID and return the sanitized value
-    $userId = Get-User
+    if (-not $UserID) {
+        $userId = Get-User
+    }
 
     # Function: Get-OU - Get the OU for the user
     $OU = Get-OU -userId $userId
@@ -322,5 +331,10 @@ while ($true) {
     } else {
         Start-Sleep -Seconds 1
     }
-    cls
+    if($stoploop) {
+        cls
+    }
+    if(!$stoploop) {
+        break
+    }
 }
