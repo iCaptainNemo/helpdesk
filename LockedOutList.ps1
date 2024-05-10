@@ -28,7 +28,7 @@ do {
 } while ($refreshInterval -le 0)
 
 # Prompt user for auto unlock
-$autoUnlockInput = Read-Host "Do you want to enable auto unlock for mismatched accounts? (y/n):"
+$autoUnlockInput = Read-Host "Do you want to enable auto unlock for mismatched accounts? (y/no):"
 $autoUnlock = $autoUnlockInput.Trim().ToLower() -eq 'y'
 
 
@@ -145,7 +145,8 @@ do {
     
         foreach ($user in $usersWithMismatchedTimes) {
             try {
-                & '.\Unlocker.ps1' -UserID $user.SamAccountName
+                & '.\Unlocker.ps1' -UserID $user.SamAccountName > $null
+                Write-Host "User $($user.SamAccountName) has been unlocked" -BackgroundColor DarkGreen
                 $unlocked += $user.SamAccountName
         
                 # Update the count for this user
@@ -155,9 +156,12 @@ do {
                     $unlockedCounts[$user.SamAccountName] = 1
                 }
         
-                # Check if this user is a problem user
+               # Check if this user is a problem user
                 if ($unlockedCounts[$user.SamAccountName] -ge 3) {
-                    $problemUsers += $user.SamAccountName
+                    # Only add the user to the problem users list if they are not already in it
+                    if ($user.SamAccountName -notin $problemUsers) {
+                        $problemUsers += $user.SamAccountName
+                    }
                 }
             } catch {
                 if ($_.Exception.Message -like "*Access is denied*") {
@@ -165,6 +169,7 @@ do {
                 }
             }
         }
+        Write-Host ""
     }
     
     # Display the list of users who could not be unlocked
@@ -180,9 +185,12 @@ do {
     if ($problemUsers.Count -gt 0) {
         Write-Host "Problem users who have been unlocked 3 or more times:" -ForegroundColor Yellow
         $problemUsersDetails = foreach ($user in $problemUsers) {
-            Get-ADUser -Identity $user -Properties *
+            $userDetails = Get-ADUser -Identity $user -Properties *
+            # Add the unlock count to the user details
+            $userDetails | Add-Member -NotePropertyName 'UnlockCount' -NotePropertyValue $unlockedCounts[$user] -Force
+            $userDetails
         }
-        $problemUsersDetails | Sort-Object Name | Format-Table @{Name='ID';Expression={$_.SamAccountName}}, Name, Department -AutoSize
+        $problemUsersDetails | Sort-Object Name | Format-Table @{Name='ID';Expression={$_.SamAccountName}}, Name, Department, UnlockCount -AutoSize
     } else {
         Write-Host "No problem users found." -ForegroundColor Green
     }
@@ -190,7 +198,24 @@ do {
     # Display the countdown message
     Write-Host "Refreshing in $refreshInterval minute(s)..."
 
-    # Wait for specified minutes
-    Start-Sleep -Seconds ($refreshInterval * 60)
+    # Wait for specified minutes or go to sleep during non-business hours
+    $currentHour = (Get-Date).Hour
+    if ($currentHour -ge 17 -or $currentHour -lt 7) {
+        # If it's between 5 PM and 7 AM, sleep until 7 AM
+        $sleepUntil7AM = (New-TimeSpan -Start (Get-Date) -End (Get-Date).Date.AddHours(7)).TotalSeconds
+        if ($sleepUntil7AM -lt 0) {
+            $sleepUntil7AM += 24 * 60 * 60  # Add 24 hours if the time is past 7 AM
+        }
+        Start-Sleep -Seconds $sleepUntil7AM
+        
+        # Clear the variables after waking up
+        $unlockable = @()
+        $unlocked = @()
+        $problemUsers = @()
+        $unlockedCounts = @{}
+    } else {
+        # If it's between 7 AM and 5 PM, sleep for the specified refresh interval
+        Start-Sleep -Seconds ($refreshInterval * 60)
+    }
 
 } while ($true)
