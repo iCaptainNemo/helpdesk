@@ -336,7 +336,7 @@ while ($true) {
     } else {
         Start-Sleep -Seconds 1
     }
-    if(-not $stoploop) {
+    if ($stoploop -eq $true -or $stoploop -eq $null) {
         cls
         $UserID = $null
     }
