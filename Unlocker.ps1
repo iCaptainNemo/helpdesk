@@ -4,7 +4,12 @@ param (
     [switch]$StopLoop
 )
 
+
 $Host.UI.RawUI.WindowTitle = Split-Path -Path $MyInvocation.MyCommand.Definition -Leaf
+
+if ($stoploop -ne $false) {
+    $stoploop = $true
+}
 
 # Ask the user if they want to enable debugging
 $debugging = $false
@@ -331,10 +336,11 @@ while ($true) {
     } else {
         Start-Sleep -Seconds 1
     }
-    if($stoploop) {
+    if(-not $stoploop) {
         cls
+        $UserID = $null
     }
-    if(!$stoploop) {
+    else {
         break
     }
 }
