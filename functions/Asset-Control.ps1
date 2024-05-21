@@ -193,6 +193,7 @@ function Asset-Control {
         Write-Host "9. Remote Logoff"
         Write-Host "10. Open File Explorer"
         Write-Host "11. Clear Browsers"
+        Write-Host "12: Set default PDF application to Adobe"
         Write-Host "0. Back to Main Menu"
 
         $assetChoice = Read-Host "Enter your choice"
@@ -358,6 +359,23 @@ function Asset-Control {
                     }
                 }
                 break
+            }
+            '12' {
+                try {
+                    # Set default PDF application
+                    $command = 'assoc .pdf=Acrobat.Document.DC && ftype Acrobat.Document.DC="C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe" "%1"'
+                    $output = psexec.exe \\$computerName cmd.exe /c $command | Out-String
+            
+                    if ($output -match '.pdf=Acrobat.Document.DC' -and $output -match 'Acrobat.Document.DC="C:\\Program Files\\Adobe\\Acrobat DC\\Acrobat\\Acrobat.exe" "%1"') {
+                        # Confirmation message
+                        Write-Host "Starting cmd.exe on $computerName"
+                        Write-Host "Successfully set default PDF application to Adobe Acrobat on $computerName"
+                    } else {
+                        throw "Failed to set default PDF application on remote computer"
+                    }
+                } catch {
+                    Write-Host "Error: $_"
+                }
             }
             '0' {
                 # Back to main menu
