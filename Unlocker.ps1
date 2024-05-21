@@ -1,37 +1,30 @@
 
 param (
     [string]$UserID,
-    [switch]$StopLoop
+    [switch]$StopLoop,
+    [switch]$debug = $false
 )
 
 
 $Host.UI.RawUI.WindowTitle = Split-Path -Path $MyInvocation.MyCommand.Definition -Leaf
 
-if ($stoploop -ne $false) {
-    $stoploop = $true
-}
-
-# Ask the user if they want to enable debugging
-$debugging = $false
-if ($stoploop) {
-    $debugChoice = Read-Host "Do you want to enable debugging? Default no. (Y)"
-}
-if (($debugChoice -eq 'Y' -or $debugChoice -eq 'y') -and $stoploop) {
-    $debugging = $true
-    # Ask the user if they want to see debugging lines (Continue), debug (Inquire), or cancel debugging (Cancel)
-    $debugPreferenceChoice = Read-Host "See debugging lines (default), debug (Inquire), or cancel debugging (Cancel)? (I/C/Enter)"
+if ($debug) {
+    # Ask user if they want to see debugging lines (Continue) or debug (Inquire)
+    $debugPreferenceChoice = Read-Host "See debug lines (Continue) or debug (Inquire)? Default is Continue. (C/I)"
 
     if ($debugPreferenceChoice -eq 'I' -or $debugPreferenceChoice -eq 'i') {
         $DebugPreference = 'Inquire'
         Write-Host "Debugging is enabled with Inquire preference" -ForegroundColor Green
-    } elseif ($debugPreferenceChoice -eq 'C' -or $debugPreferenceChoice -eq 'c') {
-        $debugging = $false
-        Write-Host "Debugging is cancelled" -ForegroundColor DarkGray
     } else {
         $DebugPreference = 'Continue'
         Write-Host "Debugging is enabled with Continue preference" -ForegroundColor Green
     }
-} 
+}
+
+# DEBUG: Print the UserID and StopLoop values from external call
+Write-Debug "UserID: $UserID"
+Write-Debug "Stop Loop Switch: $stoploop"
+
 
 function Get-DomainRoot {
     try {
@@ -39,10 +32,10 @@ function Get-DomainRoot {
         $rootDSE = New-Object System.DirectoryServices.DirectoryEntry("LDAP://$($currentDomain.Name)/RootDSE")
         $domainRoot = $rootDSE.defaultNamingContext
         $ldapPath = "LDAP://OU=Domain Controllers,$($currentDomain.distinguishedName)"
-        if ($debugging) {
-            Write-Host "LDAP path: $ldapPath"
-            Write-Host "Domain root: $domainRoot"
-        }
+
+        Write-Debug "LDAP path: $ldapPath"
+        Write-Debug "Domain root: $domainRoot"
+
         return @{
             DomainRoot = $domainRoot
             LdapPath = $ldapPath
@@ -58,7 +51,7 @@ function Get-DomainControllers {
     $dcList = @{}
     try {
         $currentDomain = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain()
-        if ($debugging) { Write-Host "Current Domain: $($currentDomain)" }
+        Write-Debug "Current Domain: $($currentDomain)"
 
         $currentDomain.DomainControllers | ForEach-Object {
             $dcList[$_.Name] = $_
@@ -66,13 +59,13 @@ function Get-DomainControllers {
 
         # Retrieve the primary domain controller (PDC) emulator role owner DN
         $PDC = $currentDomain.PdcRoleOwner
-        if ($debugging) { Write-Host "Primary DC: $($PDC)" }
+        Write-Debug "Primary DC: $($PDC)"
 
         # Retrieve the distinguished name of the DDC
         $DDC = $currentDomain.RidRoleOwner
-        if ($debugging) { Write-Host "Distributed DC: $($DDC)" }
+        Write-Debug "Distributed DC: $($DDC)"
+        Write-Debug "Number of domain controllers found: $($dcList.Count)"
 
-        if ($debugging) { Write-Host "Number of domain controllers found: $($dcList.Count)" }
         return @{
             DcList = $dcList
             PDC = $PDC
@@ -130,7 +123,7 @@ function PrintDebugInfo($dcList) {
 }
 
 # Debug: Print the domain controllers
-if ($debugging) {
+if ($debug) {
     PrintDebugInfo($dcList)
 }
 
@@ -157,7 +150,7 @@ function Get-OU {
             # The first OU will be the second part of the distinguishedName
             $firstOU = $parts[1].Replace('OU=', '')
 
-            if ($debugging) { Write-Host "OU: $firstOU" }
+            if ($debug) { Write-Host "OU: $firstOU" }
             return $firstOU  # Return the OU
         } else {
             Write-Host "User does not exist, check ID and try again."
@@ -331,16 +324,17 @@ while ($true) {
     # Prompt the user to press Enter to reset
     # Read-Host "Press Enter to reset..."
     # pause
-    if ($debugging) {
-        Read-Host "Press Enter to continue"
-    } else {
-        Start-Sleep -Seconds 1
-    }
-    if ($stoploop -eq $true -or $stoploop -eq $null) {
+
+    Start-Sleep -Seconds 1
+
+    Write-Debug "$stoploop"
+
+    if (!$stoploop) {
         cls
         $UserID = $null
     }
     else {
+        Write-Debug "$stoploop"
         break
     }
 }

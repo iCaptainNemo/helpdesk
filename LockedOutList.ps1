@@ -1,15 +1,21 @@
-﻿Import-Module ActiveDirectory
+﻿param (
+    [switch]$Debug
+)
+
+if ($Debug) {
+    $DebugPreference = 'Continue'
+}
+
+Import-Module ActiveDirectory
+
+Write-Debug "Debug mode is enabled."
 
 function Get-CurrentTime {
     Get-Date -Format "yyyy-MM-dd hh:mm:ss tt"
 }
 
-
-# Get the current user
-$AdminUser = Get-ADUser -Identity $env:USERNAME -Properties *
-
 # Prompt user for userIDs to watch for
-$watchedUserIDsInput = Read-Host "Enter the userIDs to watch for, separated by commas (e.g., userID1,userID2,userID3):"
+$watchedUserIDsInput = Read-Host "Enter the userIDs to watch for, separated by commas (e.g., userID1, userID2, userID3):"
 $watchedUserIDsArray = $watchedUserIDsInput.Split(',')
 $watchedUserIDs = @{}
 foreach ($userID in $watchedUserIDsArray) {
@@ -28,7 +34,7 @@ do {
 } while ($refreshInterval -le 0)
 
 # Prompt user for auto unlock
-$autoUnlockInput = Read-Host "Do you want to enable auto unlock for mismatched accounts? (y/no):"
+$autoUnlockInput = Read-Host "Do you want to enable auto unlock for mismatched accounts? (y/n):"
 $autoUnlock = $autoUnlockInput.Trim().ToLower() -eq 'y'
 
 
@@ -65,7 +71,8 @@ do {
 
     # Iterate through all locked-out users and get additional AD properties
     $probableLockedOutUsers = foreach ($lockedOutUser in $lockedOutUsers) {
-        $adUser = Get-ADUser -Identity $lockedOutUser.SamAccountName -Properties *
+        ## $adUser = Get-ADUser -Identity $lockedOutUser.SamAccountName -Properties *
+        $adUser = Get-ADUser -Identity $lockedOutUser.SamAccountName -Properties SamAccountName, Name, Enabled, LockedOut, Department, LastBadPasswordAttempt, AccountLockoutTime
 
                 # If the user is in the watched list, add them to the watched locked-out users list
                 if ($watchedUserIDs.ContainsKey($adUser.SamAccountName)) {
@@ -74,9 +81,16 @@ do {
         
         $adUser
     }
+
+    # Debug prompt to display the probable locked out users in a table
+    if ($debug) {
+        Write-Host "Debug: Displaying probable locked out users:"
+        $probableLockedOutUsers | Format-Table SamAccountName, Name, Enabled, LockedOut, Department, LastBadPasswordAttempt, AccountLockoutTime
+    }
+
     # Display the properties of watched locked-out users in a separate table
     if ($watchedLockedOutUsers.Count -gt 0) {
-        Write-Host "Watched locked-out users within the last 24 hours:"
+        Write-Host "Watched locked-out users within the last 24 hours: $($watchedlockedOutUsers.Count)" -ForegroundColor Red
         $tableOutput = $watchedLockedOutUsers | Sort-Object AccountLockoutTime -Descending | Format-Table @{Name='ID';Expression={$_.SamAccountName}}, Name, @{Name='Expired';Expression={$_.PasswordExpired}}, AccountLockoutTime -AutoSize | Out-String
         $tableOutput -split "`n" | ForEach-Object { Write-Host $_ -ForegroundColor Red }
     } else {
@@ -100,6 +114,25 @@ do {
         }
         return $false
     }
+
+    ## Debugging
+
+    # $usersWithMismatchedTimes = $probableLockedOutUsers | Where-Object {
+    #     if ($_.AccountLockoutTime) {
+    #         if ($_.LastBadPasswordAttempt) {
+    #             $timeDifference = [Math]::Abs(($_.AccountLockoutTime - $_.LastBadPasswordAttempt).TotalMinutes)
+    #             Write-Host "User: $($_.SamAccountName), AccountLockoutTime: $($_.AccountLockoutTime), LastBadPasswordAttempt: $($_.LastBadPasswordAttempt), Time Difference: $timeDifference"
+    #             return $timeDifference -gt 5
+    #         } else {
+    #             Write-Host "User: $($_.SamAccountName), AccountLockoutTime: $($_.AccountLockoutTime), LastBadPasswordAttempt: Null"
+    #             return $true
+    #         }
+    #     }
+    #     Write-Host "User: $($_.SamAccountName), AccountLockoutTime: Null"
+    #     return $false
+    # }
+
+
     # Create a list of all locked out users that are not in $usersWithMismatchedTimes
     $lockedOut = $probableLockedOutUsers | Where-Object {
         $_.SamAccountName -notin $usersWithMismatchedTimes.SamAccountName
@@ -123,8 +156,8 @@ do {
 
     # Display the properties of locked-out users in a separate table
     if ($lockedOut.Count -gt 0) {
-        Write-Host "Locked-out users within the last 24 hours:" -ForegroundColor Red
-        $lockedOut | Sort-Object AccountLockoutTime -Descending | Format-Table @{Name='ID';Expression={$_.SamAccountName}}, Name, @{Name='Expired';Expression={$_.PasswordExpired}}, AccountLockoutTime -AutoSize
+        Write-Host "Locked-out users within the last 24 hours: $($lockedOutUsers.Count)" -ForegroundColor Red
+        $lockedOut | Sort-Object AccountLockoutTime -Descending | Format-Table @{Name='ID';Expression={$_.SamAccountName}}, Name, @{Name='Expired';Expression={$_.PasswordExpired}}, AccountLockoutTime, LastBadPasswordAttempt -AutoSize
     } else {
         Write-Host "0 recent locked-out users" -ForegroundColor Green
     }
@@ -145,7 +178,7 @@ do {
     
         foreach ($user in $usersWithMismatchedTimes) {
             try {
-                & '.\Unlocker.ps1' -UserID $user.SamAccountName > $null
+                & '.\Unlocker.ps1' -UserID $user.SamAccountName -StopLoop:$true > $null
                 Write-Host "User $($user.SamAccountName) has been unlocked" -BackgroundColor DarkGreen
                 $unlocked += $user.SamAccountName
         
