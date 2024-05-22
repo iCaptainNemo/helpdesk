@@ -194,6 +194,7 @@ function Asset-Control {
         Write-Host "10. Open File Explorer"
         Write-Host "11. Clear Browsers"
         Write-Host "12: Set default PDF application to Adobe"
+        Write-Host "66: Remote Restart"
         Write-Host "0. Back to Main Menu"
 
         $assetChoice = Read-Host "Enter your choice"
@@ -375,6 +376,16 @@ function Asset-Control {
                     }
                 } catch {
                     Write-Host "Error: $_"
+                }
+            }
+            '66' {
+                $minutes = Read-Host "Please enter the number of minutes before restart"
+                if (![int]::TryParse($minutes, [ref]0)) {
+                    Write-Host "Invalid input. Please enter a number."
+                } else {
+                    $time = (Get-Date).AddMinutes($minutes)
+                    shutdown.exe /m \\$computer /r /t ($minutes * 60) /d p:4:1 /c "Scheduled restart"
+                    Write-Host "Scheduled a restart on $computer at $time"
                 }
             }
             '0' {

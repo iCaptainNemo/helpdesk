@@ -5,10 +5,10 @@
 if ($Debug) {
     $DebugPreference = 'Continue'
 }
+Write-Debug "Debug mode is enabled."
 
 Import-Module ActiveDirectory
 
-Write-Debug "Debug mode is enabled."
 
 function Get-CurrentTime {
     Get-Date -Format "yyyy-MM-dd hh:mm:ss tt"

@@ -1,32 +1,25 @@
+param (
+    [switch]$Debug
+)
+
+if ($Debug) {
+    $DebugPreference = 'Continue'
+}
+cls
+Write-Debug "Debug mode is enabled."
+
 $Host.UI.RawUI.WindowTitle = Split-Path -Path $MyInvocation.MyCommand.Definition -Leaf
 Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope CurrentUser
 
-# Ask the user if they want to enable debugging
-$debugChoice = Read-Host "Do you want to enable debugging? (Y/N)"
-
-if ($debugChoice -eq 'Y' -or $debugChoice -eq 'y') {
-    # Ask the user if they want to see debugging lines or debug
-    $debugPreferenceChoice = Read-Host "Do you want to see debugging lines (Continue) or debug (Inquire)? (C/I)"
-
-    if ($debugPreferenceChoice -eq 'C' -or $debugPreferenceChoice -eq 'c') {
-        $DebugPreference = 'Continue'
-        Write-Host "Debugging is enabled with Continue preference" -ForegroundColor Green
-    } elseif ($debugPreferenceChoice -eq 'I' -or $debugPreferenceChoice -eq 'i') {
-        $DebugPreference = 'Inquire'
-        Write-Host "Debugging is enabled with Inquire preference" -ForegroundColor Green
-    } else {
-        Write-Host "Invalid choice. Debugging preference not set." -ForegroundColor Red
-    }
-} else {
-    Write-Host "Debugging is disabled" -ForegroundColor DarkGray
-}
-
-# Import required modules
+# Import ActiveDirectory module
 Import-Module ActiveDirectory
+
+Write-Host "Jarvis Helpdesk Automation Script" -ForegroundColor Green
+Write-Host ""
 
 # Get the current domain and enviroment type
 try {
-    Write-Host "Checking if powershell AD Module is enabled..." -ForegroundColor Yellow
+    #Write-Host "Checking if powershell AD Module is enabled..." -ForegroundColor Yellow
     $currentDomain = (Get-ADDomain -ErrorAction SilentlyContinue -WarningAction SilentlyContinue).DNSRoot
     $env:CommandType = "Power"
     $powershell = $true
@@ -44,19 +37,18 @@ try {
     }
 }
 
-Write-Host "Current domain: $currentDomain"
+Write-Host "Current domain: " -NoNewLine
+Write-Host "$currentDomain" -ForegroundColor Green
 
 # Environment type
 if ($powershell) {
-    Write-Host "Powershell Commands: Enabled" -ForegroundColor Green
-} else {
-    Write-Host "Powershell Commands: Disabled" -ForegroundColor DarkGray
+    Write-Host "Powershell Enviroment: " -NoNewline
+    Write-Host "Enabled" -ForegroundColor Green
 }
 
 if ($wmi) {
-    Write-Host "WMI Commands: Enabled" -ForegroundColor Red
-} else {
-    Write-Host "WMI Commands: Disabled" -ForegroundColor DarkGray
+    Write-Host "WMI Commands: " -NoNewline
+    Write-Host "Enabled" -ForegroundColor Yellow
 }
 
 # Get the current user with specific properties
@@ -104,7 +96,7 @@ function SetGlobalVariable {
 # Check if the .env_$AdminConfig.ps1 file exists
 $AdminConfig = ".\.env\.env_$env:USERNAME.ps1"
 if (Test-Path $AdminConfig) {
-    Write-Host "Admin config exists. " -NoNewline; Write-Host "Imported." -ForegroundColor Green
+    Write-Host "Admin User config:" -NoNewline; Write-Host "Imported." -ForegroundColor Green
     . $AdminConfig
 
 
@@ -158,72 +150,11 @@ $envVars = @{
     logPathBoolean = $null -ne $envVars['logFileBasePath'] -and $envVars['logFileBasePath'] -ne ""
 }
 
-Write-Host "Admin User: " -NoNewline; Write-Host "$env:USERNAME" -ForegroundColor Cyan
 Write-Host "Temp Password: " -NoNewline; Write-Host "$($envVars['tempPassword'])" -ForegroundColor Yellow
 Write-Host "Logfile Path: " -NoNewline; Write-Host "$($envVars['logFileBasePath'])" -ForegroundColor Yellow
+Write-Host ""
 
-Write-Host "Enable panes? Default false. (y/n):" -NoNewline
-$paneChoice = Read-Host
-
-if ($paneChoice -eq 'Y' -or $paneChoice -eq 'y') {
-    $panesEnabled = $true
-} else {
-    $panesEnabled = $false
-}
-
-if ($panesEnabled) {
-    Write-Host "Panes: Enabled" -ForegroundColor Green
-    Write-Host "Select a function to run in the pane:"
-    Write-Host "1. Asset-Control"
-    Write-Host "2. Add-NetworkPrinter"
-    Write-Host "3. ADUserProp"
-    Write-Host "4. Get-UserId"
-    Write-Host "5. Invoke-SCCMRemoteTool"
-    Write-Host "6. Main-Loop"
-    Write-Host "7. Remove-UserId"
-    Write-Host "8. Set-TempPassword"
-    Write-Host "9. Show-LastLogEntries"
-    Write-Host "10. Test-DomainControllers"
-    Write-Host "11. Unlock-ADAccountOnAllDomainControllers"
-    Write-Host "12. Clear-Browsers"
-    Write-Host "13. Exit"
-
-    $functionChoice = Read-Host
-
-    $AssetControl = $false
-    $AddNetworkPrinter = $false
-    $ADUserProp = $false
-    $GetUserId = $false
-    $InvokeSCCMRemoteTool = $false
-    $MainLoop = $false
-    $RemoveUserId = $false
-    $SetTempPassword = $false
-    $ShowLastLogEntries = $false
-    $TestDomainControllers = $false
-    $UnlockADAccountOnAllDomainControllers = $false
-    $ClearBrowsers = $false
-
-    switch ($functionChoice) {
-        '1' { $AssetControl = $true; . .\functions\Asset-Control.ps1 }
-        '2' { $AddNetworkPrinter = $true; . .\functions\Add-NetworkPrinter.ps1 }
-        '3' { $ADUserProp = $true; . .\functions\ADUserProp.ps1 }
-        '4' { $GetUserId = $true; . .\functions\Get-UserId.ps1 }
-        '5' { $InvokeSCCMRemoteTool = $true; . .\functions\Invoke-SCCMRemoteTool.ps1 }
-        '6' { $MainLoop = $true; . .\functions\Main-Loop.ps1 }
-        '7' { $RemoveUserId = $true; . .\functions\Remove-UserId.ps1 }
-        '8' { $SetTempPassword = $true; . .\functions\Set-TempPassword.ps1 }
-        '9' { $ShowLastLogEntries = $true; . .\functions\Show-LastLogEntries.ps1 }
-        '10' { $TestDomainControllers = $true; . .\functions\Test-DomainControllers.ps1 }
-        '11' { $UnlockADAccountOnAllDomainControllers = $true; . .\functions\Unlock-ADAccountOnAllDomainControllers.ps1 }
-        '12' { $ClearBrowsers = $true; . .\functions\Clear-Browsers.ps1 }
-        '13' { break }
-        default {
-            Write-Host "Invalid choice. Please select a valid function."
-        }
-    }
-} else {
-Write-Host "Panes: Disabled" -ForegroundColor DarkGray
-}
+Pause
 
 
 # Main loop
