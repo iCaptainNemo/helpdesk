@@ -194,6 +194,7 @@ function Asset-Control {
         Write-Host "10. Open File Explorer"
         Write-Host "11. Clear Browsers"
         Write-Host "12: Set default PDF application to Adobe"
+        Write-Host "13: Get Uptime"
         Write-Host "66: Remote Restart"
         Write-Host "0. Back to Main Menu"
 
@@ -378,6 +379,26 @@ function Asset-Control {
                     Write-Host "Error: $_"
                 }
             }
+            '13' { 
+                # Get Up Time
+                try {
+                    $os = Get-CimInstance -ClassName Win32_OperatingSystem -ComputerName $computerName 2>$null
+                    $uptime = (Get-Date) - $os.LastBootUpTime
+                    $formattedUptime = "{0} days, {1} hours, {2} minutes" -f $uptime.Days, $uptime.Hours, $uptime.Minutes
+                
+                    if ($uptime.TotalDays -gt 5) {
+                        Write-Host "Uptime: $formattedUptime" -ForegroundColor Red
+                    } elseif ($uptime.TotalDays -le 1) {
+                        Write-Host "Uptime: $formattedUptime" -ForegroundColor Green
+                    } else {
+                        Write-Host "Uptime: $formattedUptime" -ForegroundColor Yellow
+                    }
+                } catch {
+                    Write-Output "Failed to get uptime using PowerShell. Switching to psexec..."
+                    $output = psexec \\$computerName cmd /c "systeminfo | find \"System Boot Time:\"" 2>$null
+                    Write-Output "Uptime: $output"
+                }
+            }   
             '66' {
                 $minutes = Read-Host "Please enter the number of minutes before restart"
                 if (![int]::TryParse($minutes, [ref]0)) {
