@@ -1,51 +1,87 @@
+param (
+    [switch]$Debug
+)
+
+if ($Debug) {
+    $DebugPreference = 'Continue'
+}
+cls
+Write-Debug "Debug mode is enabled."
+
 $Host.UI.RawUI.WindowTitle = Split-Path -Path $MyInvocation.MyCommand.Definition -Leaf
 Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope CurrentUser
 
-Clear-Host
-# Import required modules
+# Import ActiveDirectory module
 Import-Module ActiveDirectory
 
-# Get the current domain
+Write-Host "Jarvis Helpdesk Automation Script" -ForegroundColor Green
+Write-Host ""
+
+# Get the current domain and enviroment type
 try {
+    #Write-Host "Checking if powershell AD Module is enabled..." -ForegroundColor Yellow
     $currentDomain = (Get-ADDomain -ErrorAction SilentlyContinue -WarningAction SilentlyContinue).DNSRoot
+    $env:CommandType = "Power"
+    $powershell = $true
+    $WMI = $false
 } catch {
-    Write-Host "Error getting domain. Setting default domain to 403." -ForegroundColor Red
-    $currentDomain = 403
+    try {
+        $currentDomain = (Get-WmiObject -Class Win32_ComputerSystem).Domain
+        $env:CommandType = "WMI"
+        $powershell = $false
+        $WMI = $true
+    } catch {
+        Write-Host "Error getting domain. Due to restrictive environment this script is unable to perform. Press any key to exit." -ForegroundColor Red
+        $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        exit
+    }
 }
-Write-Host "Current domain: $currentDomain"
+
+Write-Host "Current domain: " -NoNewLine
+Write-Host "$currentDomain" -ForegroundColor Green
+
+# Environment type
+if ($powershell) {
+    Write-Host "Powershell Enviroment: " -NoNewline
+    Write-Host "Enabled" -ForegroundColor Green
+}
+
+if ($wmi) {
+    Write-Host "WMI Commands: " -NoNewline
+    Write-Host "Enabled" -ForegroundColor Yellow
+}
 
 # Get the current user with specific properties
-
 try {
-    $AdminUser = Get-ADUser -Identity $env:USERNAME -Properties SamAccountName, Name -ErrorAction SilentlyContinue
+    # Assign the USERNAME environment variable to $AdminUser
+    $AdminUser = $env:USERNAME
 } catch {
     Write-Host "Error getting user. Setting default AdminUserID to 404."
     $AdminUser = New-Object PSObject -Property @{
         SamAccountName = 404
-        Name = "Unkown"
+        Name = "Unknown"
     }
 }
 
-# Initialize $envVars hashtable
+# Initialize variables hashtable
 $envVars = @{}
+$UserVars = @{}
 
 # Import functions from functions directory
 . .\functions\Asset-Control.ps1
 . .\functions\Add-NetworkPrinter.ps1
-. .\functions\Test-AssetConnection.ps1
-. .\functions\Get-ADUserProperties.ps1
+. .\functions\ADUserProp.ps1
 . .\functions\Get-UserId.ps1
 . .\functions\Invoke-SCCMRemoteTool.ps1
 . .\functions\Main-Loop.ps1
 . .\functions\Remove-UserId.ps1
 . .\functions\Set-TempPassword.ps1
-. .\functions\Show-ADUserProperties.ps1
 . .\functions\Show-LastLogEntries.ps1
 . .\functions\Test-DomainControllers.ps1
 . .\functions\Unlock-ADAccountOnAllDomainControllers.ps1
 . .\functions\Clear-Browsers.ps1
 
-# Call the function to create the env.ps1 file
+# Create env.ps1 file if missing and test domain controllers
 if (-not (Test-Path ".\.env\.env_$currentDomain.ps1")) {
     Test-DomainControllers
 }
@@ -54,13 +90,13 @@ if (-not (Test-Path ".\.env\.env_$currentDomain.ps1")) {
 . .\.env\.env_$currentDomain.ps1
 
 function SetGlobalVariable {
-    $global:AdminConfig = ".\.env_$($AdminUser.SamAccountName).ps1"
+    $global:AdminConfig = ".\.env_$env:USERNAME.ps1"
 }
 
 # Check if the .env_$AdminConfig.ps1 file exists
-$AdminConfig = ".\.env\.env_$($AdminUser.SamAccountName).ps1"
+$AdminConfig = ".\.env\.env_$env:USERNAME.ps1"
 if (Test-Path $AdminConfig) {
-    Write-Host "Admin config file exists. " -NoNewline; Write-Host "Imported." -ForegroundColor Green
+    Write-Host "Admin User config:" -NoNewline; Write-Host "Imported." -ForegroundColor Green
     . $AdminConfig
 
 
@@ -114,14 +150,17 @@ $envVars = @{
     logPathBoolean = $null -ne $envVars['logFileBasePath'] -and $envVars['logFileBasePath'] -ne ""
 }
 
-Write-Host "Admin User: " -NoNewline; Write-Host "$($AdminUser.SamAccountName)" -ForegroundColor Cyan
 Write-Host "Temp Password: " -NoNewline; Write-Host "$($envVars['tempPassword'])" -ForegroundColor Yellow
 Write-Host "Logfile Path: " -NoNewline; Write-Host "$($envVars['logFileBasePath'])" -ForegroundColor Yellow
+Write-Host ""
+
+Pause
 
 
 # Main loop
 while ($true) {
     # Get User ID before entering the main menu
+    Clear-Host
     $envVars['UserID'] = Get-UserId
 
     # Initialize $logFilePath inside the main loop

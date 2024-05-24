@@ -24,7 +24,7 @@ function Unlock-ADAccountOnAllDomainControllers {
             }
         } -ArgumentList $userId, $targetDC, $PSDomains, $cmdDomains, $netUserCommandExecuted
     }
-
+    
     # Receive and print job outputs as they complete
     $jobs | ForEach-Object {
         while ($_ -ne $null -and $_.State -ne 'Completed') {

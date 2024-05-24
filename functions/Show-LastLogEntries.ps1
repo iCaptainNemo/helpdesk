@@ -1,3 +1,27 @@
+
+while ($panesEnabled -eq $true -and $ShowLastLogEntries -eq $true) {
+    Write-Debug "All conditions met, proceeding..."
+    Clear-Host
+
+    # Resolve the path to the AdminConfig file
+    $AdminConfig = Resolve-Path ".\.env\.env_$env:USERNAME.ps1"
+
+    Write-Debug "AdminConfig file changed, re-running functions..."
+
+    # Source the AdminConfig file to get the updated variables
+    . $AdminConfig
+
+    # Get the updated UserID
+    $userId = $envVars['UserID']
+    Write-Debug "$userID"
+
+    # Update the logFilePath
+    $logFilePath = $envVars['logFileBasePath'] + $envVars['UserID']
+
+    # Wait until the Changed event is triggered
+    Start-Sleep -seconds 3
+}
+
 # Function to display last 10 log entries with parsed information
 function Show-LastLogEntries {
     param (
@@ -10,7 +34,7 @@ function Show-LastLogEntries {
             [string]$logEntry
         )
 
-        # Assuming $logEntry has the format "TAD062DT379527 Tue 12/19/2023 14:49:26.98"
+        # Assuming $logEntry has the format "<computername> Tue 12/19/2023 14:49:26.98"
         $components = $logEntry -split ' '
         $PossibleComputerName = $components[0]
         $day = $components[1]
@@ -34,7 +58,7 @@ function Show-LastLogEntries {
         # Check if the log file exists
         if (Test-Path $logFilePath -PathType Leaf) {
             $logEntries = Get-Content $logFilePath -Tail 10
-            Write-Host "Last 10 login entries with parsed information:"
+            Write-Host "Last 10 login entries.:"
             # Add a line break or additional Write-Host statements for space
             Write-Host "`n"
             foreach ($entry in $logEntries) {

@@ -1,7 +1,7 @@
 # Function to set $tempPassword
 function Set-TempPassword {
     do {
-        $userInput = Read-Host "The temp password is not set. Enter one to use or press enter to use the default"
+        $userInput = Read-Host "The temp password for resets is not set. Enter one to use or press enter to use the default"
         if ($userInput) {
             $tempPassword = $userInput
         } else {

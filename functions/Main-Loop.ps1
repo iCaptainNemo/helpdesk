@@ -13,7 +13,7 @@ function Main-Loop {
         Clear-Host
         
         # Get User ID before entering the main menu
-        $userId = Get-UserID
+        $userId = Get-UserId
         # Get AD properties for the provided User ID
         $userId = $envVars['UserID']
         $adUser = Get-ADUserProperties -userId $userId
@@ -120,6 +120,7 @@ function Main-Loop {
             '3' {
                 # Asset Control submenu
                 Asset-Control -userId $userId
+               #Start-Process powershell -ArgumentList "-NoExit", "-Command & `".\functions\Asset-Control.ps1`" -userId $userId"
         
                 # Check if the script should be restarted
                 if ($global:restartScript) {
