@@ -398,7 +398,20 @@ function Asset-Control {
                     $output = psexec \\$computerName cmd /c "systeminfo | find \"System Boot Time:\"" 2>$null
                     Write-Output "Uptime: $output"
                 }
-            }   
+            }
+            '14.' { #'Pull Group Policy'
+                try {
+                    $path = [Environment]::GetFolderPath("MyDocuments") + "\${userID}-${computer}.html"
+                    Get-GPResultantSetOfPolicy -User $userID -Computer $computer -ReportType html -Path $path
+                    if (Test-Path $path) {
+                        Invoke-Item $path
+                    } else {
+                        Write-Host "File not found: $path"
+                    }
+                } catch {
+                    Write-Host "An error occurred: $_"
+                }
+            }
             '66' {
                 $minutes = Read-Host "Please enter the number of minutes before restart"
                 if (![int]::TryParse($minutes, [ref]0)) {
