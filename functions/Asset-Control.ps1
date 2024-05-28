@@ -63,8 +63,10 @@ function Asset-Control {
     # Prompt for Computer Name or number
     $input = Read-Host "Enter Computer Name or number (1-10, C to cancel):"
 
+
     # Check if the input is 'C' or 'c' to cancel
     if ($input -eq 'C' -or $input -eq 'c') {
+
         Write-Host "Selection cancelled."
         break
     } elseif ($input -match '^[1-9]$|^10$') {
