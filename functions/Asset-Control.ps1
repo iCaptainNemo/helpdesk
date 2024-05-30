@@ -420,7 +420,8 @@ function Asset-Control {
                     Write-Host "Invalid input. Please enter a number."
                 } else {
                     $time = (Get-Date).AddMinutes($minutes)
-                    shutdown.exe /m \\$computer /r /t ($minutes * 60) /d p:4:1 /c "Scheduled restart"
+                    $seconds = $minutes * 60
+                    shutdown.exe /m \\$computer /r /t $seconds /d p:4:1 /c "Scheduled restart"
                     Write-Host "Scheduled a restart on $computer at $time"
                 }
             }
