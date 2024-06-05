@@ -9,6 +9,37 @@ Write-Debug "Debug mode is enabled."
 
 Import-Module ActiveDirectory
 
+function Get-DomainControllers {
+    $dcList = @{}
+    try {
+        $currentDomain = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain()
+        Write-Debug "Current Domain: $($currentDomain)"
+
+        $currentDomain.DomainControllers | ForEach-Object {
+            $dcList[$_.Name] = $_
+        }
+
+        # Retrieve the primary domain controller (PDC) emulator role owner DN
+        $PDC = $currentDomain.PdcRoleOwner
+        Write-Debug "Primary DC: $($PDC)"
+
+        # Retrieve the distinguished name of the DDC
+        $DDC = $currentDomain.RidRoleOwner
+        Write-Debug "Distributed DC: $($DDC)"
+        Write-Debug "Number of domain controllers found: $($dcList.Count)"
+
+        return @{
+            DcList = $dcList
+            PDC = $PDC
+            DDC = $DDC
+        }
+    } catch {
+        Write-Host "Error: $_"
+    }
+}
+
+$domainControllers = Get-DomainControllers
+$PDC = $domainControllers.PDC
 
 function Get-CurrentTime {
     Get-Date -Format "yyyy-MM-dd hh:mm:ss tt"
@@ -72,7 +103,7 @@ do {
     # Iterate through all locked-out users and get additional AD properties
     $probableLockedOutUsers = foreach ($lockedOutUser in $lockedOutUsers) {
         ## $adUser = Get-ADUser -Identity $lockedOutUser.SamAccountName -Properties *
-        $adUser = Get-ADUser -Identity $lockedOutUser.SamAccountName -Properties SamAccountName, Name, Enabled, LockedOut, Department, LastBadPasswordAttempt, AccountLockoutTime
+        $adUser = Get-ADUser -Identity $lockedOutUser.SamAccountName -Properties SamAccountName, Name, Enabled, LockedOut, Department, LastBadPasswordAttempt, AccountLockoutTime -Server $PDC
 
                 # If the user is in the watched list, add them to the watched locked-out users list
                 if ($watchedUserIDs.ContainsKey($adUser.SamAccountName)) {
@@ -232,23 +263,29 @@ do {
     Write-Host "Refreshing in $refreshInterval minute(s)..."
 
     # Wait for specified minutes or go to sleep during non-business hours
-    $currentHour = (Get-Date).Hour
-    if ($currentHour -ge 17 -or $currentHour -lt 7) {
-        # If it's between 5 PM and 7 AM, sleep until 7 AM
-        $sleepUntil7AM = (New-TimeSpan -Start (Get-Date) -End (Get-Date).Date.AddHours(7)).TotalSeconds
-        if ($sleepUntil7AM -lt 0) {
-            $sleepUntil7AM += 24 * 60 * 60  # Add 24 hours if the time is past 7 AM
+    $currentDate = Get-Date
+    $currentHour = $currentDate.Hour
+    $currentMinute = $currentDate.Minute
+    $dayOfWeek = $currentDate.DayOfWeek
+
+    if (($dayOfWeek -ge [System.DayOfWeek]::Monday -and $dayOfWeek -le [System.DayOfWeek]::Friday) -and 
+        (($currentHour -gt 6 -or ($currentHour -eq 6 -and $currentMinute -ge 50)) -and 
+        ($currentHour -lt 17 -or ($currentHour -eq 17 -and $currentMinute -le 25)))) {
+        # If it's between 6:50 AM and 5:25 PM on weekdays, sleep for the specified refresh interval
+        Start-Sleep -Seconds ($refreshInterval * 60)
+    } else {
+        # If it's outside of these hours or not a weekday, sleep until 6:50 AM of the next weekday
+        $sleepUntil650AM = (New-TimeSpan -Start $currentDate -End ($currentDate.Date.AddHours(6).AddMinutes(50))).TotalSeconds
+        if ($sleepUntil650AM -lt 0) {
+            $sleepUntil650AM += 24 * 60 * 60  # Add 24 hours if the time is past 6:50 AM
         }
-        Start-Sleep -Seconds $sleepUntil7AM
-        
+        Start-Sleep -Seconds $sleepUntil650AM
+
         # Clear the variables after waking up
         $unlockable = @()
         $unlocked = @()
         $problemUsers = @()
         $unlockedCounts = @{}
-    } else {
-        # If it's between 7 AM and 5 PM, sleep for the specified refresh interval
-        Start-Sleep -Seconds ($refreshInterval * 60)
     }
 
 } while ($true)
