@@ -25,13 +25,44 @@ while ($panesEnabled -eq $true -and $ADUserProp -eq $true) {
     Start-Sleep -seconds 3
 
 }
+function Get-DomainControllers {
+    $dcList = @{}
+    try {
+        $currentDomain = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain()
+        Write-Debug "Current Domain: $($currentDomain)"
+
+        $currentDomain.DomainControllers | ForEach-Object {
+            $dcList[$_.Name] = $_
+        }
+
+        # Retrieve the primary domain controller (PDC) emulator role owner DN
+        $PDC = $currentDomain.PdcRoleOwner
+        Write-Debug "Primary DC: $($PDC)"
+
+        # Retrieve the distinguished name of the DDC
+        $DDC = $currentDomain.RidRoleOwner
+        Write-Debug "Distributed DC: $($DDC)"
+        Write-Debug "Number of domain controllers found: $($dcList.Count)"
+
+        return @{
+            DcList = $dcList
+            PDC = $PDC
+            DDC = $DDC
+        }
+    } catch {
+        Write-Host "Error: $_"
+    }
+}
+
+$domainControllers = Get-DomainControllers
+$PDC = $domainControllers.PDC
 function Get-ADUserProperties {
     param (
         [string]$userId
     )
     try {
         if ($powershell -eq $true) {
-            $adUser = Get-ADUser -Identity $userId -Properties *
+            $adUser = Get-ADUser -Identity $userId -Properties * -Server $PDC
             Write-Debug "Get-ADUser returned: $adUser"
         } else {
             # Use System.DirectoryServices.DirectorySearcher to get the user properties from Active Directory

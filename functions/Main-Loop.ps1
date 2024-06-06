@@ -48,8 +48,14 @@ function Main-Loop {
                 return $null
             }
             '1' {
-                # Unlock AD account on all domain controllers
-                Unlock-ADAccountOnAllDomainControllers -userId $userId
+                # Try to run the new script
+                try {
+                    & '.\Unlocker.ps1' -UserID $userId -StopLoop:$false > $null
+                } catch {
+                    # If an error occurs, fall back to the original command
+                    Unlock-ADAccountOnAllDomainControllers -userId $userId
+                }
+            
                 Read-Host "Press any key to continue"
             }
             '2' {
