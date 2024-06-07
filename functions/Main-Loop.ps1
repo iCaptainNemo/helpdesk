@@ -50,7 +50,8 @@ function Main-Loop {
             '1' {
                 # Try to run the new script
                 try {
-                    & '.\Unlocker.ps1' -UserID $userId -StopLoop:$false > $null
+                    & '.\Unlocker.ps1' -UserID $userId -StopLoop:$true > $null
+                    Write-Host "User ID: $userId unlocked on all domain controllers" -BackgroundColor Green
                 } catch {
                     # If an error occurs, fall back to the original command
                     Unlock-ADAccountOnAllDomainControllers -userId $userId
