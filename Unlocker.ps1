@@ -89,7 +89,7 @@ function Get-User {
     do {
         do {
             $userId = Read-Host "Enter Locked UserID"
-            $userId = $userId.Trim() -replace '[^a-zA-Z0-9]', ''
+            $userId = $userId.Trim() -replace '[^a-zA-Z0-9_]', ''
 
             if ([string]::IsNullOrEmpty($userId)) {
                 Write-Host "User ID cannot be empty. Please enter a valid user ID."
