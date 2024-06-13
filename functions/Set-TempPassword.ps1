@@ -1,5 +1,12 @@
 # Function to set $tempPassword
 function Set-TempPassword {
+    if ($envVars.ContainsKey('tempPassword')) {
+        $useExisting = Read-Host "Use existing temporary password $($envVars['tempPassword'])? (y/n)"
+        if ($useExisting -eq 'y') {
+            return $envVars['tempPassword']
+        }
+    }
+
     do {
         $userInput = Read-Host "The temp password for resets is not set. Enter one to use or press enter to use the default"
         if ($userInput) {
@@ -17,14 +24,11 @@ function Set-TempPassword {
         }
         $confirm = Read-Host "You entered '$tempPassword'. Is this correct? (n to redo)"
     } while ($confirm -eq 'n')
-
     # Update the tempPassword in the $envVars hashtable
     $envVars['tempPassword'] = $tempPassword
-
     # Convert the updated hashtable to a list of strings
     $envVarsList = "`$envVars = @{}" + ($envVars.GetEnumerator() | ForEach-Object { "`n`$envVars['$($_.Key)'] = '$($_.Value)'" })
     # Write the updated environmental variables to the $AdminConfig file
     Set-Content -Path "$AdminConfig" -Value ($envVarsList -join "`n")
-
     return $tempPassword
 }

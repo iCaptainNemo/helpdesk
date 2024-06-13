@@ -127,6 +127,7 @@ do {
     } else {
         Write-Host "0 watched locked-out users found." -ForegroundColor Green
     }
+
     # Filter locked-out users whose lockoutTime is within X days of the current date and Enabled is True
     $probableLockedOutUsers = $probableLockedOutUsers | Where-Object {
         $_.AccountlockoutTime -ge (Get-Date).AddDays(-1) -and
@@ -146,44 +147,10 @@ do {
         return $false
     }
 
-    ## Debugging
-
-    # $usersWithMismatchedTimes = $probableLockedOutUsers | Where-Object {
-    #     if ($_.AccountLockoutTime) {
-    #         if ($_.LastBadPasswordAttempt) {
-    #             $timeDifference = [Math]::Abs(($_.AccountLockoutTime - $_.LastBadPasswordAttempt).TotalMinutes)
-    #             Write-Host "User: $($_.SamAccountName), AccountLockoutTime: $($_.AccountLockoutTime), LastBadPasswordAttempt: $($_.LastBadPasswordAttempt), Time Difference: $timeDifference"
-    #             return $timeDifference -gt 5
-    #         } else {
-    #             Write-Host "User: $($_.SamAccountName), AccountLockoutTime: $($_.AccountLockoutTime), LastBadPasswordAttempt: Null"
-    #             return $true
-    #         }
-    #     }
-    #     Write-Host "User: $($_.SamAccountName), AccountLockoutTime: Null"
-    #     return $false
-    # }
-
-
-    # Create a list of all locked out users that are not in $usersWithMismatchedTimes
-    $lockedOut = $probableLockedOutUsers | Where-Object {
-        $_.SamAccountName -notin $usersWithMismatchedTimes.SamAccountName
-    }
-    # Post data to Power BI API for each locked-out user
-#    foreach ($user in $probableLockedOutUsers) {
-#        $payload = @{
-#            "AdminID" = $AdminUser.SamAccountName  # Assuming SamAccountName is the AdminID, modify as needed
-#            "UserID" = $user.SamAccountName
-#            "Enabled" = $user.Enabled
-#            "Locked" = $user.LockedOut
-#            "PasswordExpired" = $user.PasswordExpired
-#            "BadPasswords" = $user.badPwdCount
-#            "AccountLockoutTime" = $user.AccountLockoutTime
-#        }
-#        # Power BI API endpoint
-#        $endpoint = "https://api.powerbigov.us/beta/31399e53-6a93-49aa-8cae-c929f9d4a91d/datasets/a08cf34a-60d2-4b7f-8632-83ac4780364c/rows?key=95UTbh7eub3juY%2Fe53DCZ%2Ba1qOEudlWngNjNtmSdEcF%2FRfXzR97Y0s13Ys1ySmTkAt%2BXP3PCLko%2BleYk%2FtOlDA%3D%3D"
-
-#        Invoke-RestMethod -Method Post -Uri $endpoint -Body (ConvertTo-Json @($payload))
-#git    }
+        # Create a list of all locked out users that are not in $usersWithMismatchedTimes
+        $lockedOut = $probableLockedOutUsers | Where-Object {
+            $_.SamAccountName -notin $usersWithMismatchedTimes.SamAccountName
+        }
 
     # Display the properties of locked-out users in a separate table
     if ($lockedOut.Count -gt 0) {
@@ -199,6 +166,41 @@ do {
         $usersWithMismatchedTimes | Sort-Object AccountLockoutTime -Descending | Format-Table @{Name='ID';Expression={$_.SamAccountName}}, Name, @{Name='Expired';Expression={$_.PasswordExpired}}, LastBadPasswordAttempt, AccountLockoutTime -AutoSize
     } else {
         Write-Host "0 users with mismatched found." -ForegroundColor Green
+    }
+
+    if ($autoUnlock -and $watchedLockedOutUsers.Count -gt 0) {
+        # Filter out users who are in the $unlockable array
+        $watchedLockedOutUsers = $watchedLockedOutUsers | Where-Object {
+            $_.SamAccountName -notin $unlockable
+        }
+    
+        foreach ($user in $watchedLockedOutUsers) {
+            try {
+                & '.\Unlocker.ps1' -UserID $user.SamAccountName -StopLoop:$true > $null
+                Write-Host "User $($user.SamAccountName) has been unlocked" -BackgroundColor DarkGreen
+                $unlocked += $user.SamAccountName
+    
+                # Update the count for this user
+                if ($unlockedCounts.ContainsKey($user.SamAccountName)) {
+                    $unlockedCounts[$user.SamAccountName]++
+                } else {
+                    $unlockedCounts[$user.SamAccountName] = 1
+                }
+    
+                # Check if this user is a problem user
+                if ($unlockedCounts[$user.SamAccountName] -ge 3) {
+                    # Only add the user to the problem users list if they are not already in it
+                    if ($user.SamAccountName -notin $problemUsers) {
+                        $problemUsers += $user.SamAccountName
+                    }
+                }
+            } catch {
+                if ($_.Exception.Message -like "*Access is denied*") {
+                    $unlockable += $user.SamAccountName
+                }
+            }
+        }
+        Write-Host ""
     }
 
     if ($autoUnlock -and $usersWithMismatchedTimes.Count -gt 0) {

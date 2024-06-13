@@ -86,19 +86,24 @@ function Asset-Control {
     if ($powershell -eq $true) {
         # Get computer properties
         try {
-            $computer = Get-ADComputer $computerName -Properties MemberOf
+            $computer = Get-ADComputer $computerName -Properties *
             if ($computer) {
                 $memberOf = $computer.MemberOf -join ', '
 
                 # Check if the required groups are present in MemberOf
                 $isHSRemoteComputers = $memberOf -like '*HSRemoteComputers*'
                 $isHSRemoteMFAComputers = $memberOf -like '*HSRemoteMFAComputers*'
+                
+            # Get the OU of the computer
+            $ou = ($computer.DistinguishedName -replace '^CN=.*?,(.*?),(DC=.*)$', '$1').Replace(',', '/')
 
                 # Display properties in a table
                 $properties = @{
                     'HSRemoteComputers'      = if ($isHSRemoteComputers) { 'True' } else { 'False' }
                     'HSRemoteMFAComputers'   = if ($isHSRemoteMFAComputers) { 'True' } else { 'False' }
                     'Computer Reachable'     = if (Test-Connection -Count 1 -ComputerName $computerName -Quiet) { 'True' } else { 'False' }
+                    'IPv4 Address'           = $computer.IPv4Address
+                    'OU'                     = $ou
                 }
 
                 # Color coding for properties
@@ -106,10 +111,10 @@ function Asset-Control {
                     $propertyName = $_.Key
                     $propertyValue = $_.Value
 
-                    if ($propertyValue -eq 'True') {
-                        Write-Host "${propertyName}: ${propertyValue}" -ForegroundColor Green
-                    } else {
+                    if ([string]::IsNullOrEmpty($propertyValue)) {
                         Write-Host "${propertyName}: ${propertyValue}" -ForegroundColor Red
+                    } else {
+                        Write-Host "${propertyName}: ${propertyValue}" -ForegroundColor Green
                     }
                 }
                 #Line break for space
@@ -120,45 +125,6 @@ function Asset-Control {
         }
     }
 
-    # Check powershell boolean
-    # if ($powershell -eq $true) {
-    #     try {
-    #         # Get LastBootUpTime and calculate uptime
-    #         if ($properties.'Computer Reachable' -eq 'True') {
-    #             # Get LastBootUpTime using CIM instance
-    #             $lastBootUpTime = Get-CimInstance -ClassName Win32_OperatingSystem -ComputerName $computerName -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LastBootUpTime
-            
-    #             # Check if $lastBootUpTime is not null before trying to calculate $uptime
-    #             if ($null -ne $lastBootUpTime) {
-    #                 # Calculate the uptime
-    #                 $uptime = (Get-Date) - $lastBootUpTime
-    #                 $days = [math]::Round($uptime.TotalDays, 0)
-    #                 Write-Host "Last Boot Up Time: $lastBootUpTime"
-    #             } else {
-    #                 throw "Last boot up time is null"
-    #             }
-                
-    #             # Color coding for computer uptime
-    #             if ($uptime -is [TimeSpan]) {
-    #                 if ($days -gt 5) {
-    #                     Write-Host "Uptime: $days days" -ForegroundColor Red
-    #                 } elseif ($days -gt 3) {
-    #                     Write-Host "Uptime: $days days" -ForegroundColor Yellow
-    #                 } else {
-    #                     Write-Host "Uptime: $days days" -ForegroundColor Green
-    #                 }
-    #             } else {
-    #                 Write-Host $uptime -ForegroundColor Red
-    #             }
-    #         } else {
-    #             Write-Host "Computer not found: $computerName" -ForegroundColor Red
-    #             return
-    #         }
-    #     } catch {
-    #         Write-Host "Error retrieving computer properties: $_" -ForegroundColor Red
-    #         return
-    #     }
-    # }
 
     # Function to get print jobs for a specific computer
     function Get-PrintJobsForComputer {
@@ -197,6 +163,7 @@ function Asset-Control {
         Write-Host "11. Clear Browsers"
         Write-Host "12: Set default PDF application to Adobe"
         Write-Host "13: Get Uptime"
+        Write-Host "14: Group Policy Pull"
         Write-Host "66: Remote Restart"
         Write-Host "0. Back to Main Menu"
 
@@ -291,15 +258,12 @@ function Asset-Control {
                 # Define the commands to be executed on the remote computer
                 $command1 = 'reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f'
                 $command2 = 'netsh advfirewall firewall set rule group="remote desktop" new enable=yes'
-                $command3 = 'shutdown /r /t 0'
             
                 # Execute the commands on the remote computer using PsExec
                 try {
                     Start-Process -FilePath "cmd.exe" -ArgumentList "/c psexec.exe \\$computerName $command1"
                     Start-Process -FilePath "cmd.exe" -ArgumentList "/c psexec.exe \\$computerName $command2"
-                    Read-Host "Press Enter to continue"
-                    Start-Process -FilePath "cmd.exe" -ArgumentList "/c psexec.exe \\$computerName $command3"
-                    Write-Host "RDP re-enabled, firewall rules set, and computer restarted on $computerName"
+                    Write-Host "RDP re-enabled, firewall rules set, Computer should be restarted for changes to take effect"
                 } catch {
                     Write-Host "An error occurred while re-enabling RDP, setting firewall rules, or restarting the computer: $_" -ForegroundColor Red
                 }
@@ -401,10 +365,10 @@ function Asset-Control {
                     Write-Output "Uptime: $output"
                 }
             }
-            '14.' { #'Pull Group Policy'
+            '14' { #'Pull Group Policy'
                 try {
-                    $path = [Environment]::GetFolderPath("MyDocuments") + "\${userID}-${computer}.html"
-                    Get-GPResultantSetOfPolicy -User $userID -Computer $computer -ReportType html -Path $path
+                    $path = [Environment]::GetFolderPath("MyDocuments") + "\${userID}-$ComputerName.html"
+                    Get-GPResultantSetOfPolicy -User $userID -Computer $computerName -ReportType html -Path $path
                     if (Test-Path $path) {
                         Invoke-Item $path
                     } else {
@@ -413,6 +377,73 @@ function Asset-Control {
                 } catch {
                     Write-Host "An error occurred: $_"
                 }
+            }
+            '15' {
+                # Copy browser data to remote computer's desktop
+                $browserChoice = Read-Host "Enter the browser to copy data from (Chrome, Edge, All, Cancel)"
+                $destinationChoice = Read-Host "Enter the destination (Desktop, HomeShare, RemotePC)"
+                switch ($browserChoice) {
+                    'Chrome' {
+                        $sourcefile = "\\$computerName\c$\Users\$userID\AppData\Local\Google\Chrome\User Data\Default\Bookmarks"
+                        switch ($destinationChoice) {
+                            'Desktop' {
+                                $destfile = "\\$computerName\c$\Users\$userID\Desktop\ChromeBookmarks"
+                            }
+                            'HomeShare' {
+                                $destfile = "$($adUser.HomeDirectory)\ChromeBookmarks"
+                            }
+                            'RemotePC' {
+                                $destComputerName = Read-Host "Enter the remote computer name"
+                                $destfile = "\\$destComputerName\c$\Users\$userID\Desktop\ChromeBookmarks"
+                            }
+                        }
+                        # Rest of the code...
+                    }
+                    'Edge' {
+                        $sourcefile = "\\$computerName\c$\Users\$userID\AppData\Local\Microsoft\Edge\User Data\Default\Bookmarks"
+                        switch ($destinationChoice) {
+                            'Desktop' {
+                                $destfile = "\\$computerName\c$\Users\$userID\Desktop\EdgeBookmarks"
+                            }
+                            'HomeShare' {
+                                $destfile = "$($adUser.HomeDirectory)\EdgeBookmarks"
+                            }
+                            'RemotePC' {
+                                $destComputerName = Read-Host "Enter the remote computer name"
+                                $destfile = "\\$destComputerName\c$\Users\$userID\Desktop\EdgeBookmarks"
+                            }
+                        }
+                        # Rest of the code...
+                    }
+                    'All' {
+                        $sourcefileChrome = "\\$computerName\c$\Users\$userID\AppData\Local\Google\Chrome\User Data\Default\Bookmarks"
+                        $sourcefileEdge = "\\$computerName\c$\Users\$userID\AppData\Local\Microsoft\Edge\User Data\Default\Bookmarks"
+                        switch ($destinationChoice) {
+                            'Desktop' {
+                                $destfileChrome = "\\$computerName\c$\Users\$userID\Desktop\ChromeBookmarks"
+                                $destfileEdge = "\\$computerName\c$\Users\$userID\Desktop\EdgeBookmarks"
+                            }
+                            'HomeShare' {
+                                $destfileChrome = "$($adUser.HomeDirectory)\ChromeBookmarks"
+                                $destfileEdge = "$($adUser.HomeDirectory)\EdgeBookmarks"
+                            }
+                            'RemotePC' {
+                                $destComputerName = Read-Host "Enter the remote computer name"
+                                $destfileChrome = "\\$destComputerName\c$\Users\$userID\Desktop\ChromeBookmarks"
+                                $destfileEdge = "\\$destComputerName\c$\Users\$userID\Desktop\EdgeBookmarks"
+                            }
+                        }
+                        # Rest of the code...
+                    }
+                    'Cancel' {
+                        Write-Host "Browser data copy operation cancelled."
+                        break
+                    }
+                    default {
+                        Write-Host "Invalid choice. Please enter Chrome, Edge, All, or Cancel."
+                    }
+                }
+                break
             }
             '66' {
                 $minutes = Read-Host "Please enter the number of minutes before restart"
