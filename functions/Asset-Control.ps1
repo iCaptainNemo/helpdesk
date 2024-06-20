@@ -1,7 +1,8 @@
 # Function to perform Asset Control actions & Menu
 function Asset-Control {
     param (
-        [string]$userId
+        [string]$userId,
+        [string]$computerName 
     )
 
     # Check $powershell boolean
@@ -95,7 +96,7 @@ function Asset-Control {
                 $isHSRemoteMFAComputers = $memberOf -like '*HSRemoteMFAComputers*'
                 
             # Get the OU of the computer
-            $ou = ($computer.DistinguishedName -replace '^CN=.*?,(.*?),(DC=.*)$', '$1').Replace(',', '/')
+            $ou = ($computer.DistinguishedName -replace '^CN=.*?,(.*?),(DC=.*)$', '$1').Replace(',', '/').Replace('CN=Computers', '').Trim()
 
                 # Display properties in a table
                 $properties = @{
@@ -125,27 +126,6 @@ function Asset-Control {
         }
     }
 
-
-    # Function to get print jobs for a specific computer
-    function Get-PrintJobsForComputer {
-        param (
-            [string]$ComputerName
-        )
-
-        try {
-            $printJobs = Get-PrintJob -ComputerName $ComputerName
-            if ($printJobs) {
-                Write-Host "Print Jobs on ${computerName}:"
-                foreach ($job in $printJobs) {
-                    Write-Host "Job ID: $($job.JobId), Document: $($job.Document), Status: $($job.JobStatus)"
-                }
-            } else {
-                Write-Host "No print jobs found on $ComputerName."
-            }
-        } catch {
-            Write-Host "Error getting print jobs: $_" -ForegroundColor Red
-        }
-    }
 
     # Asset Control submenu
     while ($true) {
@@ -452,8 +432,13 @@ function Asset-Control {
                 } else {
                     $time = (Get-Date).AddMinutes($minutes)
                     $seconds = $minutes * 60
-                    shutdown.exe /m \\$computer /r /t $seconds /d p:4:1 /c "Scheduled restart"
+                    shutdown.exe /m \\$computername /r /t $seconds /d p:4:1 /c "Scheduled restart"
                     Write-Host "Scheduled a restart on $computer at $time"
+                    $abort = Read-Host "Do you want to abort the scheduled restart? (y/n)"
+                    if ($abort -eq 'y') {
+                        shutdown.exe /m \\$computername /a
+                        Write-Host "Aborted the scheduled restart."
+                    }
                 }
             }
             '0' {
