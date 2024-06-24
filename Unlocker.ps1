@@ -255,7 +255,7 @@ function Unlock-User {
                 if ($stopLoop -eq $false) {
                     Write-Host "Account unlocked on $($dc.Name)" -BackgroundColor DarkGreen
                 } else {
-                    Write-Output "Account unlocked on $($dc.Name)" -BackgroundColor DarkGreen
+                    Write-Output "Account unlocked on $($dc.Name)"
                 }
             } else {
                 Write-Output "Error unlocking account on $($dc.Name): User not found"
@@ -271,7 +271,7 @@ function Unlock-User {
                     $userEntry = $user.GetDirectoryEntry()
                     $userEntry.Properties["lockoutTime"].Value = 0
                     $userEntry.CommitChanges()
-                    Write-Output "Account unlocked on $targetDC" -BackgroundColor DarkGreen
+                    Write-Host "Account unlocked on $targetDC" -BackgroundColor DarkGreen
                 } else {
                     Write-Output "Error unlocking account on $targetDC User not found"
                 }
