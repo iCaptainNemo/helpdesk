@@ -33,13 +33,13 @@ function Validate-ComputerName {
 CLS
 $UserID, $ComputerID, $RDPComputer = ''
 
-Write-host "`n Before trying this script, make sure the user is on the County network In-Office or through VPN `n" -ForegroundColor Red -BackgroundColor White
-Read-Host -Prompt "Press any key to continue..."
 
+cls
 
 # Get user input for username
 do {
-    $UserID = Read-Host "Enter a username"
+    Write-Host "Enter User to create RDP Shortcut for:" -ForegroundColor Yellow
+    $UserID = Read-Host "UserID"
 } while (-not (Validate-Username -Username $UserID))
 
 # Get user input for computer name
@@ -108,7 +108,7 @@ drivestoredirect:s:
 
 " 
 
-$rdp | Out-File -FilePath "$outputdirectory\RDPonVPN.rdp"
+$rdp | Out-File -FilePath "$outputdirectory\Remote-DesktopV2.rdp"
 
 Write-Host "`n Remote desktop icon has been created on $RDPComputer `n" -ForegroundColor DarkGreen -BackgroundColor White
 
