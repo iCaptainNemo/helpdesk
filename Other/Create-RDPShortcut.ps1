@@ -1,14 +1,35 @@
-﻿function Validate-Username {
+﻿<#
+.SYNOPSIS
+Creates an RDP shortcut for a specified computer after validating its existence in Active Directory.
+
+.DESCRIPTION
+This script first validates a computer name against Active Directory (AD) to check if it is part of the domain using the Get-ADComputer cmdlet. If the computer exists in the domain, it proceeds to create an RDP (Remote Desktop Protocol) shortcut on the desktop of the current user. If the computer is not found in AD, it notifies the user that the computer was not found.
+
+.PARAMETER ComputerName
+The name of the computer for which to create an RDP shortcut. This computer is validated against Active Directory to ensure it is part of the domain.
+
+.EXAMPLE
+.\Create-RDPShortcut.ps1 -ComputerName "Workstation01"
+This example validates the existence of a computer named Workstation01 in Active Directory. If the computer exists, it creates an RDP shortcut on the user's desktop.
+
+.NOTES
+This script requires the Active Directory PowerShell module to be installed and available. It must be run with sufficient permissions to query Active Directory and to create shortcuts on the user's desktop.
+#>
+
+# Import ActiveDirectory module
+Import-Module ActiveDirectory
+
+function Validate-Username {
     param (
         [string]$Username
     )
 
     try {
         $User = Get-ADUser $Username -ErrorAction Stop
-        Write-Host "User '$Username' exists in AD."
+        Write-Host "User '$Username' Exists." -ForegroundColor Green
         return $true
     } catch {
-        Write-Host "User '$Username' not found in AD."
+        Write-Host "User '$Username' does not exist."  -ForegroundColor Red
         return $false
     }
 }
@@ -30,17 +51,15 @@ function Validate-ComputerName {
     }
 }
 
-CLS
-$UserID, $ComputerID, $RDPComputer = ''
-
+$Username, $ComputerID, $RDPComputer = ''
 
 cls
 
 # Get user input for username
 do {
     Write-Host "Enter User to create RDP Shortcut for:" -ForegroundColor Yellow
-    $UserID = Read-Host "UserID"
-} while (-not (Validate-Username -Username $UserID))
+    $Username = Read-Host "Username"
+} while (-not (Validate-Username -Username $Username))
 
 # Get user input for computer name
 do {
@@ -53,7 +72,7 @@ do {
 } while (-not (Validate-ComputerName -ComputerName $RDPComputer))
 
 
-$outputdirectory = "\\$RDPComputer\c$\users\$UserID\Desktop\"
+$outputdirectory = "\\$RDPComputer\c$\users\$Username\Desktop\"
 
 $rdp = "
 screen mode id:i:2
@@ -112,4 +131,4 @@ $rdp | Out-File -FilePath "$outputdirectory\Remote-DesktopV2.rdp"
 
 Write-Host "`n Remote desktop icon has been created on $RDPComputer `n" -ForegroundColor DarkGreen -BackgroundColor White
 
-Read-Host -Prompt "Press any key to Finish..."
+Pause
