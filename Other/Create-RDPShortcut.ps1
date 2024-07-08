@@ -51,30 +51,34 @@ function Validate-ComputerName {
     }
 }
 
-$Username, $ComputerID, $RDPComputer = ''
+function Get-UserADProperties {
+    param (
+        [string]$Username
+    )
+    $userProperties = Get-ADUser -Identity $Username -Properties HomeDirectory
+    Write-Host "HomeShare: $($userProperties.HomeDirectory)"
+    return $userProperties
+}
 
-cls
+function Create-Shortcut {
+    param (
+        [string]$RDPComputer,
+        [string]$Username,
+        [string]$ComputerID,
+        [PSCustomObject]$userProperties # Assuming $userProperties includes a HomeDirectory property
+    )
 
-# Get user input for username
-do {
-    Write-Host "Enter User to create RDP Shortcut for:" -ForegroundColor Yellow
-    $Username = Read-Host "Username"
-} while (-not (Validate-Username -Username $Username))
+    # Ask the user for the location(s) to create the shortcut
+    $locations = @("Desktop", "HomeDirectory")
+    Write-Host "Select the location(s) to create the shortcut by entering the numbers separated by commas (e.g., 1,2):"
+    for ($i = 0; $i -lt $locations.Length; $i++) {
+        Write-Host "$($i+1): $($locations[$i])"
+    }
+    $selectedLocations = Read-Host "Enter your choice(s)"
+    $selectedIndices = $selectedLocations.Split(',') | ForEach-Object { [int]$_ - 1 }
 
-# Get user input for computer name
-do {
-    $ComputerID = Read-Host "Enter a In-Office Computer name"
-} while (-not (Validate-ComputerName -ComputerName $ComputerID))
-
-# Get user input for remote computer name
-do {
-    $RDPComputer = Read-Host "Enter a Telecommuting computer name"
-} while (-not (Validate-ComputerName -ComputerName $RDPComputer))
-
-
-$outputdirectory = "\\$RDPComputer\c$\users\$Username\Desktop\"
-
-$rdp = "
+    # RDP file content
+    $rdp = @"
 screen mode id:i:2
 use multimon:i:1
 desktopwidth:i:3440
@@ -124,11 +128,64 @@ rdgiskdcproxy:i:0
 kdcproxyname:s:
 enablerdsaadauth:i:0
 drivestoredirect:s:
+"@
 
-" 
+    # Create the RDP file at the selected location(s)
+    foreach ($index in $selectedIndices) {
+        $location = $locations[$index]
+        switch ($location) {
+            "Desktop" {
+                $outputDirectory = "\\$RDPComputer\c$\users\$Username\Desktop\"
+                Write-Debug "Setting output directory to Desktop: $outputDirectory"
+            }
+            "HomeDirectory" {
+                # Use the HomeDirectory from $userProperties and append \Desktop\ for the shortcut placement
+                $outputDirectory = "$($User.HomeDirectory)\Desktop\"
+                Write-Debug "Setting output directory to HomeDirectory: $outputDirectory"
+            }
+        }
+    
+        # Check if the output directory exists, if not, create it
+        if (-not (Test-Path -Path $outputDirectory)) {
+            Write-Debug "Output directory does not exist."
+        }
+    
+        try {
+            $rdp | Out-File -FilePath "$outputDirectory\Remote-DesktopV2.rdp"
+            Write-Host "`nRemote desktop icon has been created on $RDPComputer in the $location.`n" -ForegroundColor Green
+        } catch {
+            Write-Error "Failed to create the RDP file."
+        }
+    }
+}
 
-$rdp | Out-File -FilePath "$outputdirectory\Remote-DesktopV2.rdp"
 
-Write-Host "`n Remote desktop icon has been created on $RDPComputer `n" -ForegroundColor DarkGreen -BackgroundColor White
+$Username, $ComputerID, $RDPComputer = ''
+
+cls
+
+# Get user input for username
+do {
+    Write-Host "Enter User to create RDP Shortcut for:" -ForegroundColor Yellow
+    $Username = Read-Host "Username"
+} while (-not (Validate-Username -Username $Username))
+
+do { 
+    $User = Get-ADUser $Username -Properties HomeDirectory
+    Write-Host "HomeShare: $($User.HomeDirectory)"
+} while ($null -eq $User)
+
+# Get user input for computer name
+do {
+    $ComputerID = Read-Host "Enter a In-Office Computer name"
+} while (-not (Validate-ComputerName -ComputerName $ComputerID))
+
+# Get user input for remote computer name
+do {
+    $RDPComputer = Read-Host "Enter a Telecommuting computer name"
+} while (-not (Validate-ComputerName -ComputerName $RDPComputer))
+
+# Create the RDP shortcut
+Create-Shortcut -RDPComputer $RDPComputer -Username $Username -ComputerID $ComputerID
 
 Pause
