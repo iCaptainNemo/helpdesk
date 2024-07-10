@@ -129,6 +129,8 @@ kdcproxyname:s:
 enablerdsaadauth:i:0
 drivestoredirect:s:
 username:s:hs\$Username
+client:i:0
+server authentication level:i:0
 "@
 
     # Create the RDP file at the selected location(s)
