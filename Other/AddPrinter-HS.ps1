@@ -14,7 +14,34 @@ $outputdirectory = ''
 # Inform the user to ensure they are on the County network or connected through VPN
 Write-Host "`n Before trying this script, make sure the user is on the County network In-Office or through VPN `n" -ForegroundColor Red -BackgroundColor White
 Read-Host -Prompt "Press any key to continue..."
+#Validate the printer in the Print server provided on Server variable
+function Validate-PrinterOnServer {
+    param (
+        [string]$Server,          # The name of the print server
+        [string]$PrinterName      # The name of the printer to validate
+    )
+    
+    # Check if the Server is reachable
+    if (-not (Test-Connection -ComputerName $Server -Count 1 -Quiet)) {
+        Write-Host "The print server $Server is not reachable. Please check the server name and network connection." -ForegroundColor Red
+        return $false
+    }
 
+    # Try to get the printer from the specified server
+    try {
+        $printers = Get-Printer -ComputerName $Server -ErrorAction Stop
+        if ($printers.Name -contains $PrinterName) {
+            Write-Host "The printer '$PrinterName' exists on the server '$Server'." -ForegroundColor Green
+            return $true
+        } else {
+            Write-Host "The printer '$PrinterName' does not exist on the server '$Server'." -ForegroundColor Red
+            return $false
+        }
+    } catch {
+        Write-Host "Failed to query printers on the server $Server. Error: $_" -ForegroundColor Red
+        return $false
+    }
+}
 # Function to validate UserID, ComputerID, and Server in Active Directory
 function Get-ValidADInput {
     param (
