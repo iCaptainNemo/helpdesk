@@ -1,19 +1,35 @@
 param (
-    [switch]$Debug
+    [switch]$Debug  # Parameter to enable debug mode
 )
 
+# If the Debug switch is provided, set the debug preference to 'Continue'
 if ($Debug) {
     $DebugPreference = 'Continue'
 }
+
+# Clear the screen
 cls
+
+# Write a debug message if debug mode is enabled
 Write-Debug "Debug mode is enabled."
 
+# Set the window title to the name of the script file
 $Host.UI.RawUI.WindowTitle = Split-Path -Path $MyInvocation.MyCommand.Definition -Leaf
+
+# Set the execution policy to Undefined for the current user scope
 Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope CurrentUser
 
 # Import ActiveDirectory module
 Import-Module ActiveDirectory
 
+# Install the powershell-yaml module if it is not already installed
+if (-not (Get-Module -ListAvailable -Name powershell-yaml)) {
+    Install-Module -Name powershell-yaml -Force -Scope CurrentUser
+}
+# Import the powershell-yaml module
+Import-Module -Name powershell-yaml
+
+# Display the script title
 Write-Host "Jarvis Helpdesk Automation Script" -ForegroundColor Green
 Write-Host ""
 
@@ -24,17 +40,17 @@ try {
     $env:CommandType = "Power"
     $powershell = $true
     $WMI = $false
-} catch {
-    try {
-        $currentDomain = (Get-WmiObject -Class Win32_ComputerSystem).Domain
-        $env:CommandType = "WMI"
-        $powershell = $false
-        $WMI = $true
     } catch {
-        Write-Host "Error getting domain. Due to restrictive environment this script is unable to perform. Press any key to exit." -ForegroundColor Red
-        $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-        exit
-    }
+        try {
+            $currentDomain = (Get-WmiObject -Class Win32_ComputerSystem).Domain
+            $env:CommandType = "WMI"
+            $powershell = $false
+            $WMI = $true
+        } catch {
+            Write-Host "Error getting domain. Due to restrictive environment this script is unable to perform. Press any key to exit." -ForegroundColor Red
+            $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+            exit
+        }
 }
 
 Write-Host "Current domain: " -NoNewLine
@@ -67,45 +83,10 @@ try {
 $envVars = @{}
 $UserVars = @{}
 
-
-# Function to set $tempPassword
-function Set-TempPassword {
-    if ($envVars.ContainsKey('tempPassword')) {
-        $useExisting = Read-Host "Use existing temporary password $($envVars['tempPassword'])? (y/n)"
-        if ($useExisting -eq 'y') {
-            return $envVars['tempPassword']
-        }
-    }
-
-    do {
-        $userInput = Read-Host "Enter temp password or use Season-Year format (e.g. Spring2024) for password resets"
-        if ($userInput) {
-            $tempPassword = $userInput
-        } else {
-            # Set Temporary Password based on the season and year
-            $currentMonth = (Get-Date).Month
-            $season = switch ($currentMonth) {
-                { $_ -in 3..5 } { 'Spring' }
-                { $_ -in 6..8 } { 'Summer' }
-                { $_ -in 9..11 } { 'Fall' }
-                { $_ -in 1, 2, 12 } { 'Winter' }
-            }
-            $tempPassword = "$season$(Get-Date -UFormat '%Y')"
-        }
-        $confirm = Read-Host "Use '$tempPassword'. Is this correct? (n to redo)"
-    } while ($confirm -eq 'n')
-    # Update the tempPassword in the $envVars hashtable
-    $envVars['tempPassword'] = $tempPassword
-    # Convert the updated hashtable to a list of strings
-    $envVarsList = "`$envVars = @{}" + ($envVars.GetEnumerator() | ForEach-Object { "`n`$envVars['$($_.Key)'] = '$($_.Value)'" })
-    # Write the updated environmental variables to the $AdminConfig file
-    Set-Content -Path "$AdminConfig" -Value ($envVarsList -join "`n")
-    return $tempPassword
-}
-
 # Import functions from functions directory
 . .\functions\Asset-Control.ps1
 . .\functions\Add-NetworkPrinter.ps1
+. .\functions\Set-TempPassword.ps1
 . .\functions\ADUserProp.ps1
 . .\functions\Get-UserId.ps1
 . .\functions\Invoke-SCCMRemoteTool.ps1

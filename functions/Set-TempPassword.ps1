@@ -8,7 +8,7 @@ function Set-TempPassword {
     }
 
     do {
-        $userInput = Read-Host "The temp password for resets is not set. Enter one to use or press enter to use the default"
+        $userInput = Read-Host "Enter temp password or use Season-Year format (e.g. Spring2024) for password resets"
         if ($userInput) {
             $tempPassword = $userInput
         } else {
@@ -22,7 +22,7 @@ function Set-TempPassword {
             }
             $tempPassword = "$season$(Get-Date -UFormat '%Y')"
         }
-        $confirm = Read-Host "You entered '$tempPassword'. Is this correct? (n to redo)"
+        $confirm = Read-Host "Use '$tempPassword'. Is this correct? (n to redo)"
     } while ($confirm -eq 'n')
     # Update the tempPassword in the $envVars hashtable
     $envVars['tempPassword'] = $tempPassword
