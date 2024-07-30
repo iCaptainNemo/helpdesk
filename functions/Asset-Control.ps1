@@ -95,30 +95,32 @@ function Asset-Control {
                 $isHSRemoteComputers = $memberOf -like '*HSRemoteComputers*'
                 $isHSRemoteMFAComputers = $memberOf -like '*HSRemoteMFAComputers*'
                 
-            # Get the OU of the computer
-            $ou = ($computer.DistinguishedName -replace '^CN=.*?,(.*?),(DC=.*)$', '$1').Replace(',', '/').Replace('CN=Computers', '').Trim()
+                # Get the OU of the computer
+                $ou = ($computer.DistinguishedName -replace '^CN=.*?,(.*?),(DC=.*)$', '$1').Replace(',', '/').Replace('CN=Computers', '').Trim()
 
                 # Display properties in a table
-                $properties = @{
-                    'HSRemoteComputers'      = if ($isHSRemoteComputers) { 'True' } else { 'False' }
-                    'HSRemoteMFAComputers'   = if ($isHSRemoteMFAComputers) { 'True' } else { 'False' }
-                    'Computer Reachable'     = if (Test-Connection -Count 1 -ComputerName $computerName -Quiet) { 'True' } else { 'False' }
-                    'IPv4 Address'           = $computer.IPv4Address
-                    'OU'                     = $ou
-                }
+                $properties = @(
+                    @{ Name = 'HSRemoteComputers'; Value = if ($isHSRemoteComputers) { 'True' } else { 'False' } }
+                    @{ Name = 'HSRemoteMFAComputers'; Value = if ($isHSRemoteMFAComputers) { 'True' } else { 'False' } }
+                    @{ Name = 'Computer Reachable'; Value = if (Test-Connection -Count 1 -ComputerName $computerName -Quiet) { 'True' } else { 'False' } }
+                    @{ Name = 'IPv4 Address'; Value = $computer.IPv4Address }
+                    @{ Name = 'OU'; Value = $ou }
+                )
 
                 # Color coding for properties
-                $properties.GetEnumerator() | ForEach-Object {
-                    $propertyName = $_.Key
+                $properties | ForEach-Object {
+                    $propertyName = $_.Name
                     $propertyValue = $_.Value
 
-                    if ([string]::IsNullOrEmpty($propertyValue)) {
+                    if ($propertyName -eq 'OU' -and $propertyValue -eq 'OU=HS Computers') {
+                        Write-Host "${propertyName}: ${propertyValue}" -ForegroundColor Red
+                    } elseif ([string]::IsNullOrEmpty($propertyValue)) {
                         Write-Host "${propertyName}: ${propertyValue}" -ForegroundColor Red
                     } else {
                         Write-Host "${propertyName}: ${propertyValue}" -ForegroundColor Green
                     }
                 }
-                #Line break for space
+                # Line break for space
                 Write-Host "`n"
             }
         } catch {
