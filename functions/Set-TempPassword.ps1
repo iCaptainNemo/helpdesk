@@ -1,12 +1,8 @@
 # Function to set $tempPassword
 function Set-TempPassword {
     if ($envVars.ContainsKey('tempPassword')) {
-        $useExisting = Read-Host "Use existing temporary password $($envVars['tempPassword'])? (y/n)"
-        if ($useExisting -eq 'y') {
-            return $envVars['tempPassword']
-        }
+            return
     }
-
     do {
         $userInput = Read-Host "Enter temp password or use Season-Year format (e.g. Spring2024) for password resets"
         if ($userInput) {

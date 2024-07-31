@@ -109,6 +109,32 @@ function SetGlobalVariable {
     $global:AdminConfig = ".\.env_$env:USERNAME.ps1"
 }
 
+
+# YAML handler class
+class YamlHandler {
+    [string]$FilePath
+
+    YamlHandler([string]$fileName) {
+        $this.FilePath = ".\.env\$fileName.yaml"
+    }
+
+    [hashtable] Import() {
+        if (Test-Path $this.FilePath) {
+            $yamlContent = Get-Content -Path $this.FilePath -Raw
+            $variables = $yamlContent | ConvertFrom-Yaml
+            return $variables
+        } else {
+            Write-Host "YAML file not found: $this.FilePath"
+            return @{}
+        }
+    }
+
+    [void] Export([hashtable]$variables) {
+        $yamlContent = $variables | ConvertTo-Yaml
+        Set-Content -Path $this.FilePath -Value $yamlContent
+    }
+}
+
 # Check if the .env_$AdminConfig.ps1 file exists
 $AdminConfig = ".\.env\.env_$env:USERNAME.ps1"
 if (Test-Path $AdminConfig) {
