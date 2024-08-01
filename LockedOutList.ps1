@@ -155,7 +155,7 @@ do {
     # Display the properties of locked-out users in a separate table
     if ($lockedOut.Count -gt 0) {
         Write-Host "Locked-out users within the last 24 hours: $($lockedOutUsers.Count)" -ForegroundColor Red
-        $lockedOut | Sort-Object AccountLockoutTime -Descending | Format-Table @{Name='ID';Expression={$_.SamAccountName}}, Name, @{Name='Expired';Expression={$_.PasswordExpired}}, AccountLockoutTime, LastBadPasswordAttempt -AutoSize
+        $lockedOut | Sort-Object AccountLockoutTime -Descending | Format-Table @{Name='ID';Expression={$_.SamAccountName}}, Name, @{Name='Expired';Expression={$_.PasswordExpired}}, AccountLockoutTime -AutoSize
     } else {
         Write-Host "0 recent locked-out users" -ForegroundColor Green
     }
