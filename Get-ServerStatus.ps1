@@ -179,33 +179,53 @@ if (-not (Test-Path $serversPath)) {
     $servers = $configManager.LoadServers($serversPath)
     Write-Debug "Servers loaded: $($servers -join ', ')"
 }
-
-# Dictionary to store the offline duration for each server
+# Dictionary to store the offline duration and timestamp for each server
 $offlineDurations = @{}
+# Dictionary to store the time when servers come back online
+$recentlyOnline = @{}
 
 while ($true) {
     Write-Host "Checking server statuses..."
     $servers = $configManager.LoadServers($serversPath)
-    $table = @()
+    $onlineServers = @()
+    $offlineServers = @()
+    $recentlyOnlineServers = @()
+    $currentTime = Get-Date
+
     foreach ($server in $servers) {
         $status = $serverManager.CheckServerStatus($server)
         $statusText = if ($status) { "Online" } else { "Offline" }
         $color = if ($status) { "Green" } else { "Red" }
 
-        # Update offline duration
-        if (-not $status) {
-            if (-not $offlineDurations.ContainsKey($server)) {
-                $offlineDurations[$server] = -10 # Initialize to -10 so the first increment makes it 0
+        if ($status) {
+            $onlineServers += $server
+            # Check if the server was recently offline
+            if ($offlineDurations.ContainsKey($server)) {
+                $recentlyOnline[$server] = @{
+                    TimeOnline = $currentTime
+                    OfflineTimestamp = $offlineDurations[$server].Timestamp
+                }
+                $offlineDurations.Remove($server)
             }
-            $offlineDurations[$server] += 10 # Increment by 10 minutes
         } else {
-            $offlineDurations.Remove($server)
+            $offlineServers += $server
+            if (-not $offlineDurations.ContainsKey($server)) {
+                $offlineDurations[$server] = @{
+                    Duration = -10 # Initialize to -10 so the first increment makes it 0
+                    Timestamp = $currentTime
+                }
+            }
+            $offlineDurations[$server].Duration += 10 # Increment by 10 minutes
         }
+    }
 
-        # Calculate offline time in minutes and hours
+    # Calculate offline time in minutes and hours
+    $offlineTable = @()
+    foreach ($server in $offlineServers) {
         $offlineTime = ""
+        $offlineTimestamp = ""
         if ($offlineDurations.ContainsKey($server)) {
-            $minutes = $offlineDurations[$server]
+            $minutes = $offlineDurations[$server].Duration
             $hours = [math]::Floor($minutes / 60)
             $remainingMinutes = $minutes % 60
             if ($hours -gt 0) {
@@ -213,26 +233,49 @@ while ($true) {
             } else {
                 $offlineTime = "$minutes minutes"
             }
+            $offlineTimestamp = $offlineDurations[$server].Timestamp
         }
 
-        $table += [PSCustomObject]@{
-            ServerName  = $server
-            Status      = $statusText
-            OfflineTime = $offlineTime
+        $offlineTable += [PSCustomObject]@{
+            ServerName      = $server
+            OfflineTime     = $offlineTime
+            OfflineTimestamp = $offlineTimestamp
         }
     }
 
-    # Display the table with color formatting
-    foreach ($row in $table) {
-        $color = if ($row.Status -eq "Online") { "Green" } else { "Red" }
-        Write-Host "$($row.ServerName):" -NoNewline
-        Write-Host " $($row.Status)" -ForegroundColor $color -NoNewline
-        if ($row.OfflineTime) {
-            Write-Host " ($($row.OfflineTime))"
+    # Find recently online servers within the last hour
+    $recentlyOnlineTable = @()
+    foreach ($server in $recentlyOnline.Keys) {
+        $timeOnline = $recentlyOnline[$server].TimeOnline
+        $offlineTimestamp = $recentlyOnline[$server].OfflineTimestamp
+        if (($currentTime - $timeOnline).TotalMinutes -le 60) {
+            $recentlyOnlineTable += [PSCustomObject]@{
+                ServerName       = $server
+                TimeOnline       = $timeOnline
+                OfflineTimestamp = $offlineTimestamp
+            }
         } else {
-            Write-Host ""
+            $recentlyOnline.Remove($server)
         }
     }
+
+    # Display the count of online servers
+    Write-Host "Online Servers: $($onlineServers.Count)" -ForegroundColor Green
+    Write-Host "" # Add space
+
+    # Display the list of offline servers with their offline duration and timestamp
+    Write-Host "Offline Servers:" -ForegroundColor Red
+    foreach ($row in $offlineTable) {
+        Write-Host "$($row.ServerName): Offline for $($row.OfflineTime) since $($row.OfflineTimestamp)" -ForegroundColor Red
+    }
+    Write-Host "" # Add space
+
+    # Display the list of recently online servers within the last hour with their offline timestamp
+    Write-Host "Recently Online Servers (within the last hour):" -ForegroundColor Yellow
+    foreach ($row in $recentlyOnlineTable) {
+        Write-Host "$($row.ServerName): Came back online at $($row.TimeOnline) (was offline since $($row.OfflineTimestamp))" -ForegroundColor Yellow
+    }
+    Write-Host "" # Add space
 
     Write-Host "Waiting for 10 minutes before the next check."
     Start-Sleep -Seconds 600
