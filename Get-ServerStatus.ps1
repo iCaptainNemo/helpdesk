@@ -245,7 +245,8 @@ while ($true) {
 
     # Find recently online servers within the last hour
     $recentlyOnlineTable = @()
-    foreach ($server in $recentlyOnline.Keys) {
+    $recentlyOnlineKeys = $recentlyOnline.Keys # Create a copy of the keys
+    foreach ($server in $recentlyOnlineKeys) {
         $timeOnline = $recentlyOnline[$server].TimeOnline
         $offlineTimestamp = $recentlyOnline[$server].OfflineTimestamp
         if (($currentTime - $timeOnline).TotalMinutes -le 60) {
