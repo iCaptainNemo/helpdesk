@@ -230,7 +230,9 @@ while ($true) {
             } else {
                 Write-Host "$server : File share service is not running" -ForegroundColor Yellow
             }
-            sleep 1
+            if ($debug) {
+                Start-Sleep -Seconds 1
+            }
         } else {
             Write-Debug "$server is Offline."
             $offlineServers += $server
@@ -314,16 +316,17 @@ while ($true) {
     }
         
     Write-Host "" # Add space
-    Write-Host "Next check in 10 minutes. Press any key to start immediately."
-
+    Write-Host "Next check in 10 minutes."
     $startTime = Get-Date
     $timeout = 600
+    Write-Debug "Start time: $startTime"
+    Write-Debug "Timeout: $timeout seconds"
+    
     while ((Get-Date) -lt $startTime.AddSeconds($timeout)) {
-        if ($Host.UI.RawUI.KeyAvailable) {
-            $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-            break
-        }
-        Start-Sleep -Milliseconds 500
+        $currentTime = Get-Date
+        Write-Debug "Current time: $currentTime"
+        Write-Debug "Time remaining: $([math]::Round(($startTime.AddSeconds($timeout) - $currentTime).TotalSeconds)) seconds"
+        Start-Sleep -Seconds 1
     }
     cls
 }
