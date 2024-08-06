@@ -289,6 +289,8 @@ while ($true) {
         }
     }
     cls
+    # Display the last time the script was run
+    Write-Host "Last run: $(Get-Date)"
     # Display the count of online servers
     Write-Host "Online Servers: $($onlineServers.Count)" -ForegroundColor Green
     Write-Host "" # Add space
