@@ -2,7 +2,7 @@
 Import-Module ActiveDirectory
 
 # Clear the console screen
-CLS
+Clear-Host
 
 # Initialize variables
 $UserID = ''
@@ -43,55 +43,6 @@ function Validate-PrinterOnServer {
     }
 }
 # Function to validate UserID, ComputerID, and Server in Active Directory
-function Get-ValidADInput {
-    param (
-        [string]$Prompt,                # Prompt message for user input
-        [string]$ErrorMessage,          # Error message to display if validation fails
-        [switch]$IsADUser = $false,    # Flag to specify if the input should be validated as an AD user
-        [switch]$IsADComputer = $false, # Flag to specify if the input should be validated as an AD computer
-        [switch]$IsNotEmpty = $false    # Flag to specify if the input should not be empty
-    )
-    while ($true) {
-        # Read user input and trim any extra spaces
-        $input = (Read-Host $Prompt).Trim()
-
-        # Check if input should not be empty
-        if ($IsNotEmpty -and [string]::IsNullOrWhiteSpace($input)) {
-            Write-Host $ErrorMessage -ForegroundColor Red
-            continue
-        }
-
-        # Validate as AD user if specified
-        if ($IsADUser -and [string]::IsNullOrWhiteSpace($input) -eq $false) {
-            try {
-                $adUser = Get-ADUser -Identity $input -ErrorAction Stop
-                if ($adUser) {
-                    return $input
-                }
-            } catch {
-                Write-Host $ErrorMessage -ForegroundColor Red
-            }
-            continue
-        }
-
-        # Validate as AD computer if specified
-        if ($IsADComputer -and [string]::IsNullOrWhiteSpace($input) -eq $false) {
-            try {
-                $adComputer = Get-ADComputer -Identity $input -ErrorAction Stop
-                if ($adComputer) {
-                    return $input
-                }
-            } catch {
-                Write-Host $ErrorMessage -ForegroundColor Red
-            }
-            continue
-        }
-
-        # If no AD validation needed, simply return the input
-        return $input
-    }
-}
-
 function Get-ValidADInput {
     param (
         [string]$Prompt,                # Prompt message for user input
