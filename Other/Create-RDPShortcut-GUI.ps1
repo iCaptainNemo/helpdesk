@@ -142,7 +142,7 @@ $form.StartPosition = "CenterScreen"
 
 # Create labels and textboxes for user input
 $lblUsername = New-Object System.Windows.Forms.Label
-$lblUsername.Text = "Username:"
+$lblUsername.Text = "Employee ID:"
 $lblUsername.Location = New-Object System.Drawing.Point(10, 20)
 $form.Controls.Add($lblUsername)
 
