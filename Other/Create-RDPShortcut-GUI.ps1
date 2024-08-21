@@ -52,6 +52,7 @@ function Create-Shortcut {
         [string]$RDPComputer,
         [string]$Username,
         [string]$ComputerID,
+        [string]$ShortcutName,
         [PSCustomObject]$userProperties,
         [string[]]$locations
     )
@@ -126,7 +127,7 @@ server authentication level:i:0
         }
 
         try {
-            $rdp | Out-File -FilePath "$outputDirectory\Remote-DesktopV2.rdp"
+            $rdp | Out-File -FilePath "$outputDirectory\$ShortcutName.rdp"
             [System.Windows.Forms.MessageBox]::Show("Remote desktop icon has been created on $RDPComputer in the $location.", "Success", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
         } catch {
             [System.Windows.Forms.MessageBox]::Show("Failed to create the RDP file.", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
@@ -137,7 +138,7 @@ server authentication level:i:0
 # Create the form
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "Create RDP Shortcut"
-$form.Size = New-Object System.Drawing.Size(400, 300)
+$form.Size = New-Object System.Drawing.Size(400, 350)
 $form.StartPosition = "CenterScreen"
 
 # Create labels and textboxes for user input
@@ -171,26 +172,37 @@ $txtRDPComputer.Location = New-Object System.Drawing.Point(120, 100)
 $txtRDPComputer.Width = 250
 $form.Controls.Add($txtRDPComputer)
 
+$lblShortcutName = New-Object System.Windows.Forms.Label
+$lblShortcutName.Text = "Shortcut Name:"
+$lblShortcutName.Location = New-Object System.Drawing.Point(10, 140)
+$form.Controls.Add($lblShortcutName)
+
+$txtShortcutName = New-Object System.Windows.Forms.TextBox
+$txtShortcutName.Location = New-Object System.Drawing.Point(120, 140)
+$txtShortcutName.Width = 250
+$form.Controls.Add($txtShortcutName)
+
 # Create checkboxes for Desktop and HomeDirectory
 $chkDesktop = New-Object System.Windows.Forms.CheckBox
 $chkDesktop.Text = "Desktop"
-$chkDesktop.Location = New-Object System.Drawing.Point(120, 140)
+$chkDesktop.Location = New-Object System.Drawing.Point(120, 180)
 $form.Controls.Add($chkDesktop)
 
 $chkHomeDirectory = New-Object System.Windows.Forms.CheckBox
 $chkHomeDirectory.Text = "Home Directory"
-$chkHomeDirectory.Location = New-Object System.Drawing.Point(120, 170)
+$chkHomeDirectory.Location = New-Object System.Drawing.Point(120, 210)
 $form.Controls.Add($chkHomeDirectory)
 
 # Create a button to validate and create the shortcut
 $btnCreate = New-Object System.Windows.Forms.Button
 $btnCreate.Text = "Create Shortcut"
-$btnCreate.Location = New-Object System.Drawing.Point(150, 210)
+$btnCreate.Location = New-Object System.Drawing.Point(150, 250)
 $btnCreate.Size = New-Object System.Drawing.Size(120, 30)
 $btnCreate.Add_Click({
     $Username = $txtUsername.Text
     $ComputerID = $txtComputerID.Text
     $RDPComputer = $txtRDPComputer.Text
+    $ShortcutName = $txtShortcutName.Text
 
     if (-not (Validate-Username -Username $Username)) {
         [System.Windows.Forms.MessageBox]::Show("User '$Username' does not exist.", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
@@ -226,12 +238,13 @@ $btnCreate.Add_Click({
         return
     }
 
-    Create-Shortcut -RDPComputer $RDPComputer -Username $Username -ComputerID $ComputerID -userProperties $User -locations $locations
+    Create-Shortcut -RDPComputer $RDPComputer -Username $Username -ComputerID $ComputerID -ShortcutName $ShortcutName -userProperties $User -locations $locations
 
     # Clear input fields after successful creation
     $txtUsername.Clear()
     $txtComputerID.Clear()
     $txtRDPComputer.Clear()
+    $txtShortcutName.Clear()
     $chkDesktop.Checked = $false
     $chkHomeDirectory.Checked = $false
 })
