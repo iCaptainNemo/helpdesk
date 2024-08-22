@@ -293,26 +293,32 @@ while ($true) {
     cls
     # Display the last time the script was run
     Write-Host "Last run: $(Get-Date)"
-    # Display the count of online servers
-    Write-Host "Online Servers: $($onlineServers.Count)" -ForegroundColor Green
-    Write-Host "" # Add space
 
-    # Display the list of offline servers with their offline duration and timestamp
-    Write-Host "Offline Servers:" -ForegroundColor Red
-    foreach ($row in $offlineTable) {
-        Write-Host "$($row.ServerName): Offline for $($row.OfflineTime) since $($row.OfflineTimestamp)" -ForegroundColor Red
-    }
-    Write-Host "" # Add space
+    # Conditional output based on server statuses
+    if ($offlineServers.Count -eq 0 -and $recentlyOnlineTable.Count -eq 0) {
+        Write-Host "All servers online" -ForegroundColor Green
+    } else {
+        # Display the count of online servers
+        Write-Host "Online Servers: $($onlineServers.Count)" -ForegroundColor Green
+        Write-Host "" # Add space
 
-    # Display the list of recently online servers within the last hour with their offline timestamp
-    Write-Host "Recently Online Servers (within the last hour):" -ForegroundColor Yellow
-    foreach ($row in $recentlyOnlineTable) {
-        $offlineDuration = [math]::Floor(($row.TimeOnline - $row.OfflineTimestamp).TotalMinutes)
-        $hours = [math]::Floor($offlineDuration / 60)
-        $remainingMinutes = $offlineDuration % 60
-        $offlineDurationText = if ($hours -gt 0) { "$hours hours, $remainingMinutes minutes" } else { "$offlineDuration minutes" }
+        # Display the list of offline servers with their offline duration and timestamp
+        Write-Host "Offline Servers:" -ForegroundColor Red
+        foreach ($row in $offlineTable) {
+            Write-Host "$($row.ServerName): Offline for $($row.OfflineTime) since $($row.OfflineTimestamp)" -ForegroundColor Red
+        }
+        Write-Host "" # Add space
 
-        Write-Host "$($row.ServerName) Offline since: $($row.OfflineTimestamp), back online: $($row.TimeOnline), was offline for $offlineDurationText" -ForegroundColor Yellow
+        # Display the list of recently online servers within the last hour with their offline timestamp
+        Write-Host "Recently Online Servers (within the last hour):" -ForegroundColor Yellow
+        foreach ($row in $recentlyOnlineTable) {
+            $offlineDuration = [math]::Floor(($row.TimeOnline - $row.OfflineTimestamp).TotalMinutes)
+            $hours = [math]::Floor($offlineDuration / 60)
+            $remainingMinutes = $offlineDuration % 60
+            $offlineDurationText = if ($hours -gt 0) { "$hours hours, $remainingMinutes minutes" } else { "$offlineDuration minutes" }
+
+            Write-Host "$($row.ServerName) Offline since: $($row.OfflineTimestamp), back online: $($row.TimeOnline), was offline for $offlineDurationText" -ForegroundColor Yellow
+        }
     }
         
     Write-Host "" # Add space
