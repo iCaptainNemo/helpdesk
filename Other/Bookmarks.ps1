@@ -1,3 +1,5 @@
+#This script allows to copy the Google Chrome and Edge Bookmarks from Computer A to B when both computers are available on the network. 
+
 # Import the Active Directory module
 Import-Module ActiveDirectory
 
