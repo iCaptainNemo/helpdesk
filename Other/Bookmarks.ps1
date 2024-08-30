@@ -1,4 +1,5 @@
 #This script allows to copy the Google Chrome and Edge Bookmarks from Computer A to B when both computers are available on the network. 
+# You can use this also to transfer from a Computer A to VDI.
 
 # Import the Active Directory module
 Import-Module ActiveDirectory
@@ -12,7 +13,7 @@ function Prompt-ForValidComputer {
         $computerName = Read-Host $PromptMessage
         $computerExists = (Get-ADComputer -Filter { Name -eq $computerName } -ErrorAction SilentlyContinue) -ne $null
         if (-not $computerExists) {
-            Write-Host "The computer '$computerName' does not exist in Active Directory. Please try again."
+            Write-Host "The computer '$computerName' does not exist in Active Directory. Please try again." -ForegroundColor Red
         }
     } while (-not $computerExists)
     return $computerName
@@ -24,7 +25,7 @@ function Prompt-ForValidEmployeeID {
         $employeeID = Read-Host "Enter the EmployeeID"
         $userExists = (Get-ADUser -Filter { SamAccountName -eq $employeeID } -ErrorAction SilentlyContinue) -ne $null
         if (-not $userExists) {
-            Write-Host "The Employee ID '$employeeID' does not exist in Active Directory. Please try again."
+            Write-Host "The Employee ID '$employeeID' does not exist in Active Directory. Please try again." -ForegroundColor Red
         }
     } while (-not $userExists)
     return $employeeID
@@ -35,7 +36,7 @@ function Prompt-ForValidBrowserChoice {
     do {
         $browserChoice = Read-Host "Choose the browser (1 for Chrome, 2 for Edge)"
         if ($browserChoice -notin @('1', '2')) {
-            Write-Host "Invalid choice. Please enter 1 for Chrome or 2 for Edge."
+            Write-Host "Invalid choice. Please enter 1 for Chrome or 2 for Edge." -ForegroundColor Red
         }
     } while ($browserChoice -notin @('1', '2'))
     return $browserChoice
