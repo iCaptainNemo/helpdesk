@@ -159,7 +159,7 @@ do {
         $lockedOut | Sort-Object AccountLockoutTime -Descending | ForEach-Object {
             $lockoutDuration = ($currentTime - $_.AccountLockoutTime).TotalMinutes
             $color = if ($lockoutDuration -le 10) { "Yellow" } else { "White" }
-            Write-Host ("{0,-20} {1,-30} {2,-30}" -f $_.SamAccountName, $_.Name, $_.AccountLockoutTime) -ForegroundColor $color
+            Write-Host ("{0,-5} {1,-25} {2,-20} {3,-25}" -f $_.SamAccountName, $_.Name, $_.Department, $_.AccountLockoutTime) -ForegroundColor $color
         }
     } else {
         Write-Host "0 recent locked-out users" -ForegroundColor Green
