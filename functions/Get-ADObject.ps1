@@ -19,7 +19,7 @@ function Get-ADObjectType {
 
     try {
         # Retrieve the objects from Active Directory with all properties
-        $adObjects = Get-ADObject -Filter "Name -like '$object' -or SamAccountName -like '$object'" -Properties *
+        $adObjects = Get-ADObject -Filter "Name -like '$object' -or SamAccountName -like '$object' -or (objectClass -eq 'printQueue' -and Name -like '*$object')" -Properties *
 
         if ($null -eq $adObjects) {
             throw "No objects found matching: $object"
