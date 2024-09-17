@@ -1,0 +1,26 @@
+User:
+    - UserID: $UserID
+    - TimeHelped: $DateTime
+    - UserUpdated:  $DateTime 
+    - TimesUnlocked: 0
+    - PasswordResets: 0
+Properties:
+    - AccountLockoutTime: $AccountLockoutTime
+    - Address: $Address
+    - BadpasswordCount: $BadpasswordCount
+    - City: $City
+    - Created: $DateTime
+    - CreatedBy: $UserID
+    - Department: $Department
+    - Email: $Email
+    - FirstName: $FirstName
+    - lastLogonTimestamp: $lastLogonTimestamp
+    - LastName: $LastName
+    - LastUpdated: $DateTime
+    - LastbadpasswordTime: $LastbadpasswordTime
+    - Phone: $Phone
+    - Tite: $Title
+Memberof:
+
+
+Computers:

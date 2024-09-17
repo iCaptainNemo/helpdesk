@@ -1,0 +1,4 @@
+Admin:
+    - User: $AdminUser
+    - Temppassword: <PLACEHOLDER>
+    - Logfile: <PLACEHOLDER>
