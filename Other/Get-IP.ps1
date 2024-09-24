@@ -10,6 +10,7 @@ $dnsResolvers | ForEach-Object { Write-Host $_ }
 do {
     # Ask for a network computer to resolve
     $networkComputer = Read-Host "Enter the network computer to resolve"
+    cls
 
     # Resolve the network computer using each DNS resolver
     foreach ($dnsResolver in $dnsResolvers) {
@@ -22,9 +23,5 @@ do {
             Write-Host "Failed to resolve $networkComputer using DNS resolver $dnsResolver"
         }
     }
-
-    # Pause to allow user to copy the IP addresses
-    pause
-    cls
 
 } while ($true)
