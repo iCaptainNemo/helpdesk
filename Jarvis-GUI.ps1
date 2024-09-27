@@ -7,23 +7,14 @@ if ($Debug) {
     $DebugPreference = 'Continue'
 }
 
-# # Import necessary assemblies
-# Add-Type -AssemblyName System.Windows.Forms
-# Add-Type -AssemblyName System.Drawing
+# Import functions
+. .\functions\Hide-Console.ps1
+. .\functions\Manage-DB.ps1
+. .\functions\Manage-AdminUser.ps1
+. .\functions\Manage-User.ps1
 
-# # Hide the console window
-# Add-Type -Name Window -Namespace Console -MemberDefinition '
-# [DllImport("Kernel32.dll")]
-# public static extern IntPtr GetConsoleWindow();
-
-# [DllImport("user32.dll")]
-# public static extern bool ShowWindow(IntPtr hWnd, Int32 nCmdShow);
-# '
-
-# $console = [Console.Window]::GetConsoleWindow()
-
-# # 0 hide
-# [Console.Window]::ShowWindow($console, 0) | Out-Null
+## Call functions needed at start
+# Hide-Console
 
 
 # Import ActiveDirectory module
@@ -36,27 +27,12 @@ try {
     exit 1
 }
 
-# Install the powershell-yaml module if it is not already installed
-if (-not (Get-Module -ListAvailable -Name powershell-yaml)) {
-    try {
-        Write-Debug "Installing powershell-yaml module."
-        Install-Module -Name powershell-yaml -Force -Scope CurrentUser -ErrorAction Stop
-        Write-Verbose "powershell-yaml module installed successfully."
-    } catch {
-        Write-Error "Failed to install powershell-yaml module: $_"
-        exit 1
-    }
+# Import PSSQLite module
+if (-not (Get-Module -ListAvailable -Name PSSQLite)) {
+    Install-Module -Name PSSQLite -Force -Scope CurrentUser -ErrorAction Stop
 }
+Import-Module -Name PSSQLite -ErrorAction Stop
 
-# Import the powershell-yaml module
-try {
-    Write-Debug "Importing powershell-yaml module."
-    Import-Module -Name powershell-yaml -ErrorAction Stop
-    Write-Verbose "powershell-yaml module imported successfully."
-} catch {
-    Write-Error "Failed to import powershell-yaml module: $_"
-    exit 1
-}
 
 # Get the current domain and enviroment type
 try {
@@ -78,126 +54,33 @@ try {
         }
 }
 
-# Config checks for admin, tempuser,temp computer, watched items.
-$AdminUser = $env:USERNAME
-$configs = ".\Config"
-$Templates = ".\Templates"
-$Admin_Template = "$Templates\Admin_template.yaml"
-$Admin = "$configs\${AdminUser}_Config.yaml"
-$User_Template = "$Templates\User_Template.yaml"
-$User = ".\Users\${UserID}.yaml"
-#$CurrentDomainConfig = "$configs\$CurrentDomain.ymal"
-#$Adpermissions = "$configs\$Ad-permissions.ymal"
 
-# Function to create the config file from the template
-function Create-ConfigFromTemplate {
-    param (
-        [string]$ConfigFile,
-        [string]$TemplateFile
-    )
+# Database path
+$dbPath = ".\db\database.db"
 
-    # Read the template content into a PowerShell object
-    $yamlContent = Get-Content -Path $TemplateFile -Raw | ConvertFrom-Yaml
+# Ensure the database and schema are correct
+Manage-DB -dbPath $dbPath
 
-    # Convert the object back to YAML and save it to the new config file
-    $yamlContent | ConvertTo-Yaml | Set-Content -Path $ConfigFile
+# Ensure the admin user exists, prompt for null values, and return the row
+$AdminUser = $env:USERNAME.ToUpper()
+$admin = Manage-AdminUser -dbPath $dbPath -AdminUser $AdminUser
 
-    Write-Host "$ConfigFile created from template."
-}
-
-# Function to validate the existing config file and prompt for missing values
-function Validate-Config {
-    param (
-        [string]$ConfigFile
-    )
-
-    # Read the config file content into a PowerShell object
-    $yamlContent = Get-Content -Path $ConfigFile -Raw | ConvertFrom-Yaml
-
-    # Function to update placeholder values and replace variables
-    function UpdateValues {
-        param (
-            [hashtable]$content
-        )
-
-        $updateRequired = $false
-        $keysToUpdate = @()
-
-        foreach ($key in $content.Keys) {
-            Write-Debug "Checking key: $key with value: $($content[$key])"
-            if ($content[$key] -eq '<PLACEHOLDER>') {
-                Write-Debug "Found placeholder for key: $key"
-                $newValue = Read-Host "Enter value for $key"
-                $keysToUpdate += @{ Key = $key; Value = $newValue }
-                $updateRequired = $true
-            } elseif ($content[$key] -match '^\$') {
-                $variableName = $content[$key].TrimStart('$')
-                $variableValue = Get-Variable -Name $variableName -ErrorAction SilentlyContinue
-                if ($variableValue) {
-                    $keysToUpdate += @{ Key = $key; Value = $variableValue.Value }
-                    $updateRequired = $true
-                }
-            }
-        }
-
-        foreach ($update in $keysToUpdate) {
-            $content[$update.Key] = $update.Value
-        }
-
-        return $updateRequired
-    }
-
-    # Check for placeholder values and prompt for missing values
-    $updateRequired = $false
-    foreach ($item in $yamlContent.Admin) {
-        $updateRequired = (UpdateValues -content $item) -or $updateRequired
-    }
-
-    # Update the config file if any values were missing
-    if ($updateRequired) {
-        $yamlContent | ConvertTo-Yaml | Set-Content -Path $ConfigFile
-        Write-Host "$ConfigFile updated with missing values."
-    } else {
-        Write-Host "No updates required for $ConfigFile."
-    }
-}
-
-if (-Not (Test-Path -Path $Admin)) {
-    Write-Host "$Admin does not exist. Creating from template."
-    Create-ConfigFromTemplate -ConfigFile $Admin -TemplateFile $Admin_Template
-}
-# Print the file path that is about to be validated
-Write-Host "Validating config file: $Admin"
-
-# Validate the existing or newly created config file
-Validate-Config -ConfigFile $Admin
+# Print out the row for the current admin user
+Write-Host "Admin user Settings:"
+$admin.userID
+$admin.temppassword
+$admin.logfile
 
 # Prompt for userID
 $userID = Read-Host "Enter the userID"
+$userID = $userID.ToUpper()
 
-# Get user properties using the get-adobject.ps1 script
-$userProperties = & ".\functions\get-adobject.ps1" $userID
+# Ensure the user exists or is updated in the database and get the user row
+#$user = Manage-User -dbPath $dbPath -userID $userID
+$user = Fetch-User $userID
 
-Write-Host $userProperties
+$user 
+write-host ""
+$user.givenName
+Write-Host "End of script"
 pause
-
-if (-not $userProperties) {
-    Write-Error "Failed to retrieve properties for userID: $userID"
-    exit 1
-}
-
-# Define paths for user template and user config
-$User_Template = "$Templates\User_Template.yaml"
-$User = ".\Users\${UserID}.yaml"
-
-# Create the user config file from the template
-Create-ConfigFromTemplate -ConfigFile $User -TemplateFile $User_Template
-
-
-
-# Validate the user config file and fill in variables
-Validate-Config -ConfigFile $User
-
-# Write the new user.yaml file to the console
-Write-Host "New user config file created: $User"
-Pause

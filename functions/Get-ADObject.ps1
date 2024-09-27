@@ -1,8 +1,3 @@
-# Get an active directory object instead of using every specific cmdlet
-# Usage: ./Get-ADObject.ps1 "USERID" | Format-Table -AutoSize
-# $properties = Get-ADObjectType -object $object
-# $properties | Format-Table -AutoSize
-
 # Import the Active Directory module
 Import-Module ActiveDirectory
 
@@ -19,27 +14,23 @@ function Get-ADObjectType {
 
     try {
         # Retrieve the objects from Active Directory with all properties
-        $adObjects = Get-ADObject -Filter "Name -like '$object' -or SamAccountName -like '$object*' -or (objectClass -eq 'printQueue' -and Name -like '*$object')" -Properties *
+        $adObject = Get-ADObject -Filter "Name -like '$object' -or SamAccountName -like '$object*' -or (objectClass -eq 'printQueue' -and Name -like '*$object')" -Properties *
 
-        if ($null -eq $adObjects) {
+        if ($null -eq $adObject) {
             throw "No objects found matching: $object"
         }
 
-        # Return the properties as an array of custom objects
-        $properties = $adObjects | ForEach-Object {
-            $_.PSObject.Properties | ForEach-Object {
-                [PSCustomObject]@{
-                    Property = $_.Name
-                    Value    = $_.Value
-                }
-            }
+        # Create a custom object with properties
+        $properties = [PSCustomObject]@{}
+        $adObject.PSObject.Properties | ForEach-Object {
+            $properties | Add-Member -MemberType NoteProperty -Name $_.Name -Value $_.Value
         }
 
         return $properties
 
     } catch {
         Write-Host "Error: $_" -ForegroundColor Red
-        return @()
+        return $null
     }
 }
 

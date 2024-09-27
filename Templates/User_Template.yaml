@@ -5,21 +5,24 @@ User:
     - TimesUnlocked: 0
     - PasswordResets: 0
 Properties:
-    - AccountLockoutTime: $AccountLockoutTime
-    - Address: $Address
-    - BadpasswordCount: $BadpasswordCount
+    - AccountLockoutTime: $lockoutTime
+    - Account Created: $createTimeStamp
+    - Address: $streetAddress
+    - BadpasswordCount: $badPwdCount
     - City: $City
     - Created: $DateTime
     - CreatedBy: $UserID
-    - Department: $Department
-    - Email: $Email
-    - FirstName: $FirstName
+    - Department: $department
+    - Email: $mail
+    - FirstName: $givenName
+    - HomeDirectory: $homeDirectory
     - lastLogonTimestamp: $lastLogonTimestamp
-    - LastName: $LastName
+    - LastName: $sn
     - LastUpdated: $DateTime
     - LastbadpasswordTime: $LastbadpasswordTime
-    - Phone: $Phone
-    - Tite: $Title
+    - PasswordLastSet: $pwdLastSet
+    - Phone: $telephoneNumber
+    - Tite: $title
 Memberof:
 
 
