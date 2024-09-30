@@ -146,6 +146,8 @@ function Asset-Control {
         Write-Host "12: Set default PDF application to Adobe"
         Write-Host "13: Get Uptime"
         Write-Host "14: Group Policy Pull"
+        Write-Host "15: Copy Browsers Bookmarks"
+        Write-Host "16: Get Bitlocker Recovery Key"
         Write-Host "66: Remote Restart"
         Write-Host "0. Back to Main Menu"
 
@@ -370,13 +372,19 @@ function Asset-Control {
                         switch ($destinationChoice) {
                             'Desktop' {
                                 $destfile = "\\$computerName\c$\Users\$userID\Desktop\ChromeBookmarks"
+                                Copy-Item -Path $sourcefile -Destination $destfile
+                                Write-Host "Browser data has been copied to $destfile"
                             }
                             'HomeShare' {
                                 $destfile = "$($adUser.HomeDirectory)\ChromeBookmarks"
+                                Copy-Item -Path $sourcefile -Destination $destfile
+                                Write-Host "Browser data has been copied to $destfile"
                             }
                             'RemotePC' {
                                 $destComputerName = Read-Host "Enter the remote computer name"
                                 $destfile = "\\$destComputerName\c$\Users\$userID\Desktop\ChromeBookmarks"
+                                Copy-Item -Path $sourcefile -Destination $destfile
+                                Write-Host "Browser data has been copied to $destfile"
                             }
                         }
                         # Rest of the code...
@@ -386,13 +394,19 @@ function Asset-Control {
                         switch ($destinationChoice) {
                             'Desktop' {
                                 $destfile = "\\$computerName\c$\Users\$userID\Desktop\EdgeBookmarks"
+                                Copy-Item -Path $sourcefile -Destination $destfile
+                                Write-Host "Browser data has been copied to $destfile"
                             }
                             'HomeShare' {
                                 $destfile = "$($adUser.HomeDirectory)\EdgeBookmarks"
+                                Copy-Item -Path $sourcefile -Destination $destfile
+                                Write-Host "Browser data has been copied to $destfile"
                             }
                             'RemotePC' {
                                 $destComputerName = Read-Host "Enter the remote computer name"
                                 $destfile = "\\$destComputerName\c$\Users\$userID\Desktop\EdgeBookmarks"
+                                Copy-Item -Path $sourcefile -Destination $destfile
+                                Write-Host "Browser data has been copied to $destfile"
                             }
                         }
                         # Rest of the code...
@@ -404,15 +418,24 @@ function Asset-Control {
                             'Desktop' {
                                 $destfileChrome = "\\$computerName\c$\Users\$userID\Desktop\ChromeBookmarks"
                                 $destfileEdge = "\\$computerName\c$\Users\$userID\Desktop\EdgeBookmarks"
+                                Copy-Item -Path $sourcefileChrome -Destination $destfileChrome
+                                Copy-Item -Path $sourcefileEdge -Destination $destfileEdge
+                                Write-Host "Browser data has been copied to $destfileChrome and $destfileEdge"
                             }
                             'HomeShare' {
                                 $destfileChrome = "$($adUser.HomeDirectory)\ChromeBookmarks"
                                 $destfileEdge = "$($adUser.HomeDirectory)\EdgeBookmarks"
+                                Copy-Item -Path $sourcefileChrome -Destination $destfileChrome
+                                Copy-Item -Path $sourcefileEdge -Destination $destfileEdge
+                                Write-Host "Browser data has been copied to $destfileChrome and $destfileEdge"
                             }
                             'RemotePC' {
                                 $destComputerName = Read-Host "Enter the remote computer name"
                                 $destfileChrome = "\\$destComputerName\c$\Users\$userID\Desktop\ChromeBookmarks"
                                 $destfileEdge = "\\$destComputerName\c$\Users\$userID\Desktop\EdgeBookmarks"
+                                Copy-Item -Path $sourcefileChrome -Destination $destfileChrome
+                                Copy-Item -Path $sourcefileEdge -Destination $destfileEdge
+                                Write-Host "Browser data has been copied to $destfileChrome and $destfileEdge"
                             }
                         }
                         # Rest of the code...
@@ -426,6 +449,13 @@ function Asset-Control {
                     }
                 }
                 break
+            }
+            '16'{
+                # Get the Recovery key info
+                $bitLockerRecoveryInfo = Get-ADObject -Filter {objectclass -eq 'msFVE-RecoveryInformation'} -SearchBase $(Get-AdComputer $computerName).DistinguishedName -Properties 'msFVE-RecoveryPassword'
+                # Prepare the recovery password
+                $recoveryPassword = if ($bitLockerRecoveryInfo) { $bitLockerRecoveryInfo | Select-Object -ExpandProperty msFVE-RecoveryPassword } else { "No recovery info found" }
+                Write-Host "`n The Bitlocker key is: `n $recoveryPassword `n"
             }
             '66' {
                 $minutes = Read-Host "Please enter the number of minutes before restart"
