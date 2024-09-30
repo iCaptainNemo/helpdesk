@@ -157,18 +157,14 @@ function Fetch-User {
     # Use the global $dbPath variable
     $global:dbPath
 
-    Write-debug "Fetching user '$userID' from the database."
-    # Check if the user exists
+    Write-Debug "Fetching user '$userID' from the database."
+
+    # Always call Manage-User to ensure the user is inserted or updated
+    Manage-User -dbPath $dbPath -userID $userID
+
+    # Fetch the user row after Manage-User has run
     $fetchUserQuery = "SELECT * FROM Users WHERE UserID = '$userID';"
     $userRow = Invoke-SqliteQuery -DataSource $dbPath -Query $fetchUserQuery
-
-    if ($userRow.Count -eq 0) {
-        # User does not exist, call Manage-User to insert or update the user
-        Manage-User -dbPath $dbPath -userID $userID
-
-        # Fetch the user row again after Manage-User has run
-        $userRow = Invoke-SqliteQuery -DataSource $dbPath -Query $fetchUserQuery
-    }
 
     return $userRow
 }
