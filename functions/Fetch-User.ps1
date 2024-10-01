@@ -44,3 +44,7 @@ function Get-User {
 
     return $userRow
 }
+
+# Main script execution
+$user = Get-User -dbPath $dbPath -userID $userID
+$user

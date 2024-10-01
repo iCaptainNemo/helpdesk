@@ -1,11 +1,15 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const path = require('path');
 
 const app = express();
 app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({ extended: true }));
 
 const dbPath = './db/database.db'; // Define dbPath here
+
+// Serve static files from the "public" directory
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Import routes
 const fetchUserRoute = require('./routes/fetchUser');
