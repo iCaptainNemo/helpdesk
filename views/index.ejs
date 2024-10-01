@@ -74,11 +74,7 @@
     <div class="content" id="user-prop">
         <h2>User Properties</h2>
         <% if (typeof userProperties !== 'undefined') { %>
-            <ul>
-                <% Object.keys(userProperties).forEach(function(key) { %>
-                    <li><strong><%= key %>:</strong> <%= userProperties[key] %></li>
-                <% }); %>
-            </ul>
+            <pre><%= userProperties %></pre>
         <% } else { %>
             <p>No user properties found.</p>
         <% } %>

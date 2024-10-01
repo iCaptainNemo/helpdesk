@@ -1,9 +1,9 @@
 const { exec } = require('child_process');
 
-function executePowerShellScript(scriptPath, params = {}) {
-    const paramString = Object.entries(params)
-        .map(([key, value]) => `-${key} '${value}'`)
-        .join(' ');
+function executePowerShellScript(scriptPath, params = []) {
+    const paramString = params
+        .filter(param => param) // Omit empty parameters
+        .join(' '); // Join parameters without wrapping in quotes
 
     const command = `powershell.exe -NoProfile -ExecutionPolicy Bypass -File ${scriptPath} ${paramString}`;
 
