@@ -1,0 +1,18 @@
+{
+  "name": "helpdesk-gui",
+  "version": "1.0.0",
+  "description": "This repository contains a collection of domain-agnostic PowerShell scripts designed to assist helpdesk teams with common tasks and procedures.",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.20.3",
+    "ejs": "^3.1.10",
+    "express": "^4.21.0",
+    "node-powershell": "^5.0.1"
+  }
+}

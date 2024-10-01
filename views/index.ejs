@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Index</title>
+</head>
+<body>
+    <h1>Welcome</h1>
+    <form action="/fetch-user" method="post">
+        <label for="userID">User ID:</label>
+        <input type="text" id="userID" name="userID">
+        <button type="submit">Fetch User</button>
+    </form>
+
+    <form action="/test" method="post">
+        <button type="submit">Test</button>
+    </form>
+
+    <% if (typeof testOutput !== 'undefined') { %>
+        <h2>Test Output:</h2>
+        <p><%= testOutput %></p>
+    <% } %>
+</body>
+</html>

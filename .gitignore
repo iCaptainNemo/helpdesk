@@ -2,3 +2,4 @@
 .env/*
 Config/*
 *.db
+/node_modules

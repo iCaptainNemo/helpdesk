@@ -28,10 +28,19 @@ try {
 }
 
 # Import PSSQLite module
-if (-not (Get-Module -ListAvailable -Name PSSQLite)) {
-    Install-Module -Name PSSQLite -Force -Scope CurrentUser -ErrorAction Stop
+try {
+    if (-not (Get-Module -ListAvailable -Name PSSQLite)) {
+        Write-Debug "PSSQLite module not found. Installing PSSQLite module."
+        Install-Module -Name PSSQLite -Force -Scope CurrentUser -ErrorAction Stop
+        Write-Verbose "PSSQLite module installed successfully."
+    }
+    Write-Debug "Importing PSSQLite module."
+    Import-Module -Name PSSQLite -ErrorAction Stop
+    Write-Verbose "PSSQLite module imported successfully."
+} catch {
+    Write-Error "Failed to import or install PSSQLite module: $_"
+    exit 1
 }
-Import-Module -Name PSSQLite -ErrorAction Stop
 
 
 # Get the current domain and enviroment type
