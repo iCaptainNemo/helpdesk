@@ -1,23 +1,106 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Index</title>
+    <title>Jarvis</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .header {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .form-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .navbar {
+            display: flex;
+            background-color: #333;
+            overflow: hidden;
+            justify-content: center;
+        }
+        .navbar a {
+            padding: 14px 20px;
+            text-align: center;
+            text-decoration: none;
+            color: white;
+            cursor: pointer;
+        }
+        .navbar a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+        .content {
+            padding: 20px;
+            display: none; /* Hide all content sections by default */
+        }
+        .content.active {
+            display: block; /* Show the active content section */
+        }
+    </style>
 </head>
 <body>
-    <h1>Welcome</h1>
-    <form action="/fetch-user" method="post">
-        <label for="userID">User ID:</label>
-        <input type="text" id="userID" name="userID">
-        <button type="submit">Fetch User</button>
-    </form>
+    <div class="header">
+        <h1>Helpdesk</h1>
+        <div class="form-container">
+            <form action="/fetch-user" method="post">
+                <label for="userID">User ID:</label>
+                <input type="text" id="userID" name="userID">
+                <button type="submit">Fetch User</button>
+            </form>
+        </div>
+    </div>
 
-    <form action="/test" method="post">
-        <button type="submit">Test</button>
-    </form>
+    <div class="navbar">
+        <a onclick="showSection('dashboard')">Dashboard</a>
+        <a onclick="showSection('user-prop')">User Properties</a>
+        <a onclick="showSection('placeholder')">Placeholder</a>
+    </div>
 
-    <% if (typeof testOutput !== 'undefined') { %>
-        <h2>Test Output:</h2>
-        <p><%= testOutput %></p>
-    <% } %>
+    <div class="content" id="dashboard">
+        <h2>Dashboard</h2>
+        <form id="testForm" action="/test" method="post">
+            <button type="submit">Test</button>
+        </form>
+        <% if (typeof testOutput !== 'undefined') { %>
+            <h2>Test Output:</h2>
+            <p><%= testOutput %></p>
+        <% } %>
+    </div>
+
+    <div class="content" id="user-prop">
+        <h2>User Properties</h2>
+        <% if (typeof userProperties !== 'undefined') { %>
+            <ul>
+                <% Object.keys(userProperties).forEach(function(key) { %>
+                    <li><strong><%= key %>:</strong> <%= userProperties[key] %></li>
+                <% }); %>
+            </ul>
+        <% } else { %>
+            <p>No user properties found.</p>
+        <% } %>
+    </div>
+
+    <div class="content" id="placeholder">
+        <h2>Placeholder</h2>
+        <p>This is a placeholder for a different view.</p>
+    </div>
+
+    <script>
+        // Function to show the selected section and hide others
+        function showSection(sectionId) {
+            const sections = document.querySelectorAll('.content');
+            sections.forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById(sectionId).classList.add('active');
+        }
+
+        // Show the dashboard section by default
+        showSection('dashboard');
+    </script>
 </body>
 </html>

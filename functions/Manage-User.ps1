@@ -26,6 +26,9 @@ try {
     Write-Error "Failed to import or install PSSQLite module: $_"
     exit 1
 }
+
+# Dot Source Get-ADObject function
+. "$PSScriptRoot\Get-ADObject.ps1"
 function Manage-User {
     param (
         [string]$dbPath,
@@ -36,7 +39,7 @@ function Manage-User {
     $userID = $userID.ToUpper()
 
     # Retrieve AD object
-    $adObject = .\functions\Get-ADObject.ps1 $userID
+    $adObject = ."$PSScriptRoot\Get-ADObject.ps1" $userID
 
     if ($null -eq $adObject) {
         Write-Error "Failed to retrieve AD object for userID: $userID"
@@ -175,21 +178,21 @@ function Manage-User {
     }
 }
 
-# Function to fetch user from the Users table
-function Fetch-User {
-    param (
-        [string]$dbPath,
-        [string]$userID
-    )
+# # Function to fetch user from the Users table
+# function Fetch-User {
+#     param (
+#         [string]$dbPath,
+#         [string]$userID
+#     )
     
-    Write-Debug "Fetching user '$userID' from the database."
+#     Write-Debug "Fetching user '$userID' from the database."
 
-    # Always call Manage-User to ensure the user is inserted or updated
-    Manage-User -dbPath $dbPath -userID $userID
+#     # Always call Manage-User to ensure the user is inserted or updated
+#     Manage-User -dbPath $dbPath -userID $userID
 
-    # Fetch the user row after Manage-User has run
-    $fetchUserQuery = "SELECT * FROM Users WHERE UserID = '$userID';"
-    $userRow = Invoke-SqliteQuery -DataSource $dbPath -Query $fetchUserQuery
+#     # Fetch the user row after Manage-User has run
+#     $fetchUserQuery = "SELECT * FROM Users WHERE UserID = '$userID';"
+#     $userRow = Invoke-SqliteQuery -DataSource $dbPath -Query $fetchUserQuery
 
-    return $userRow
-}
+#     return $userRow
+# }

@@ -4,16 +4,14 @@ const { executePowerShellScript } = require('../powershell');
 
 router.post('/fetch-user', async (req, res) => {
     const userID = req.body.userID.toUpperCase();
-    const scriptPath = './functions/Manage-User.ps1';
+    const scriptPath = './functions/Get-ADObject.ps1';
     const params = {
-        dbPath: req.dbPath, // Use dbPath from request object
-        userID: userID,
-        functionName: 'Fetch-User'
+        object: userID
     };
 
     try {
         const userProperties = await executePowerShellScript(scriptPath, params);
-        res.render('user-properties', { userProperties });
+        res.render('index', { userProperties: userProperties });
     } catch (error) {
         console.error(error);
         res.send(`Error: ${error}`);
