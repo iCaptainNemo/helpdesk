@@ -1,4 +1,4 @@
-.env/*
+.env
 Config/*
 /node_modules
 /frontend/build
