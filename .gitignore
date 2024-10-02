@@ -1,5 +1,5 @@
-.github/workflows/
 .env/*
 Config/*
-*.db
 /node_modules
+/frontend/build
+/backend/db/database.db

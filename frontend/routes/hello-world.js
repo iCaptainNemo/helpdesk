@@ -4,10 +4,9 @@ const { executePowerShellScript } = require('../powershell');
 
 router.post('/test', async (req, res) => {
     const scriptPath = './functions/hello-world.ps1';
-    const params = {};
 
     try {
-        const output = await executePowerShellScript(scriptPath, params);
+        const output = await executePowerShellScript(scriptPath);
         res.render('index', { testOutput: output });
     } catch (error) {
         console.error(error);

@@ -44,28 +44,30 @@
         <form id="testForm" action="/test" method="post">
             <button type="submit">Test</button>
         </form>
-        <% if (typeof testOutput !== 'undefined') { %>
-            <h2>Test Output:</h2>
-            <p><%= testOutput %></p>
-        <% } %>
+        <div id="testOutputContainer">
+            <% if (typeof testOutput !== 'undefined') { %>
+                <h2>Test Output:</h2>
+                <p><%= testOutput %></p>
+            <% } %>
+        </div>
     </div>
 
     <div class="content" id="user-prop">
         <h2>User Properties</h2>
-        <% if (typeof userProperties !== 'undefined') { %>
-            <pre><%= userProperties %></pre>
-        <% } else { %>
-            <p>No user properties found.</p>
-        <% } %>
+        <div class="loading-screen" id="loadingScreen">Loading...</div>
+        <div id="userPropertiesContainer">
+            <% if (typeof userProperties !== 'undefined') { %>
+                <pre><%= userProperties %></pre>
+            <% } else { %>
+                <p>No user properties found.</p>
+            <% } %>
+        </div>
     </div>
 
     <div class="content" id="placeholder">
         <h2>Placeholder</h2>
         <p>This is a placeholder for a different view.</p>
     </div>
-
-    <!-- Loading screen -->
-    <div class="loading-screen" id="loadingScreen">Loading...</div>
 
     <script>
         // Function to show the selected section and hide others
@@ -84,6 +86,9 @@
         document.getElementById('fetchUserForm').addEventListener('submit', function(event) {
             event.preventDefault(); // Prevent the default form submission
 
+            // Show the User Properties view immediately
+            showSection('user-prop');
+
             // Show the loading screen
             document.getElementById('loadingScreen').style.display = 'block';
 
@@ -97,19 +102,37 @@
             .then(response => response.text())
             .then(data => {
                 // Update the user properties section with the response data
-                document.getElementById('user-prop').innerHTML = data;
+                document.getElementById('userPropertiesContainer').innerHTML = data;
 
                 // Hide the loading screen
                 document.getElementById('loadingScreen').style.display = 'none';
-
-                // Switch to the User Properties view
-                showSection('user-prop');
             })
             .catch(error => {
                 console.error('Error:', error);
 
                 // Hide the loading screen in case of error
                 document.getElementById('loadingScreen').style.display = 'none';
+            });
+        });
+
+        // Handle test form submission with AJAX
+        document.getElementById('testForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent the default form submission
+
+            const form = event.target;
+            const formData = new FormData(form);
+
+            fetch(form.action, {
+                method: form.method,
+                body: formData
+            })
+            .then(response => response.text())
+            .then(data => {
+                // Update the test output section with the response data
+                document.getElementById('testOutputContainer').innerHTML = data;
+            })
+            .catch(error => {
+                console.error('Error:', error);
             });
         });
     </script>

@@ -9,7 +9,7 @@ router.post('/fetch-user', async (req, res) => {
 
     try {
         const userProperties = await executePowerShellScript(scriptPath, params);
-        res.render('index', { userProperties });
+        res.send(`<pre>${userProperties}</pre>`); // Return only the user properties
     } catch (error) {
         console.error(error);
         res.send(`Error: ${error}`);
