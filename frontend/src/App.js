@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import axios from 'axios';
 import socketIOClient from 'socket.io-client';
 import './styles.css'; // Import the CSS file
 import Header from './Header';
@@ -50,9 +49,16 @@ function App() {
         const formData = new FormData(form);
         const data = Object.fromEntries(formData.entries());
         try {
-          const response = await axios.post(form.action, data);
+          const response = await fetch(form.action, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+          });
+          const result = await response.text();
           // Update the user properties section with the response data
-          document.getElementById('userPropertiesContainer').innerHTML = response.data;
+          document.getElementById('userPropertiesContainer').innerHTML = result;
         } catch (error) {
           console.error('Error:', error);
         } finally {
@@ -71,9 +77,16 @@ function App() {
         const formData = new FormData(form);
         const data = Object.fromEntries(formData.entries());
         try {
-          const response = await axios.post(form.action, data);
+          const response = await fetch(form.action, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+          });
+          const result = await response.text();
           // Update the test output section with the response data
-          document.getElementById('testOutputContainer').innerHTML = response.data;
+          document.getElementById('testOutputContainer').innerHTML = result;
         } catch (error) {
           console.error('Error:', error);
         }

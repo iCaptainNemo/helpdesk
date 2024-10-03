@@ -1,12 +1,22 @@
 import React from 'react';
-import axios from 'axios';
 
 const Content = () => {
   const handleHelloWorldButtonClick = async (event) => {
     event.preventDefault();
     try {
-      const response = await axios.post('/api/hello-world');
-      document.getElementById('helloWorldOutputContainer').innerText = response.data.message;
+      const response = await fetch('/api/hello-world', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const data = await response.json();
+      document.getElementById('helloWorldOutputContainer').innerText = data.message;
     } catch (error) {
       console.error('Error fetching hello world output:', error);
       document.getElementById('helloWorldOutputContainer').innerText = 'Error fetching hello world output';

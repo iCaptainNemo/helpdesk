@@ -3,8 +3,10 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const http = require('http');
 const socketIo = require('socket.io');
-const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors'); // Import the cors middleware
+
+const db = require('./db/init');
+const { insertOrUpdateUser, fetchUser } = require('./db/queries');
 
 const app = express();
 const server = http.createServer(app);
@@ -19,15 +21,6 @@ app.use(cors()); // Enable CORS for all routes
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-
-const dbPath = path.join(__dirname, 'db', 'database.db');
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-        console.error('Error opening database:', err.message);
-    } else {
-        console.log('Connected to the SQLite database.');
-    }
-});
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
