@@ -4,10 +4,18 @@ const path = require('path');
 const http = require('http');
 const socketIo = require('socket.io');
 const sqlite3 = require('sqlite3').verbose();
+const cors = require('cors'); // Import the cors middleware
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = socketIo(server, {
+    cors: {
+        origin: "http://localhost:3000", // Allow requests from this origin
+        methods: ["GET", "POST"]
+    }
+});
+
+app.use(cors()); // Enable CORS for all routes
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -27,6 +35,7 @@ app.use(express.static(path.join(__dirname, '../frontend/build')));
 // Import routes
 const fetchUserRoute = require('./routes/fetchUser');
 const helloWorldRoute = require('./routes/hello-world');
+const helloWorldMiddleware = require('./middleware/helloWorldMiddleware');
 
 // Use routes and pass db
 app.use((req, res, next) => {
@@ -35,7 +44,8 @@ app.use((req, res, next) => {
 });
 
 app.use('/api', fetchUserRoute);
-app.use('/api', helloWorldRoute);
+app.use('/api/hello-world', helloWorldRoute); // Use the new hello-world route
+app.use('/api', helloWorldMiddleware);
 
 // Catch-all handler to serve the React app
 app.get('*', (req, res) => {
@@ -50,7 +60,7 @@ io.on('connection', (socket) => {
     });
 });
 
-const PORT = process.env.PORT || 3001; //Backend server port
+const PORT = process.env.PORT || 3001; // Backend server port
 server.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });

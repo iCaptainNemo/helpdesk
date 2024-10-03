@@ -4,3 +4,4 @@ Config/*
 /frontend/build
 /frontend/node_modules
 /backend/db/database.db
+/backend/node_modules

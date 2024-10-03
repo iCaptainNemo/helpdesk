@@ -15,13 +15,19 @@ function executePowerShellScript(scriptPath, params = []) {
                 console.error(`exec error: ${error}`);
                 return reject(`exec error: ${error}\n${stderr}`);
             }
+            if (stderr) {
+                console.error(`stderr: ${stderr}`);
+            }
             if (!stdout) {
                 console.error('No output from PowerShell script');
                 return reject('No output from PowerShell script');
             }
+            console.log(`stdout: ${stdout}`); // Log the output for debugging
             resolve(stdout.trim()); // Return raw output
         });
     });
 }
 
-module.exports = { executePowerShellScript };
+module.exports = {
+    executePowerShellScript
+};

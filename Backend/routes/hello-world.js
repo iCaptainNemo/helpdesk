@@ -3,7 +3,7 @@ const router = express.Router();
 const path = require('path'); // Import the path module
 const { executePowerShellScript } = require('../powershell');
 
-router.get('/hello-world', async (req, res) => {
+router.post('/', async (req, res) => { // Changed to POST method
     const scriptPath = path.join(__dirname, '../functions/hello-world.ps1');
 
     try {

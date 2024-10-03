@@ -7,7 +7,7 @@ const Header = () => (
       <form id="fetchUserForm" action="/fetch-user" method="post">
         <label htmlFor="userID">User ID:</label>
         <input type="text" id="userID" name="userID" />
-        <button type="submit">Fetch User</button>
+        <button type="submit">Get User</button>
       </form>
     </div>
   </div>
