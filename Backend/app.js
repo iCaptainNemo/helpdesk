@@ -29,13 +29,15 @@ const db = new sqlite3.Database(dbPath, (err) => {
     }
 });
 
-// Serve static files from the React app
-app.use(express.static(path.join(__dirname, '../frontend/build')));
+// Serve static files from the public directory
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Import routes
 const fetchUserRoute = require('./routes/fetchUser');
 const helloWorldRoute = require('./routes/hello-world');
 const helloWorldMiddleware = require('./middleware/helloWorldMiddleware');
+const forbidden = require('./middleware/forbidden');
+const notFound = require('./middleware/notfound');
 
 // Use routes and pass db
 app.use((req, res, next) => {
@@ -47,10 +49,11 @@ app.use('/api', fetchUserRoute);
 app.use('/api/hello-world', helloWorldRoute); // Use the new hello-world route
 app.use('/api', helloWorldMiddleware);
 
-// Catch-all handler to serve the React app
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
-});
+// Middleware to handle 403 Forbidden errors
+app.use(forbidden);
+
+// Middleware to handle 404 Not Found errors
+app.use(notFound);
 
 // Socket.IO setup
 io.on('connection', (socket) => {
