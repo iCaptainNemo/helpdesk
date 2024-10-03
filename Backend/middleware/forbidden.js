@@ -1,10 +1,11 @@
 const path = require('path');
 
 const forbiddenMiddleware = (req, res, next) => {
-    if (!req.path.startsWith('/api')) {
-        res.status(403).sendFile(path.join(__dirname, '../public', '403.html'));
-    } else {
+    // Allow requests for static files from the public directory
+    if (req.path.startsWith('/api') || req.path.startsWith('/css') || req.path.startsWith('/static')) {
         next();
+    } else {
+        res.status(403).sendFile(path.join(__dirname, '../public', '403.html'));
     }
 };
 
