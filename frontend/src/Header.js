@@ -5,9 +5,9 @@ const Header = () => (
     <h1>Helpdesk</h1>
     <div className="form-container">
       <form id="fetchUserForm" action="/fetch-user" method="post">
-        <label htmlFor="userID">User ID:</label>
+        <label htmlFor="userID">AD Object: </label>
         <input type="text" id="userID" name="userID" />
-        <button type="submit">Get User</button>
+        <button type="submit">Go</button>
       </form>
     </div>
   </div>
