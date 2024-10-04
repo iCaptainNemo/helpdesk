@@ -3,15 +3,15 @@ import React from 'react';
 const Header = () => {
   const handleFormSubmit = async (event) => {
     event.preventDefault();
-    const userID = event.target.userID.value;
+    const adObjectID = event.target.adObjectID.value;
 
     try {
-      const response = await fetch('/api/fetch-user', {
+      const response = await fetch('/api/fetch-adobject', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ userID })
+        body: JSON.stringify({ adObjectID })
       });
 
       if (!response.ok) {
@@ -21,8 +21,8 @@ const Header = () => {
       const data = await response.text();
       document.getElementById('userPropertiesContainer').innerHTML = `<pre>${data}</pre>`;
     } catch (error) {
-      console.error('Error fetching user properties:', error);
-      document.getElementById('userPropertiesContainer').innerHTML = 'Error fetching user properties';
+      console.error('Error fetching AD object properties:', error);
+      document.getElementById('userPropertiesContainer').innerHTML = 'Error fetching AD object properties';
     }
   };
 
@@ -30,9 +30,9 @@ const Header = () => {
     <div className="header">
       <h1>Helpdesk</h1>
       <div className="form-container">
-        <form id="fetchUserForm" onSubmit={handleFormSubmit}>
-          <label htmlFor="userID">AD Object: </label>
-          <input type="text" id="userID" name="userID" />
+        <form id="fetchAdObjectForm" onSubmit={handleFormSubmit}>
+          <label htmlFor="adObjectID">AD Object: </label>
+          <input type="text" id="adObjectID" name="adObjectID" />
           <button type="submit">Go</button>
         </form>
       </div>
