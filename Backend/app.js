@@ -4,6 +4,7 @@ const path = require('path');
 const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors'); // Import the cors middleware
+require('dotenv').config(); // Load environment variables from .env file
 
 const db = require('./db/init');
 const { insertOrUpdateUser, fetchUser } = require('./db/queries');
@@ -26,6 +27,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Import routes
+const fetchAdObjectRoute = require('./routes/fetchAdObject');
 const fetchUserRoute = require('./routes/fetchUser');
 const helloWorldRoute = require('./routes/hello-world');
 const helloWorldMiddleware = require('./middleware/helloWorldMiddleware');
@@ -38,7 +40,8 @@ app.use((req, res, next) => {
     next();
 });
 
-app.use('/api', fetchUserRoute);
+app.use('/api/fetch-adobject', fetchAdObjectRoute);
+app.use('/api/fetch-user', fetchUserRoute);
 app.use('/api/hello-world', helloWorldRoute); // Use the new hello-world route
 app.use('/api', helloWorldMiddleware);
 

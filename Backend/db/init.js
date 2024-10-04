@@ -4,6 +4,8 @@ require('dotenv').config();
 
 const dbPath = path.resolve(__dirname, process.env.DB_PATH || 'database.db');
 
+console.log(`Attempting to open database at path: ${dbPath}`);
+
 const tables = [
     {
         name: 'Admin',
@@ -45,6 +47,7 @@ const tables = [
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('Error opening database:', err.message);
+        console.error('Ensure the database file exists and has the correct permissions.');
     } else {
         console.log('Connected to the SQLite database.');
         initializeDatabase();
