@@ -50,7 +50,28 @@ function fetchUser(userID) {
     return executeQuery(query, [userID]);
 }
 
+function insertOrUpdateAdminUser(adminUser) {
+    const query = `
+        INSERT INTO Admin (userID, temppassword, logfile)
+        VALUES (?, ?, ?)
+        ON CONFLICT(userID) DO UPDATE SET
+            temppassword=excluded.temppassword,
+            logfile=excluded.logfile;
+    `;
+    const params = [
+        adminUser.userID, adminUser.temppassword, adminUser.logfile
+    ];
+    return executeQuery(query, params);
+}
+
+function fetchAdminUser(userID) {
+    const query = `SELECT * FROM Admin WHERE userID = ?;`;
+    return executeQuery(query, [userID]);
+}
+
 module.exports = {
     insertOrUpdateUser,
-    fetchUser
+    fetchUser,
+    insertOrUpdateAdminUser,
+    fetchAdminUser
 };

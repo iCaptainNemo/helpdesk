@@ -12,7 +12,9 @@ const tables = [
         columns: [
             'userID TEXT PRIMARY KEY',
             'temppassword TEXT',
-            'logfile TEXT'
+            'logfile TEXT',
+            'computername TEXT',
+            'scriptlocation TEXT'
         ]
     },
     {
