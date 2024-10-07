@@ -39,7 +39,7 @@ app.use(session({
 }));
 
 // Import routes
-const fetchAdObjectRoute = require('./routes/fetchADObject');
+const fetchADObjectRoute = require('./routes/fetchADObject');
 const fetchUserRoute = require('./routes/fetchUser');
 const helloWorldRoute = require('./routes/hello-world');
 const helloWorldMiddleware = require('./middleware/helloWorldMiddleware');
@@ -53,7 +53,7 @@ app.use((req, res, next) => {
     next();
 });
 
-app.use('/api/fetch-adobject', fetchAdObjectRoute);
+app.use('/api/fetch-adobject', fetchADObjectRoute);
 app.use('/api/fetch-user', fetchUserRoute);
 app.use('/api/hello-world', helloWorldRoute); // Use the new hello-world route
 app.use('/api', helloWorldMiddleware);

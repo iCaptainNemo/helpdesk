@@ -1,3 +1,4 @@
+const { body, validationResult } = require('express-validator');
 const db = require('./init');
 
 function executeQuery(query, params = []) {
@@ -52,14 +53,15 @@ function fetchUser(userID) {
 
 function insertOrUpdateAdminUser(adminUser) {
     const query = `
-        INSERT INTO Admin (userID, temppassword, logfile)
-        VALUES (?, ?, ?)
+        INSERT INTO Admin (userID, temppassword, logfile, computername)
+        VALUES (?, ?, ?, ?)
         ON CONFLICT(userID) DO UPDATE SET
-            temppassword=excluded.temppassword,
-            logfile=excluded.logfile;
+            temppassword=COALESCE(excluded.temppassword, Admin.temppassword),
+            logfile=COALESCE(excluded.logfile, Admin.logfile),
+            computername=COALESCE(excluded.computername, Admin.computername);
     `;
     const params = [
-        adminUser.userID, adminUser.temppassword, adminUser.logfile
+        adminUser.userID, adminUser.temppassword, adminUser.logfile, adminUser.computername
     ];
     return executeQuery(query, params);
 }

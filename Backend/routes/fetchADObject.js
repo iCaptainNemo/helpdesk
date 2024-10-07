@@ -3,7 +3,7 @@ const router = express.Router();
 const { executePowerShellScript } = require('../powershell');
 const sanitizeInput = require('../middleware/sanitizeInput');
 
-router.post('/fetch-adobject', sanitizeInput, async (req, res) => {
+router.post('/', sanitizeInput, async (req, res) => { // Changed to '/'
     const adObjectID = req.body.adObjectID.toUpperCase();
     const scriptPath = './functions/Get-ADObject.ps1';
     const params = [adObjectID]; // Pass adObjectID as a positional argument
