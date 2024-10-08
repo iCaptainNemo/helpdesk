@@ -17,11 +17,15 @@ const server = http.createServer(app);
 const io = socketIo(server, {
     cors: {
         origin: "http://localhost:3000", // Allow requests from this origin
-        methods: ["GET", "POST"]
+        methods: ["GET", "POST"],
+        credentials: true // Allow credentials (cookies, authorization headers, etc.)
     }
 });
 
-app.use(cors()); // Enable CORS for all routes
+app.use(cors({
+    origin: "http://localhost:3000", // Allow requests from this origin
+    credentials: true // Allow credentials (cookies, authorization headers, etc.)
+}));
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));

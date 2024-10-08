@@ -25,7 +25,9 @@ function executePowerShellScript(scriptPath, params = []) {
             console.log(`stdout: ${stdout}`); // Log the output for debugging
 
             try {
-                const jsonOutput = JSON.parse(stdout.trim());
+                // Clean and trim the output
+                const cleanedOutput = stdout.trim();
+                const jsonOutput = JSON.parse(cleanedOutput);
                 resolve(jsonOutput); // Return parsed JSON output
             } catch (parseError) {
                 console.error(`JSON parse error: ${parseError}`);

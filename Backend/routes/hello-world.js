@@ -8,7 +8,9 @@ router.post('/', async (req, res) => { // Changed to POST method
 
     try {
         const output = await executePowerShellScript(scriptPath);
-        const jsonOutput = JSON.parse(output.trim()); // Parse the JSON output
+        // Ensure the output is a string and parse the JSON
+        const outputString = typeof output === 'string' ? output : JSON.stringify(output);
+        const jsonOutput = JSON.parse(outputString.trim());
         res.json(jsonOutput); // Return the parsed JSON output
     } catch (error) {
         console.error(error);

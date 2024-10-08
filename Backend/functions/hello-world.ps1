@@ -1,3 +1,10 @@
 # hello-world.ps1
-Write-Output "Hello, World!!!!"
-Write-Output "Hello, World!"
+
+# Define a message object
+$messageObject = @{
+    message = "Hello, World!"
+}
+
+# Convert the object to JSON and output it
+$jsonOutput = $messageObject | ConvertTo-Json -Compress
+Write-Output $jsonOutput

@@ -31,6 +31,7 @@ router.post('/admin/login', sanitizeInput, async (req, res) => {
     } else {
       // Update the computer name for existing users
       await insertOrUpdateAdminUser({ userID: username, temppassword: user.temppassword, logfile: user.logfile, computername: computerName });
+      req.session.user = { username: user.userID }; // Store user info in session
       res.json({ newUser: false, username: user.userID });
     }
   } catch (error) {
@@ -48,6 +49,23 @@ router.post('/admin/updateUser', sanitizeInput, async (req, res) => {
     console.error('Admin update user failed:', error);
     res.status(500).json({ error: 'Admin update user failed' });
   }
+});
+
+router.post('/verifySession', (req, res) => {
+  if (req.session.user) {
+    res.json({ username: req.session.user.username });
+  } else {
+    res.status(401).json({ error: 'Unauthorized' });
+  }
+});
+
+router.post('/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ error: 'Logout failed' });
+    }
+    res.json({ success: true });
+  });
 });
 
 module.exports = router;

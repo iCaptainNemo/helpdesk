@@ -11,6 +11,7 @@ const ENDPOINT = "http://localhost:3001"; // Backend server URL
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
+  const [initialCheck, setInitialCheck] = useState(false); // State to track initial authentication check
 
   useEffect(() => {
     const socket = socketIOClient(ENDPOINT);
@@ -28,25 +29,55 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const token = document.cookie.replace(/(?:(?:^|.*;\s*)token\s*=\s*([^;]*).*$)|^.*$/, "$1");
+    if (token) {
+      fetch('http://localhost:3001/api/auth/verifySession', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include' // Include credentials (cookies) in the request
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.username) {
+          setIsAuthenticated(true);
+          setUsername(data.username);
+        }
+        setInitialCheck(true); // Set initial check to true after verification
+      })
+      .catch(error => {
+        console.error('Session verification failed:', error);
+        setInitialCheck(true); // Set initial check to true even if verification fails
+      });
+    } else {
+      setInitialCheck(true); // Set initial check to true if no token is found
+    }
+  }, []);
+
   const handleLogin = async (username, computerName) => {
     try {
-      const response = await fetch('/api/auth/admin/login', {
+      const response = await fetch('http://localhost:3001/api/auth/admin/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ username, computerName }),
+        credentials: 'include' // Include credentials (cookies) in the request
       });
       const data = await response.json();
       if (data.newUser) {
         const tempPassword = prompt('Enter temp password:');
         const logFile = prompt('Enter log file location:');
-        await fetch('/api/auth/admin/updateUser', {
+        await fetch('http://localhost:3001/api/auth/admin/updateUser', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ username, tempPassword, logFile }),
+          credentials: 'include' // Include credentials (cookies) in the request
         });
       }
       document.cookie = `token=${data.token}; HttpOnly`; // Store token in HTTP-only cookie
@@ -58,9 +89,20 @@ function App() {
   };
 
   const handleLogout = () => {
-    document.cookie = 'token=; Max-Age=0; path=/;'; // Clear the token cookie
-    setIsAuthenticated(false);
-    setUsername('');
+    fetch('http://localhost:3001/api/auth/logout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include' // Include credentials (cookies) in the request
+    })
+    .then(() => {
+      setIsAuthenticated(false);
+      setUsername('');
+    })
+    .catch(error => {
+      console.error('Logout failed:', error);
+    });
   };
 
   const showSection = (sectionId) => {
@@ -95,7 +137,8 @@ function App() {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${document.cookie.replace(/(?:(?:^|.*;\s*)token\s*=\s*([^;]*).*$)|^.*$/, "$1")}` // Include token in Authorization header
               },
-              body: JSON.stringify(data)
+              body: JSON.stringify(data),
+              credentials: 'include' // Include credentials (cookies) in the request
             });
             const result = await response.text();
             // Update the user properties section with the response data
@@ -124,7 +167,8 @@ function App() {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${document.cookie.replace(/(?:(?:^|.*;\s*)token\s*=\s*([^;]*).*$)|^.*$/, "$1")}` // Include token in Authorization header
               },
-              body: JSON.stringify(data)
+              body: JSON.stringify(data),
+              credentials: 'include' // Include credentials (cookies) in the request
             });
             const result = await response.text();
             // Update the test output section with the response data
@@ -136,6 +180,10 @@ function App() {
       }
     }
   }, [isAuthenticated]);
+
+  if (!initialCheck) {
+    return <div>Loading...</div>; // Show a loading indicator while the initial check is in progress
+  }
 
   return (
     <div className="App">
