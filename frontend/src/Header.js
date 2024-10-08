@@ -1,6 +1,6 @@
 import React from 'react';
 
-const Header = () => {
+const Header = ({ username }) => {
   const handleFormSubmit = async (event) => {
     event.preventDefault();
     const adObjectID = event.target.adObjectID.value;
@@ -9,7 +9,8 @@ const Header = () => {
       const response = await fetch('/api/fetch-adobject', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${document.cookie.replace(/(?:(?:^|.*;\s*)token\s*=\s*([^;]*).*$)|^.*$/, "$1")}` // Include token in Authorization header
         },
         body: JSON.stringify({ adObjectID })
       });
@@ -28,7 +29,7 @@ const Header = () => {
 
   return (
     <div className="header">
-      <h1>Helpdesk</h1>
+      <h1>Helpdesk - Welcome, {username}</h1>
       <div className="form-container">
         <form id="fetchAdObjectForm" onSubmit={handleFormSubmit}>
           <label htmlFor="adObjectID">AD Object: </label>

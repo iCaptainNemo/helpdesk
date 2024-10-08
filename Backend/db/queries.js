@@ -51,19 +51,38 @@ function fetchUser(userID) {
     return executeQuery(query, [userID]);
 }
 
-function insertOrUpdateAdminUser(adminUser) {
-    const query = `
-        INSERT INTO Admin (userID, temppassword, logfile, computername)
-        VALUES (?, ?, ?, ?)
-        ON CONFLICT(userID) DO UPDATE SET
-            temppassword=COALESCE(excluded.temppassword, Admin.temppassword),
-            logfile=COALESCE(excluded.logfile, Admin.logfile),
-            computername=COALESCE(excluded.computername, Admin.computername);
-    `;
-    const params = [
-        adminUser.userID, adminUser.temppassword, adminUser.logfile, adminUser.computername
-    ];
-    return executeQuery(query, params);
+async function insertOrUpdateAdminUser(adminUser) {
+    const fetchQuery = `SELECT * FROM Admin WHERE userID = ?;`;
+    const existingUser = await executeQuery(fetchQuery, [adminUser.userID]);
+
+    if (existingUser.length === 0) {
+        const insertQuery = `
+            INSERT INTO Admin (userID, temppassword, logfile, computername)
+            VALUES (?, ?, ?, ?);
+        `;
+        const params = [
+            adminUser.userID, adminUser.temppassword, adminUser.logfile, adminUser.computername
+        ];
+        await executeQuery(insertQuery, params);
+    } else {
+        const fieldsToUpdate = {};
+        if (!existingUser[0].temppassword && adminUser.temppassword) {
+            fieldsToUpdate.temppassword = adminUser.temppassword;
+        }
+        if (!existingUser[0].logfile && adminUser.logfile) {
+            fieldsToUpdate.logfile = adminUser.logfile;
+        }
+        if (!existingUser[0].computername && adminUser.computername) {
+            fieldsToUpdate.computername = adminUser.computername;
+        }
+
+        if (Object.keys(fieldsToUpdate).length > 0) {
+            const setClause = Object.keys(fieldsToUpdate).map(field => `${field} = ?`).join(', ');
+            const updateQuery = `UPDATE Admin SET ${setClause} WHERE userID = ?;`;
+            const params = [...Object.values(fieldsToUpdate), adminUser.userID];
+            await executeQuery(updateQuery, params);
+        }
+    }
 }
 
 function fetchAdminUser(userID) {

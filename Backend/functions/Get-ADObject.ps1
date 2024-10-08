@@ -21,12 +21,12 @@ function Get-ADObjectType {
         }
 
         # Create a custom object with properties
-        $properties = [PSCustomObject]@{}
+        $adObjectProperties = [PSCustomObject]@{}
         $adObject.PSObject.Properties | ForEach-Object {
-            $properties | Add-Member -MemberType NoteProperty -Name $_.Name -Value $_.Value
+            $adObjectProperties | Add-Member -MemberType NoteProperty -Name $_.Name -Value $_.Value
         }
 
-        return $properties
+        return $adObjectProperties
 
     } catch {
         Write-Host "Error: $_" -ForegroundColor Red
@@ -36,5 +36,5 @@ function Get-ADObjectType {
 
 # Main script execution
 $object = $args[0]
-$properties = Get-ADObjectType -object $object
-$properties
+$adObjectProperties = Get-ADObjectType -object $object
+$adObjectProperties | ConvertTo-Json -Compress

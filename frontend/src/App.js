@@ -10,6 +10,7 @@ const ENDPOINT = "http://localhost:3001"; // Backend server URL
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [username, setUsername] = useState('');
 
   useEffect(() => {
     const socket = socketIOClient(ENDPOINT);
@@ -48,7 +49,9 @@ function App() {
           body: JSON.stringify({ username, tempPassword, logFile }),
         });
       }
+      document.cookie = `token=${data.token}; HttpOnly`; // Store token in HTTP-only cookie
       setIsAuthenticated(true);
+      setUsername(username);
     } catch (error) {
       console.error('Login failed:', error);
     }
@@ -83,7 +86,8 @@ function App() {
             const response = await fetch(form.action, {
               method: 'POST',
               headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${document.cookie.replace(/(?:(?:^|.*;\s*)token\s*=\s*([^;]*).*$)|^.*$/, "$1")}` // Include token in Authorization header
               },
               body: JSON.stringify(data)
             });
@@ -111,7 +115,8 @@ function App() {
             const response = await fetch(form.action, {
               method: 'POST',
               headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${document.cookie.replace(/(?:(?:^|.*;\s*)token\s*=\s*([^;]*).*$)|^.*$/, "$1")}` // Include token in Authorization header
               },
               body: JSON.stringify(data)
             });
@@ -130,7 +135,7 @@ function App() {
     <div className="App">
       {isAuthenticated ? (
         <>
-          <Header />
+          <Header username={username} />
           <Navbar showSection={showSection} />
           <Content />
         </>

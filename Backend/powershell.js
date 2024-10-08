@@ -23,7 +23,14 @@ function executePowerShellScript(scriptPath, params = []) {
                 return reject('No output from PowerShell script');
             }
             console.log(`stdout: ${stdout}`); // Log the output for debugging
-            resolve(stdout.trim()); // Return raw output
+
+            try {
+                const jsonOutput = JSON.parse(stdout.trim());
+                resolve(jsonOutput); // Return parsed JSON output
+            } catch (parseError) {
+                console.error(`JSON parse error: ${parseError}`);
+                reject(`JSON parse error: ${parseError}\n${stdout}`);
+            }
         });
     });
 }

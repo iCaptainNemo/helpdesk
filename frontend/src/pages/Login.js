@@ -1,70 +1,73 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const Login = ({ onLogin }) => {
-  const [username, setUsername] = useState('');
   const [tempPassword, setTempPassword] = useState('');
   const [logFile, setLogFile] = useState('');
   const [showAdditionalFields, setShowAdditionalFields] = useState(false);
 
-  const handleLogin = async () => {
-    const hostname = window.location.hostname; // Get the hostname
-    const upperUsername = username.toUpperCase(); // Convert username to uppercase
+  useEffect(() => {
+    const fetchUsername = async () => {
+      try {
+        const response = await fetch('/api/auth/admin/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
 
-    try {
-      const response = await fetch('/api/auth/admin/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: upperUsername, // Use the uppercase username
-          computerName: hostname, // Use the hostname as the computer name
-        }),
-      });
-      const data = await response.json();
-      if (data.newUser) {
-        setShowAdditionalFields(true);
-      } else {
-        alert(`Welcome, ${data.username}`);
-        onLogin(data.username);
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error);
+        }
+
+        const data = await response.json();
+        if (data.newUser) {
+          setShowAdditionalFields(true);
+        } else {
+          alert(`Welcome, ${data.username}`);
+          document.cookie = `token=${data.token}; HttpOnly`; // Store token in HTTP-only cookie
+          onLogin(data.username);
+        }
+      } catch (error) {
+        console.error('Login failed:', error);
+        alert(`Login failed: ${error.message}`);
       }
-    } catch (error) {
-      console.error('Login failed:', error);
-    }
-  };
+    };
+
+    fetchUsername();
+  }, [onLogin]);
 
   const handleUpdateUser = async () => {
-    const upperUsername = username.toUpperCase(); // Convert username to uppercase
-
     try {
-      await fetch('/api/auth/admin/updateUser', {
+      const response = await fetch('/api/auth/admin/updateUser', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${document.cookie.replace(/(?:(?:^|.*;\s*)token\s*=\s*([^;]*).*$)|^.*$/, "$1")}` // Include token in Authorization header
         },
         body: JSON.stringify({
-          username: upperUsername, // Use the uppercase username
           tempPassword,
           logFile,
         }),
       });
-      alert(`Welcome, ${upperUsername}`);
-      onLogin(upperUsername);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error);
+      }
+
+      await response.json(); // Removed unused variable 'data'
+      alert('User updated successfully');
+      onLogin();
     } catch (error) {
       console.error('Update user failed:', error);
+      alert(`Update user failed: ${error.message}`);
     }
   };
 
   return (
     <div>
       <h1>Login</h1>
-      <input
-        type="text"
-        placeholder="Username"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-      />
-      <button onClick={handleLogin}>Admin Login</button>
       {showAdditionalFields && (
         <div>
           <input

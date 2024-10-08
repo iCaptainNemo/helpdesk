@@ -5,10 +5,12 @@ const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors'); // Import the cors middleware
 const session = require('express-session'); // Import express-session for session management
+const ntlm = require('express-ntlm'); // Import express-ntlm for Windows Authentication
 require('dotenv').config(); // Load environment variables from .env file
 
 const db = require('./db/init');
 const { insertOrUpdateUser, fetchUser, insertOrUpdateAdminUser, fetchAdminUser } = require('./db/queries');
+const { getDomainInfo } = require('./utils/ldapUtils'); // Import the LDAP utility functions
 
 const app = express();
 const server = http.createServer(app);
@@ -37,6 +39,33 @@ app.use(session({
         maxAge: 1000 * 60 * 60 * 24 // 1 day
     }
 }));
+
+// Middleware to dynamically set NTLM configuration
+app.use(async (req, res, next) => {
+    try {
+        const domainInfo = await getDomainInfo();
+        const domainControllers = domainInfo.domainControllers;
+
+        app.use(ntlm({
+            domain: domainInfo.domainRoot,
+            domaincontroller: domainControllers
+        }));
+
+        next();
+    } catch (error) {
+        console.error('Failed to get domain info:', error);
+        res.status(500).send('Internal Server Error');
+    }
+});
+
+// Middleware to attach the authenticated username to the request
+app.use((req, res, next) => {
+    if (req.ntlm) {
+        req.username = req.ntlm.UserName;
+        req.computerName = req.ntlm.Workstation;
+    }
+    next();
+});
 
 // Import routes
 const fetchADObjectRoute = require('./routes/fetchADObject');
