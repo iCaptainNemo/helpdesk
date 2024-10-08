@@ -2,9 +2,9 @@ import React from 'react';
 
 const Navbar = ({ showSection }) => (
   <div className="navbar">
-    <a onClick={() => showSection('dashboard')}>Dashboard</a>
-    <a onClick={() => showSection('user-prop')}>User Properties</a>
-    <a onClick={() => showSection('placeholder')}>Placeholder</a>
+    <button className="button-link" onClick={() => showSection('dashboard')}>Dashboard</button>
+    <button className="button-link" onClick={() => showSection('user-prop')}>User Properties</button>
+    <button className="button-link" onClick={() => showSection('placeholder')}>Placeholder</button>
   </div>
 );
 

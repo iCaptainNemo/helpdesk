@@ -1,6 +1,6 @@
 import React from 'react';
 
-const Header = ({ username }) => {
+const Header = ({ username, onLogout }) => {
   const handleFormSubmit = async (event) => {
     event.preventDefault();
     const adObjectID = event.target.adObjectID.value;
@@ -37,6 +37,7 @@ const Header = ({ username }) => {
           <button type="submit">Go</button>
         </form>
       </div>
+      <button className="logout-button" onClick={onLogout}>Logout</button>
     </div>
   );
 };

@@ -57,6 +57,12 @@ function App() {
     }
   };
 
+  const handleLogout = () => {
+    document.cookie = 'token=; Max-Age=0; path=/;'; // Clear the token cookie
+    setIsAuthenticated(false);
+    setUsername('');
+  };
+
   const showSection = (sectionId) => {
     const sections = document.querySelectorAll('.content');
     sections.forEach(section => {
@@ -135,7 +141,7 @@ function App() {
     <div className="App">
       {isAuthenticated ? (
         <>
-          <Header username={username} />
+          <Header username={username} onLogout={handleLogout} />
           <Navbar showSection={showSection} />
           <Content />
         </>

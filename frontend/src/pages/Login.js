@@ -20,13 +20,16 @@ const Login = ({ onLogin }) => {
       if (data.newUser) {
         alert('New user detected. Please update your details.');
       } else {
-        alert(`Welcome, ${data.username}`);
         document.cookie = `token=${data.token}; HttpOnly`; // Store token in HTTP-only cookie
         onLogin(data.username);
       }
     } catch (error) {
       console.error('Login failed:', error);
-      alert(`Login failed: ${error.message}`);
+      if (error.message === 'Unauthorized: User not found in Admin table') {
+        alert('Login failed: User not found.');
+      } else {
+        alert(`Login failed: ${error.message}`);
+      }
     }
   };
 
