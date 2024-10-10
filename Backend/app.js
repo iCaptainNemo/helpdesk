@@ -15,7 +15,10 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
     cors: {
-        origin: ["http://localhost:3000", "http://172.25.129.95:3000"], // Allow both localhost and your frontend address
+        origin: [
+            process.env.FRONTEND_URL_1, 
+            process.env.FRONTEND_URL_2
+        ], // Allow both frontend addresses
         methods: ["GET", "POST"],
         credentials: true
     }
@@ -24,9 +27,9 @@ const io = socketIo(server, {
 // Function to check if the origin is allowed
 const isOriginAllowed = (origin) => {
     const allowedOrigins = [
-        'http://localhost:3000', 
-        'http://172.25.129.95:3000', 
-        'http://172.25.129.95:3001' // Add backend address
+        process.env.FRONTEND_URL_1, 
+        process.env.FRONTEND_URL_2, 
+        process.env.BACKEND_URL // Add backend address
     ];
     const subnetPattern = /^http:\/\/172\.25\.129\.\d{1,3}:3000$/;
     return allowedOrigins.includes(origin) || subnetPattern.test(origin);
