@@ -6,10 +6,8 @@ import Navbar from './Navbar';
 import Content from './Content';
 import Login from './pages/Login';
 
-// Determine the backend server URL based on the current hostname
-const ENDPOINT = window.location.hostname === 'localhost'
-  ? 'http://localhost:3001'
-  : 'http://172.25.129.95:3001'; // Update to your remote backend address
+// Always use the backend server IP address
+const ENDPOINT = process.env.REACT_APP_BACKEND_URL; // Update to your backend address
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -68,7 +66,7 @@ function App() {
 
   const handleLogin = async (AdminID, password) => { // Updated to AdminID
     try {
-      const response = await fetch(`${ENDPOINT}/api/auth/admin/login`, {
+      const response = await fetch(`${ENDPOINT}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -180,6 +178,7 @@ function App() {
           <Header AdminID={AdminID} onLogout={handleLogout} /> {/* Updated to AdminID */}
           <Navbar showSection={showSection} />
           <Content />
+          <div id="dashboard" className="content"></div> {/* Ensure the dashboard section exists */}
         </>
       ) : (
         <Login onLogin={handleLogin} />
@@ -187,5 +186,4 @@ function App() {
     </div>
   );
 }
-
 export default App;

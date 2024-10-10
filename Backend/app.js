@@ -21,10 +21,26 @@ const io = socketIo(server, {
     }
 });
 
-const allowedOrigins = ['http://localhost:3000', 'http://172.25.129.95:3000'];
+// Function to check if the origin is allowed
+const isOriginAllowed = (origin) => {
+    const allowedOrigins = [
+        'http://localhost:3000', 
+        'http://172.25.129.95:3000', 
+        'http://172.25.129.95:3001' // Add backend address
+    ];
+    const subnetPattern = /^http:\/\/172\.25\.129\.\d{1,3}:3000$/;
+    return allowedOrigins.includes(origin) || subnetPattern.test(origin);
+};
 
 app.use(cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+        if (!origin || isOriginAllowed(origin)) {
+            callback(null, true);
+        } else {
+            console.error(`Not allowed by CORS: ${origin}`); // Add logging
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true
 }));
 

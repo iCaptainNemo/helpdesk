@@ -24,7 +24,7 @@ const Login = ({ onLogin }) => {
     }
 
     try {
-      const response = await fetch('/api/auth/login', { // Ensure the URL is correct
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/login`, { // Use backticks for template literal
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
