@@ -6,11 +6,14 @@ import Navbar from './Navbar';
 import Content from './Content';
 import Login from './pages/Login';
 
-const ENDPOINT = "http://localhost:3001"; // Backend server URL
+// Determine the backend server URL based on the current hostname
+const ENDPOINT = window.location.hostname === 'localhost'
+  ? 'http://localhost:3001'
+  : 'http://172.25.129.95:3001'; // Update to your remote backend address
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [username, setUsername] = useState('');
+  const [AdminID, setAdminID] = useState(''); // Updated to AdminID
   const [initialCheck, setInitialCheck] = useState(false); // State to track initial authentication check
 
   useEffect(() => {
@@ -24,27 +27,33 @@ function App() {
       console.log('Disconnected from Socket.IO server');
     });
 
+    socket.on('connect_error', (error) => {
+      console.error('WebSocket connection error:', error);
+    });
+
     return () => {
       socket.disconnect();
     };
   }, []);
 
   useEffect(() => {
-    const token = document.cookie.replace(/(?:(?:^|.*;\s*)token\s*=\s*([^;]*).*$)|^.*$/, "$1");
+    const token = localStorage.getItem('token');
     if (token) {
-      fetch('http://localhost:3001/api/auth/verifySession', {
+      fetch(`${ENDPOINT}/api/auth/verify-token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        },
-        credentials: 'include' // Include credentials (cookies) in the request
+        }
       })
-      .then(response => response.json())
+      .then(response => {
+        console.log('Token verification response:', response);
+        return response.json();
+      })
       .then(data => {
-        if (data.username) {
+        if (data.AdminID) { // Updated to AdminID
           setIsAuthenticated(true);
-          setUsername(data.username);
+          setAdminID(data.AdminID); // Updated to AdminID
         }
         setInitialCheck(true); // Set initial check to true after verification
       })
@@ -57,52 +66,28 @@ function App() {
     }
   }, []);
 
-  const handleLogin = async (username, computerName) => {
+  const handleLogin = async (AdminID, password) => { // Updated to AdminID
     try {
-      const response = await fetch('http://localhost:3001/api/auth/admin/login', {
+      const response = await fetch(`${ENDPOINT}/api/auth/admin/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, computerName }),
-        credentials: 'include' // Include credentials (cookies) in the request
+        body: JSON.stringify({ AdminID, password }) // Updated to AdminID
       });
       const data = await response.json();
-      if (data.newUser) {
-        const tempPassword = prompt('Enter temp password:');
-        const logFile = prompt('Enter log file location:');
-        await fetch('http://localhost:3001/api/auth/admin/updateUser', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ username, tempPassword, logFile }),
-          credentials: 'include' // Include credentials (cookies) in the request
-        });
-      }
-      document.cookie = `token=${data.token}; HttpOnly`; // Store token in HTTP-only cookie
+      localStorage.setItem('token', data.token); // Store token in localStorage
       setIsAuthenticated(true);
-      setUsername(username);
+      setAdminID(AdminID); // Updated to AdminID
     } catch (error) {
       console.error('Login failed:', error);
     }
   };
 
   const handleLogout = () => {
-    fetch('http://localhost:3001/api/auth/logout', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      credentials: 'include' // Include credentials (cookies) in the request
-    })
-    .then(() => {
-      setIsAuthenticated(false);
-      setUsername('');
-    })
-    .catch(error => {
-      console.error('Logout failed:', error);
-    });
+    localStorage.removeItem('token'); // Remove token from localStorage
+    setIsAuthenticated(false);
+    setAdminID(''); // Updated to AdminID
   };
 
   const showSection = (sectionId) => {
@@ -110,7 +95,12 @@ function App() {
     sections.forEach(section => {
       section.classList.remove('active');
     });
-    document.getElementById(sectionId).classList.add('active');
+    const targetSection = document.getElementById(sectionId);
+    if (targetSection) {
+      targetSection.classList.add('active');
+    } else {
+      console.error(`Section with ID ${sectionId} not found`);
+    }
   };
 
   useEffect(() => {
@@ -135,10 +125,9 @@ function App() {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${document.cookie.replace(/(?:(?:^|.*;\s*)token\s*=\s*([^;]*).*$)|^.*$/, "$1")}` // Include token in Authorization header
+                'Authorization': `Bearer ${localStorage.getItem('token')}` // Include token in Authorization header
               },
-              body: JSON.stringify(data),
-              credentials: 'include' // Include credentials (cookies) in the request
+              body: JSON.stringify(data)
             });
             const result = await response.text();
             // Update the user properties section with the response data
@@ -165,10 +154,9 @@ function App() {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${document.cookie.replace(/(?:(?:^|.*;\s*)token\s*=\s*([^;]*).*$)|^.*$/, "$1")}` // Include token in Authorization header
+                'Authorization': `Bearer ${localStorage.getItem('token')}` // Include token in Authorization header
               },
-              body: JSON.stringify(data),
-              credentials: 'include' // Include credentials (cookies) in the request
+              body: JSON.stringify(data)
             });
             const result = await response.text();
             // Update the test output section with the response data
@@ -189,7 +177,7 @@ function App() {
     <div className="App">
       {isAuthenticated ? (
         <>
-          <Header username={username} onLogout={handleLogout} />
+          <Header AdminID={AdminID} onLogout={handleLogout} /> {/* Updated to AdminID */}
           <Navbar showSection={showSection} />
           <Content />
         </>

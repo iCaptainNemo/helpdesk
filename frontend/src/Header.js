@@ -1,16 +1,23 @@
 import React from 'react';
 
-const Header = ({ username, onLogout }) => {
+const Header = ({ AdminID, onLogout }) => {
   const handleFormSubmit = async (event) => {
     event.preventDefault();
     const adObjectID = event.target.adObjectID.value;
+    console.log('AD Object ID:', adObjectID); // Debug log
 
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No token found');
+      }
+      console.log('Token:', token); // Debug log
+
       const response = await fetch('/api/fetch-adobject', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${document.cookie.replace(/(?:(?:^|.*;\s*)token\s*=\s*([^;]*).*$)|^.*$/, "$1")}` // Include token in Authorization header
+          'Authorization': `Bearer ${token}` // Include token in Authorization header
         },
         body: JSON.stringify({ adObjectID })
       });
@@ -29,7 +36,7 @@ const Header = ({ username, onLogout }) => {
 
   return (
     <div className="header">
-      <h1>Helpdesk - Welcome, {username}</h1>
+      <h1>Helpdesk - Welcome, {AdminID}</h1>
       <div className="form-container">
         <form id="fetchAdObjectForm" onSubmit={handleFormSubmit}>
           <label htmlFor="adObjectID">AD Object: </label>

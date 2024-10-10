@@ -52,42 +52,42 @@ function fetchUser(userID) {
 }
 
 async function insertOrUpdateAdminUser(adminUser) {
-    const fetchQuery = `SELECT * FROM Admin WHERE userID = ?;`;
-    const existingUser = await executeQuery(fetchQuery, [adminUser.userID]);
+    const fetchQuery = `SELECT * FROM Admin WHERE AdminID = ?;`;
+    const existingUser = await executeQuery(fetchQuery, [adminUser.AdminID]);
 
     if (existingUser.length === 0) {
         const insertQuery = `
-            INSERT INTO Admin (userID, temppassword, logfile, computername)
+            INSERT INTO Admin (AdminID, temppassword, logfile, computername)
             VALUES (?, ?, ?, ?);
         `;
         const params = [
-            adminUser.userID, adminUser.temppassword, adminUser.logfile, adminUser.computername
+            adminUser.AdminID, adminUser.temppassword, adminUser.logfile, adminUser.computername
         ];
         await executeQuery(insertQuery, params);
     } else {
         const fieldsToUpdate = {};
-        if (!existingUser[0].temppassword && adminUser.temppassword) {
+        if (adminUser.temppassword && adminUser.temppassword !== existingUser[0].temppassword) {
             fieldsToUpdate.temppassword = adminUser.temppassword;
         }
-        if (!existingUser[0].logfile && adminUser.logfile) {
+        if (adminUser.logfile && adminUser.logfile !== existingUser[0].logfile) {
             fieldsToUpdate.logfile = adminUser.logfile;
         }
-        if (!existingUser[0].computername && adminUser.computername) {
+        if (adminUser.computername && adminUser.computername !== existingUser[0].computername) {
             fieldsToUpdate.computername = adminUser.computername;
         }
 
         if (Object.keys(fieldsToUpdate).length > 0) {
             const setClause = Object.keys(fieldsToUpdate).map(field => `${field} = ?`).join(', ');
-            const updateQuery = `UPDATE Admin SET ${setClause} WHERE userID = ?;`;
-            const params = [...Object.values(fieldsToUpdate), adminUser.userID];
+            const updateQuery = `UPDATE Admin SET ${setClause} WHERE AdminID = ?;`;
+            const params = [...Object.values(fieldsToUpdate), adminUser.AdminID];
             await executeQuery(updateQuery, params);
         }
     }
 }
 
-function fetchAdminUser(userID) {
-    const query = `SELECT * FROM Admin WHERE userID = ?;`;
-    return executeQuery(query, [userID]);
+function fetchAdminUser(adminID) {
+    const query = `SELECT * FROM Admin WHERE AdminID = ?;`;
+    return executeQuery(query, [adminID]);
 }
 
 module.exports = {

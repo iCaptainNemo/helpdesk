@@ -1,15 +1,17 @@
 const express = require('express');
 const router = express.Router();
-const { fetchAdminUser, insertOrUpdateAdminUser } = require('../db/queries');
+const { fetchAdminUser } = require('../db/queries');
 const { body, validationResult } = require('express-validator');
-
+const jwt = require('jsonwebtoken');
+const { authenticateUser } = require('../utils/ldapUtils');
 require('dotenv').config(); // Load environment variables from .env file
 
-const db = require('../db/init'); // Use the database initialization from init.js
+const SECRET_KEY = process.env.JWT_SECRET || 'your-secret-key';
 
 // Middleware to sanitize inputs
 const sanitizeInput = [
-  body('username').trim().escape(),
+  body('AdminID').trim().escape(),
+  body('password').trim().escape(),
   body('computerName').trim().escape(),
   body('tempPassword').optional().trim().escape(),
   body('logFile').optional().trim().escape(),
@@ -22,50 +24,61 @@ const sanitizeInput = [
   }
 ];
 
-router.post('/admin/login', sanitizeInput, async (req, res) => {
-  const { username, computerName } = req.body;
-  try {
-    let user = await fetchAdminUser(username);
-    if (!user) {
-      return res.status(401).json({ error: 'Unauthorized: User not found in Admin table' });
-    } else {
-      // Update the computer name for existing users
-      await insertOrUpdateAdminUser({ userID: username, temppassword: user.temppassword, logfile: user.logfile, computername: computerName });
-      req.session.user = { username: user.userID }; // Store user info in session
-      res.json({ newUser: false, username: user.userID });
-    }
-  } catch (error) {
-    console.error('Admin login failed:', error);
-    res.status(500).json({ error: 'Admin login failed' });
+// Middleware to verify token
+function verifyToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  if (!authHeader) {
+    console.error('No token provided');
+    return res.status(401).json({ message: 'No token provided' });
   }
-});
 
-router.post('/admin/updateUser', sanitizeInput, async (req, res) => {
-  const { username, tempPassword, logFile } = req.body;
-  try {
-    await insertOrUpdateAdminUser({ userID: username, temppassword: tempPassword, logfile: logFile, computername: null });
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Admin update user failed:', error);
-    res.status(500).json({ error: 'Admin update user failed' });
+  const token = authHeader.split(' ')[1];
+  if (!token) {
+    console.error('Malformed token');
+    return res.status(401).json({ message: 'Malformed token' });
   }
-});
 
-router.post('/verifySession', (req, res) => {
-  if (req.session.user) {
-    res.json({ username: req.session.user.username });
-  } else {
-    res.status(401).json({ error: 'Unauthorized' });
-  }
-});
-
-router.post('/logout', (req, res) => {
-  req.session.destroy((err) => {
+  jwt.verify(token, SECRET_KEY, (err, decoded) => {
     if (err) {
-      return res.status(500).json({ error: 'Logout failed' });
+      console.error('Failed to authenticate token:', err);
+      return res.status(401).json({ message: 'Failed to authenticate token' });
     }
-    res.json({ success: true });
+    req.AdminID = decoded.AdminID;
+    console.log('Token verified, AdminID:', req.AdminID); // Debug log
+    next();
   });
+}
+
+// Login route
+router.post('/login', sanitizeInput, async (req, res) => {
+  const { AdminID, password } = req.body;
+
+  try {
+    // Verify user via LDAP/NTLM
+    const isAuthenticated = await authenticateUser(AdminID, password);
+    if (!isAuthenticated) {
+      return res.status(401).json({ error: 'Invalid ID or password' });
+    }
+
+    // Check if user exists in the database
+    const adminUser = await fetchAdminUser(AdminID);
+    if (!adminUser) {
+      return res.status(404).json({ error: 'No account found' });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign({ AdminID }, SECRET_KEY, { expiresIn: '1h' });
+
+    res.json({ token, AdminID });
+  } catch (error) {
+    console.error('Login failed:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// Token verification route
+router.post('/verify-token', verifyToken, (req, res) => {
+  res.json({ AdminID: req.AdminID });
 });
 
 module.exports = router;
