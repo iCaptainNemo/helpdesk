@@ -41,7 +41,7 @@ h1 {
 }
 
 .btn {
-  width: 100%;
+  width: 100%; /* Ensure buttons are the same width */
   display: block;
   padding: 14px 16px;
   background: transparent;

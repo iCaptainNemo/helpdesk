@@ -31,7 +31,6 @@ async function getDomainInfo() {
         throw new Error(`Failed to get domain info: ${error}`);
     }
 }
-
 async function authenticateUser(userID, password) {
     console.log('authenticateUser called with userID:', userID); // Debug log without password
 
@@ -42,9 +41,13 @@ async function authenticateUser(userID, password) {
 
     const domainInfo = await getDomainInfo();
     const ldapServer = domainInfo.domainControllers[0]; // Use the first domain controller
+    let domainRoot = domainInfo.domainRoot; // Get the domain root from the domain info
+
+    // Convert domain root from 'DC=hs,DC=gov' to 'hs.gov'
+    domainRoot = domainRoot.replace(/DC=/g, '').replace(/,/g, '.');
 
     // Format the userID as username@domain
-    const formattedUserID = `${userID}@hs.gov`;
+    const formattedUserID = `${userID}@${domainRoot}`;
 
     console.log(`Attempting to bind to LDAP server: ${ldapServer}`);
     console.log(`Using sAMAccountName: ${formattedUserID}`); // Log the formatted sAMAccountName

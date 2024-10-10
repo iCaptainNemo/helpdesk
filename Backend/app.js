@@ -7,7 +7,6 @@ const cors = require('cors');
 require('dotenv').config();
 
 const db = require('./db/init');
-const ntlmConfig = require('./middleware/ntlmConfig');
 const attachUserInfo = require('./middleware/attachUserInfo');
 const verifyToken = require('./middleware/verifyToken'); // Ensure JWT middleware is used
 
@@ -26,6 +25,7 @@ const io = socketIo(server, {
 
 // Function to check if the origin is allowed
 const isOriginAllowed = (origin) => {
+    if (!origin) return true; // Allow requests without origin (e.g., Postman)
     const allowedOrigins = [
         process.env.FRONTEND_URL_1, 
         process.env.FRONTEND_URL_2, 
@@ -35,6 +35,7 @@ const isOriginAllowed = (origin) => {
     return allowedOrigins.includes(origin) || subnetPattern.test(origin);
 };
 
+// CORS middleware
 app.use(cors({
     origin: (origin, callback) => {
         if (!origin || isOriginAllowed(origin)) {
@@ -47,14 +48,20 @@ app.use(cors({
     credentials: true
 }));
 
+// Middleware to parse JSON and URL-encoded data
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Use middleware
-app.use(ntlmConfig(app)); // Pass the app instance to ntlmConfig
+// Middleware to attach the database to requests
+app.use((req, res, next) => {
+    req.db = db;
+    next();
+});
+
+// Attach user information middleware
 app.use(attachUserInfo);
 
 // Import routes
@@ -66,23 +73,35 @@ const forbidden = require('./middleware/forbidden');
 const notFound = require('./middleware/notfound');
 const authRoutes = require('./routes/auth');
 
-// Use routes and pass db
-app.use((req, res, next) => {
-    req.db = db;
-    next();
-});
-
-app.use('/api/fetch-adobject', verifyToken, fetchADObjectRoute); // Ensure JWT middleware is used
-app.use('/api/fetch-user', verifyToken, fetchUserRoute); // Ensure JWT middleware is used
+// Use routes and pass db to them
+app.use('/api/fetch-adobject', verifyToken, fetchADObjectRoute); 
+app.use('/api/fetch-user', verifyToken, fetchUserRoute); 
 app.use('/api/hello-world', helloWorldRoute);
 app.use('/api', helloWorldMiddleware);
-app.use('/api/auth', authRoutes);
+
+// Authentication routes (no token required for login)
+app.use('/api/auth', authRoutes); // Includes /windows-login
 
 // Middleware to handle 403 Forbidden errors
 app.use(forbidden);
 
 // Middleware to handle 404 Not Found errors
 app.use(notFound);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Unhandled error:', err);
+
+    if (process.env.NODE_ENV === 'production') {
+        res.status(500).json({ error: 'Internal Server Error' });
+    } else {
+        res.status(500).json({ 
+            error: 'Internal Server Error', 
+            details: err.message,
+            stack: err.stack // Include stack trace only in development
+        });
+    }
+});
 
 // Socket.IO setup
 io.on('connection', (socket) => {
@@ -92,6 +111,7 @@ io.on('connection', (socket) => {
     });
 });
 
+// Start the server
 const PORT = process.env.PORT || 3001;
 const HOST = '0.0.0.0'; // Listen on all network interfaces
 

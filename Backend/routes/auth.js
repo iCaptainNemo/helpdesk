@@ -3,7 +3,7 @@ const router = express.Router();
 const { fetchAdminUser } = require('../db/queries');
 const { body, validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
-const { authenticateUser } = require('../utils/ldapUtils');
+const { authenticateUser } = require('../utils/ldapUtils'); // LDAP authentication function
 require('dotenv').config(); // Load environment variables from .env file
 
 const SECRET_KEY = process.env.JWT_SECRET || 'your-secret-key';
@@ -49,25 +49,60 @@ function verifyToken(req, res, next) {
   });
 }
 
-// Login route
+// Windows NTLM login route
+router.get('/windows-login', (req, res) => {
+  console.log('Received request for /windows-login');
+  
+  if (req.ntlm) {
+    const AdminID = req.ntlm.UserName; // Extract the NTLM user
+    console.log('NTLM User:', AdminID); // Log the extracted AdminID
+
+    // Check if user exists in the database
+    fetchAdminUser(AdminID)
+      .then((adminUser) => {
+        if (!adminUser) {
+          console.log(`No account found for AdminID: ${AdminID}`);
+          return res.status(404).json({ error: 'No account found' });
+        }
+
+        // Generate JWT token
+        const token = jwt.sign({ AdminID }, SECRET_KEY, { expiresIn: '1h' });
+        console.log(`JWT token generated for AdminID: ${AdminID}`);
+        return res.json({ token, AdminID });
+      })
+      .catch((error) => {
+        console.error('Error fetching admin user:', error);
+        return res.status(500).json({ error: 'Internal Server Error' });
+      });
+  } else {
+    console.error('NTLM authentication failed:', req.ntlm);
+    res.status(401).json({ error: 'NTLM authentication failed' });
+  }
+});
+
+// Login route using LDAP
 router.post('/login', sanitizeInput, async (req, res) => {
   const { AdminID, password } = req.body;
+  console.log('Received login request for AdminID:', AdminID); // Log the login request
 
   try {
-    // Verify user via LDAP/NTLM
+    // Verify user via LDAP only
     const isAuthenticated = await authenticateUser(AdminID, password);
     if (!isAuthenticated) {
+      console.log('Invalid ID or password for AdminID:', AdminID); // Log invalid credentials
       return res.status(401).json({ error: 'Invalid ID or password' });
     }
 
     // Check if user exists in the database
     const adminUser = await fetchAdminUser(AdminID);
     if (!adminUser) {
+      console.log(`No account found for AdminID: ${AdminID}`);
       return res.status(404).json({ error: 'No account found' });
     }
 
     // Generate JWT token
     const token = jwt.sign({ AdminID }, SECRET_KEY, { expiresIn: '1h' });
+    console.log(`JWT token generated for AdminID: ${AdminID}`);
 
     res.json({ token, AdminID });
   } catch (error) {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/Login.css'; // Ensure this path is correct
 
-const Login = ({ onLogin }) => {
+const Login = ({ onLogin, onWindowsLogin }) => {
   const [sAMAccountName, setSAMAccountName] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -24,7 +24,7 @@ const Login = ({ onLogin }) => {
     }
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/login`, { // Use backticks for template literal
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -65,71 +65,94 @@ const Login = ({ onLogin }) => {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    handleLogin();
+    handleLogin(); // Call the handleLogin function for LDAP login
+  };
+
+  // Function to handle NTLM login
+  const handleWindowsLogin = () => {
+    // Call the onWindowsLogin prop for NTLM login
+    onWindowsLogin();
   };
 
   return (
-    <form className="form" autoComplete="off" onSubmit={handleSubmit}>
-      <div className="control">
-        <h1>Jarvis Helpdesk UI</h1>
-      </div>
-      <div className="control block-cube block-input">
-        <input
-          type="text"
-          placeholder="Username"
-          value={sAMAccountName}
-          onChange={(e) => setSAMAccountName(e.target.value)}
-        />
-        <div className="bg-top">
-          <div className="bg-inner"></div>
+    <div>
+      <form className="form" autoComplete="off" onSubmit={handleSubmit}>
+        <div className="control">
+          <h1>Jarvis Helpdesk UI</h1>
         </div>
-        <div className="bg-right">
-          <div className="bg-inner"></div>
-        </div>
-        <div className="bg">
-          <div className="bg-inner"></div>
-        </div>
-      </div>
-      <div className="control block-cube block-input">
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <div className="bg-top">
-          <div className="bg-inner"></div>
-        </div>
-        <div className="bg-right">
-          <div className="bg-inner"></div>
-        </div>
-        <div className="bg">
-          <div className="bg-inner"></div>
-        </div>
-      </div>
-      <button className="btn block-cube block-cube-hover" type="submit">
-        <div className="bg-top">
-          <div className="bg-inner"></div>
-        </div>
-        <div className="bg-right">
-          <div className="bg-inner"></div>
-        </div>
-        <div className="bg">
-          <div className="bg-inner"></div>
-        </div>
-        <div className="text">Log In</div>
-      </button>
-      <div className="control remember-me">
-        <label>
+        <div className="control block-cube block-input">
           <input
-            type="checkbox"
-            checked={rememberMe}
-            onChange={(e) => setRememberMe(e.target.checked)}
+            type="text"
+            placeholder="Username"
+            value={sAMAccountName}
+            onChange={(e) => setSAMAccountName(e.target.value)}
           />
-          Remember Me
-        </label>
-      </div>
-    </form>
+          <div className="bg-top">
+            <div className="bg-inner"></div>
+          </div>
+          <div className="bg-right">
+            <div className="bg-inner"></div>
+          </div>
+          <div className="bg">
+            <div className="bg-inner"></div>
+          </div>
+        </div>
+        <div className="control block-cube block-input">
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <div className="bg-top">
+            <div className="bg-inner"></div>
+          </div>
+          <div className="bg-right">
+            <div className="bg-inner"></div>
+          </div>
+          <div className="bg">
+            <div className="bg-inner"></div>
+          </div>
+        </div>
+        <button className="btn block-cube block-cube-hover" type="submit">
+          <div className="bg-top">
+            <div className="bg-inner"></div>
+          </div>
+          <div className="bg-right">
+            <div className="bg-inner"></div>
+          </div>
+          <div className="bg">
+            <div className="bg-inner"></div>
+          </div>
+          <div className="text">Log In</div>
+        </button>
+        <div className="control remember-me">
+          <label>
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+            />
+            Remember Me
+          </label>
+        </div>
+      </form>
+      {/* <div className="or-divider">
+        <span>Or</span>
+      </div> */}
+      {/* <button className="btn block-cube block-cube-hover" onClick={handleWindowsLogin} style={{ width: '100%' }}>
+        <div className="bg-top">
+          <div className="bg-inner"></div>
+        </div>
+        <div className="bg-right">
+          <div className="bg-inner"></div>
+        </div>
+        <div className="bg">
+          <div className="bg-inner"></div>
+        </div>
+        <div className="text">Login with Windows</div>
+      </button> */}
+    </div>
   );
 };
 

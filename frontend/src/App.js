@@ -7,12 +7,12 @@ import Content from './Content';
 import Login from './pages/Login';
 
 // Always use the backend server IP address
-const ENDPOINT = process.env.REACT_APP_BACKEND_URL; // Update to your backend address
+const ENDPOINT = process.env.REACT_APP_BACKEND_URL;
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [AdminID, setAdminID] = useState(''); // Updated to AdminID
-  const [initialCheck, setInitialCheck] = useState(false); // State to track initial authentication check
+  const [AdminID, setAdminID] = useState(''); // Store AdminID from the server
+  const [initialCheck, setInitialCheck] = useState(false); // Track the first authentication check
 
   useEffect(() => {
     const socket = socketIOClient(ENDPOINT);
@@ -35,6 +35,7 @@ function App() {
   }, []);
 
   useEffect(() => {
+    // Check token validity on app load
     const token = localStorage.getItem('token');
     if (token) {
       fetch(`${ENDPOINT}/api/auth/verify-token`, {
@@ -49,34 +50,62 @@ function App() {
         return response.json();
       })
       .then(data => {
-        if (data.AdminID) { // Updated to AdminID
+        if (data.AdminID) {
           setIsAuthenticated(true);
-          setAdminID(data.AdminID); // Updated to AdminID
+          setAdminID(data.AdminID);
         }
-        setInitialCheck(true); // Set initial check to true after verification
+        setInitialCheck(true); // Complete the initial check after verification
       })
       .catch(error => {
         console.error('Session verification failed:', error);
-        setInitialCheck(true); // Set initial check to true even if verification fails
+        setInitialCheck(true); // Complete the initial check even if failed
       });
     } else {
-      setInitialCheck(true); // Set initial check to true if no token is found
+      setInitialCheck(true); // No token found, complete the initial check
     }
   }, []);
 
-  const handleLogin = async (AdminID, password) => { // Updated to AdminID
+  const handleWindowsLogin = async () => {
+    // Handle NTLM-based login
+    try {
+      const response = await fetch(`${ENDPOINT}/api/auth/windows-login`, {
+        method: 'GET',
+        credentials: 'include', // NTLM requires cookies to be included
+      });
+      const data = await response.json();
+      if (data.token) {
+        localStorage.setItem('token', data.token); // Store token in localStorage
+        setIsAuthenticated(true);
+        setAdminID(data.AdminID);
+      } else {
+        console.error('Login failed: No token received');
+      }
+    } catch (error) {
+      console.error('Login failed:', error);
+    }
+  };
+
+  const handleLogin = async (AdminID, password) => {
+    // Handle LDAP login (assuming this is the structure for LDAP login)
     try {
       const response = await fetch(`${ENDPOINT}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ AdminID, password }) // Updated to AdminID
+        body: JSON.stringify({
+          AdminID,
+          password,
+        }),
       });
       const data = await response.json();
-      localStorage.setItem('token', data.token); // Store token in localStorage
-      setIsAuthenticated(true);
-      setAdminID(AdminID); // Updated to AdminID
+      if (data.token) {
+        localStorage.setItem('token', data.token); // Store token in localStorage
+        setIsAuthenticated(true);
+        setAdminID(data.AdminID);
+      } else {
+        console.error('Login failed: No token received');
+      }
     } catch (error) {
       console.error('Login failed:', error);
     }
@@ -85,10 +114,11 @@ function App() {
   const handleLogout = () => {
     localStorage.removeItem('token'); // Remove token from localStorage
     setIsAuthenticated(false);
-    setAdminID(''); // Updated to AdminID
+    setAdminID(''); // Clear AdminID
   };
 
   const showSection = (sectionId) => {
+    // Display the selected section
     const sections = document.querySelectorAll('.content');
     sections.forEach(section => {
       section.classList.remove('active');
@@ -103,17 +133,15 @@ function App() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      // Show the dashboard section by default
+      // Show dashboard by default after login
       showSection('dashboard');
 
-      // Handle form submission with REST
+      // Handle user form submission
       const fetchUserForm = document.getElementById('fetchUserForm');
       if (fetchUserForm) {
         fetchUserForm.addEventListener('submit', async function(event) {
-          event.preventDefault(); // Prevent the default form submission
-          // Show the User Properties view immediately
+          event.preventDefault();
           showSection('user-prop');
-          // Show the loading screen
           document.getElementById('loadingScreen').style.display = 'block';
           const form = event.target;
           const formData = new FormData(form);
@@ -123,27 +151,25 @@ function App() {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}` // Include token in Authorization header
+                'Authorization': `Bearer ${localStorage.getItem('token')}` // Include token
               },
               body: JSON.stringify(data)
             });
             const result = await response.text();
-            // Update the user properties section with the response data
             document.getElementById('userPropertiesContainer').innerHTML = result;
           } catch (error) {
             console.error('Error:', error);
           } finally {
-            // Hide the loading screen
             document.getElementById('loadingScreen').style.display = 'none';
           }
         });
       }
 
-      // Handle test form submission with REST
+      // Handle test form submission
       const testForm = document.getElementById('testForm');
       if (testForm) {
         testForm.addEventListener('submit', async function(event) {
-          event.preventDefault(); // Prevent the default form submission
+          event.preventDefault();
           const form = event.target;
           const formData = new FormData(form);
           const data = Object.fromEntries(formData.entries());
@@ -152,12 +178,11 @@ function App() {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}` // Include token in Authorization header
+                'Authorization': `Bearer ${localStorage.getItem('token')}` // Include token
               },
               body: JSON.stringify(data)
             });
             const result = await response.text();
-            // Update the test output section with the response data
             document.getElementById('testOutputContainer').innerHTML = result;
           } catch (error) {
             console.error('Error:', error);
@@ -168,22 +193,23 @@ function App() {
   }, [isAuthenticated]);
 
   if (!initialCheck) {
-    return <div>Loading...</div>; // Show a loading indicator while the initial check is in progress
+    return <div>Loading...</div>; // Show loading indicator while checking session
   }
 
   return (
     <div className="App">
       {isAuthenticated ? (
         <>
-          <Header AdminID={AdminID} onLogout={handleLogout} /> {/* Updated to AdminID */}
+          <Header AdminID={AdminID} onLogout={handleLogout} />
           <Navbar showSection={showSection} />
           <Content />
-          <div id="dashboard" className="content"></div> {/* Ensure the dashboard section exists */}
+          <div id="dashboard" className="content"></div> 
         </>
       ) : (
-        <Login onLogin={handleLogin} />
+        <Login onLogin={handleLogin} onWindowsLogin={handleWindowsLogin} />
       )}
     </div>
   );
 }
+
 export default App;
