@@ -43,6 +43,15 @@ const tables = [
             'MemberOf TEXT',
             'Computers TEXT'
         ]
+    },
+    {
+        name: 'LockedOutUsers', // New table definition
+        columns: [
+            'UserID TEXT PRIMARY KEY',
+            'name TEXT',
+            'department TEXT',
+            'AccountLockoutTime DATETIME'
+        ]
     }
 ];
 

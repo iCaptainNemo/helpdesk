@@ -9,6 +9,7 @@ require('dotenv').config();
 const db = require('./db/init');
 const attachUserInfo = require('./middleware/attachUserInfo');
 const verifyToken = require('./middleware/verifyToken'); // Ensure JWT middleware is used
+const { updateLockedOutUsers } = require('./utils/lockedOutUsersUtils'); // Import the module
 
 const app = express();
 const server = http.createServer(app);
@@ -72,6 +73,7 @@ const helloWorldMiddleware = require('./middleware/helloWorldMiddleware');
 const forbidden = require('./middleware/forbidden');
 const notFound = require('./middleware/notfound');
 const authRoutes = require('./routes/auth');
+const getLockedOutUsersRoute = require('./routes/getLockedOutUsers'); // New route for fetching locked out users
 
 // Use routes and pass db to them
 app.use('/api/fetch-adobject', verifyToken, fetchADObjectRoute); 
@@ -81,6 +83,9 @@ app.use('/api', helloWorldMiddleware);
 
 // Authentication routes (no token required for login)
 app.use('/api/auth', authRoutes); // Includes /windows-login
+
+// Route to fetch locked out users
+app.use('/api/get-locked-out-users', getLockedOutUsersRoute); // New route
 
 // Middleware to handle 403 Forbidden errors
 app.use(forbidden);
@@ -117,4 +122,9 @@ const HOST = '0.0.0.0'; // Listen on all network interfaces
 
 server.listen(PORT, HOST, () => {
     console.log(`Server is running on http://${HOST}:${PORT}`);
+    updateLockedOutUsers(); // Initial call to populate the table
+
+    // Set up the refresh interval
+    const refreshInterval = process.env.LOCKED_OUT_USERS_REFRESH_INTERVAL || 60000; // Default to 60 seconds
+    setInterval(updateLockedOutUsers, refreshInterval);
 });
