@@ -20,10 +20,14 @@ function Get-ADObjectType {
             throw "No objects found matching: $object"
         }
 
-        # Create a custom object with properties
-        $adObjectProperties = [PSCustomObject]@{}
+        # Manually construct the JSON output
+        $adObjectProperties = @{}
         $adObject.PSObject.Properties | ForEach-Object {
-            $adObjectProperties | Add-Member -MemberType NoteProperty -Name $_.Name -Value $_.Value
+            $value = $_.Value
+            if ($_.Value -is [datetime]) {
+                $value = [math]::Round((Get-Date $_.Value).ToUniversalTime().Subtract([datetime]'1970-01-01').TotalMilliseconds)
+            }
+            $adObjectProperties[$_.Name] = $value
         }
 
         return $adObjectProperties

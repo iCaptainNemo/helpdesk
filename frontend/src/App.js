@@ -16,6 +16,7 @@ function App() {
   const [AdminID, setAdminID] = useState(''); // Store AdminID from the server
   const [initialCheck, setInitialCheck] = useState(false); // Track the first authentication check
   const [section, setSection] = useState('dashboard'); // Track the current section
+  const [adObjectData, setAdObjectData] = useState(''); // Store AD object data
 
   useEffect(() => {
     const socket = socketIOClient(ENDPOINT);
@@ -120,12 +121,40 @@ function App() {
     setAdminID(''); // Clear AdminID
   };
 
+  const handleFormSubmit = async (adObjectID) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No token found');
+      }
+
+      const response = await fetch('/api/fetch-adobject', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` // Include token in Authorization header
+        },
+        body: JSON.stringify({ adObjectID })
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const data = await response.text();
+      setAdObjectData(data); // Store data in state
+      setSection('user-prop'); // Navigate to User Properties view
+    } catch (error) {
+      console.error('Error fetching AD object properties:', error);
+    }
+  };
+
   const renderSection = () => {
     switch (section) {
       case 'dashboard':
         return <Dashboard />;
       case 'user-prop':
-        return <UserProperties />;
+        return <UserProperties adObjectData={adObjectData} />;
       case 'placeholder':
         return <Placeholder />;
       default:
@@ -141,8 +170,8 @@ function App() {
     <div className="App">
       {isAuthenticated ? (
         <>
-          <Header AdminID={AdminID} onLogout={handleLogout} />
-          <Navbar showSection={setSection} />
+          <Header AdminID={AdminID} onLogout={handleLogout} onFormSubmit={handleFormSubmit} />
+          <Navbar setCurrentView={setSection} />
           {renderSection()}
         </>
       ) : (
