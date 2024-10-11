@@ -22,15 +22,19 @@ body {
   justify-content: center;
 }
 
-.navbar a {
-  padding: 14px 20px;
+.navbar a, .navbar button {
+  padding: 10px 20px; /* Adjust padding to match logout button */
   text-align: center;
   text-decoration: none;
   color: white;
   cursor: pointer;
+  background-color: #333; /* Match navbar background */
+  border: none; /* Remove default button border */
+  font-size: 16px; /* Match font size of logout button */
+  margin: 0 5px; /* Add margin between buttons */
 }
 
-.navbar a:hover {
+.navbar a:hover, .navbar button:hover {
   background-color: #ddd;
   color: black;
 }

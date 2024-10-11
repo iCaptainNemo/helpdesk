@@ -24,19 +24,21 @@ const io = socketIo(server, {
     }
 });
 
+// Define allowed origins once to avoid repetition
+const allowedOrigins = [
+    process.env.FRONTEND_URL_1, 
+    process.env.FRONTEND_URL_2, 
+    process.env.BACKEND_URL // Add backend address
+];
+
 // Function to check if the origin is allowed
 const isOriginAllowed = (origin) => {
     if (!origin) return true; // Allow requests without origin (e.g., Postman)
-    const allowedOrigins = [
-        process.env.FRONTEND_URL_1, 
-        process.env.FRONTEND_URL_2, 
-        process.env.BACKEND_URL // Add backend address
-    ];
-    const subnetPattern = /^http:\/\/172\.25\.129\.\d{1,3}:3000$/;
+    const subnetPattern = new RegExp(process.env.SUBNET_PATTERN);
     return allowedOrigins.includes(origin) || subnetPattern.test(origin);
 };
 
-// CORS middleware
+// CORS middleware with better error handling
 app.use(cors({
     origin: (origin, callback) => {
         if (!origin || isOriginAllowed(origin)) {
@@ -93,28 +95,32 @@ app.use(forbidden);
 // Middleware to handle 404 Not Found errors
 app.use(notFound);
 
-// Error handling middleware
+// Error handling middleware (improved)
 app.use((err, req, res, next) => {
     console.error('Unhandled error:', err);
 
-    if (process.env.NODE_ENV === 'production') {
-        res.status(500).json({ error: 'Internal Server Error' });
-    } else {
-        res.status(500).json({ 
-            error: 'Internal Server Error', 
-            details: err.message,
-            stack: err.stack // Include stack trace only in development
-        });
+    const errorResponse = {
+        error: 'Internal Server Error'
+    };
+
+    if (process.env.NODE_ENV !== 'production') {
+        errorResponse.details = err.message;
+        errorResponse.stack = err.stack;
     }
+
+    res.status(500).json(errorResponse);
 });
 
-// Socket.IO setup
-io.on('connection', (socket) => {
+// Function to handle Socket.IO connection and disconnection events
+const handleSocketConnection = (socket) => {
     console.log('New client connected');
     socket.on('disconnect', () => {
         console.log('Client disconnected');
     });
-});
+};
+
+// Socket.IO setup
+io.on('connection', handleSocketConnection);
 
 // Start the server
 const PORT = process.env.PORT || 3001;
@@ -124,7 +130,38 @@ server.listen(PORT, HOST, () => {
     console.log(`Server is running on http://${HOST}:${PORT}`);
     updateLockedOutUsers(); // Initial call to populate the table
 
-    // Set up the refresh interval
-    const refreshInterval = process.env.LOCKED_OUT_USERS_REFRESH_INTERVAL || 60000; // Default to 60 seconds
+    // Function to parse interval string and convert to milliseconds
+    const parseInterval = (interval) => {
+        if (!interval) return 120000; // Default to 120 seconds
+
+        const unit = interval.slice(-1);
+        const value = parseInt(interval.slice(0, -1), 10);
+
+        if (isNaN(value)) {
+            console.warn(`Invalid interval format: ${interval}`);
+            return 120000; // Default to 120 seconds
+        }
+
+        switch (unit) {
+            case 'M':
+                return value * 60 * 1000; // Minutes to milliseconds
+            case 'H':
+                return value * 60 * 60 * 1000; // Hours to milliseconds
+            case 'D':
+                return value * 24 * 60 * 60 * 1000; // Days to milliseconds
+            default:
+                return value; // Default to milliseconds if no unit
+        }
+    };
+
+    // Set up the refresh interval for locked out users
+    const refreshInterval = parseInterval(process.env.LOCKED_OUT_USERS_REFRESH_INTERVAL);
     setInterval(updateLockedOutUsers, refreshInterval);
+});
+
+// Graceful shutdown handling
+process.on('SIGTERM', () => {
+    server.close(() => {
+        console.log('Process terminated, server closed');
+    });
 });

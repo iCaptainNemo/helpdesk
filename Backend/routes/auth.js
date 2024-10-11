@@ -7,6 +7,7 @@ const { authenticateUser } = require('../utils/ldapUtils'); // LDAP authenticati
 require('dotenv').config(); // Load environment variables from .env file
 
 const SECRET_KEY = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_EXPIRATION = process.env.JWT_EXPIRATION || '1d'; // Default to 1 day if not set
 
 // Middleware to sanitize inputs
 const sanitizeInput = [
@@ -66,7 +67,7 @@ router.get('/windows-login', (req, res) => {
         }
 
         // Generate JWT token
-        const token = jwt.sign({ AdminID }, SECRET_KEY, { expiresIn: '1h' });
+        const token = jwt.sign({ AdminID }, SECRET_KEY, { expiresIn: JWT_EXPIRATION });
         console.log(`JWT token generated for AdminID: ${AdminID}`);
         return res.json({ token, AdminID });
       })
@@ -101,7 +102,7 @@ router.post('/login', sanitizeInput, async (req, res) => {
     }
 
     // Generate JWT token
-    const token = jwt.sign({ AdminID }, SECRET_KEY, { expiresIn: '1h' });
+    const token = jwt.sign({ AdminID }, SECRET_KEY, { expiresIn: JWT_EXPIRATION });
     console.log(`JWT token generated for AdminID: ${AdminID}`);
 
     res.json({ token, AdminID });
