@@ -1,6 +1,7 @@
 const ldap = require('ldapjs');
 const path = require('path');
 const { executePowerShellScript } = require('../powershell');
+const logger = require('../utils/logger'); // Import the logger
 
 let cachedDomainInfo = null;
 
@@ -23,19 +24,20 @@ async function getDomainInfo() {
             domainControllers
         };
 
-        console.log('Domain Info:', cachedDomainInfo);
+        logger.info('Domain Info:', cachedDomainInfo); // Use logger
 
         return cachedDomainInfo;
     } catch (error) {
-        console.error('Failed to get domain info:', error);
+        logger.error('Failed to get domain info:', error); // Use logger
         throw new Error(`Failed to get domain info: ${error}`);
     }
 }
+
 async function authenticateUser(userID, password) {
-    console.log('authenticateUser called with userID:', userID); // Debug log without password
+    logger.info('authenticateUser called with userID:', userID); // Debug log without password
 
     if (!userID) {
-        console.error('Empty userID provided');
+        logger.error('Empty userID provided'); // Use logger
         return false;
     }
 
@@ -49,8 +51,9 @@ async function authenticateUser(userID, password) {
     // Format the userID as username@domain
     const formattedUserID = `${userID}@${domainRoot}`;
 
-    console.log(`Attempting to bind to LDAP server: ${ldapServer}`);
-    console.log(`Using sAMAccountName: ${formattedUserID}`); // Log the formatted sAMAccountName
+
+    logger.log(`Attempting to bind to LDAP server: ${ldapServer}`);
+    logger.log(`Using sAMAccountName: ${formattedUserID}`); // Log the formatted sAMAccountName
 
     return new Promise((resolve, reject) => {
         const client = ldap.createClient({
@@ -60,10 +63,10 @@ async function authenticateUser(userID, password) {
         client.bind(formattedUserID, password, (err) => { // Use formatted sAMAccountName
             client.unbind();
             if (err) {
-                console.error('LDAP bind failed:', err);
+                logger.error('LDAP bind failed:', err);
                 return resolve(false);
             }
-            console.log('LDAP bind successful');
+            logger.log('LDAP bind successful');
             return resolve(true);
         });
     });

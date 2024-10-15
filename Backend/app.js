@@ -10,6 +10,7 @@ const db = require('./db/init');
 const attachUserInfo = require('./middleware/attachUserInfo');
 const verifyToken = require('./middleware/verifyToken'); // Ensure JWT middleware is used
 const { updateLockedOutUsers } = require('./utils/lockedOutUsersUtils'); // Import the module
+const logger = require('./utils/logger'); // Import the logger
 
 const app = express();
 const server = http.createServer(app);
@@ -44,7 +45,7 @@ app.use(cors({
         if (!origin || isOriginAllowed(origin)) {
             callback(null, true);
         } else {
-            console.error(`Not allowed by CORS: ${origin}`); // Add logging
+            logger.error(`Not allowed by CORS: ${origin}`); // Use logger
             callback(new Error('Not allowed by CORS'));
         }
     },
@@ -97,7 +98,7 @@ app.use(notFound);
 
 // Error handling middleware (improved)
 app.use((err, req, res, next) => {
-    console.error('Unhandled error:', err);
+    logger.error('Unhandled error:', err);
 
     const errorResponse = {
         error: 'Internal Server Error'
@@ -113,9 +114,9 @@ app.use((err, req, res, next) => {
 
 // Function to handle Socket.IO connection and disconnection events
 const handleSocketConnection = (socket) => {
-    console.log('New client connected');
+    logger.info('New client connected');
     socket.on('disconnect', () => {
-        console.log('Client disconnected');
+        logger.info('Client disconnected');
     });
 };
 
@@ -127,7 +128,7 @@ const PORT = process.env.PORT || 3001;
 const HOST = '0.0.0.0'; // Listen on all network interfaces
 
 server.listen(PORT, HOST, () => {
-    console.log(`Server is running on http://${HOST}:${PORT}`);
+    logger.info(`Server is running on http://${HOST}:${PORT}`);
     updateLockedOutUsers(); // Initial call to populate the table
 
     // Function to parse interval string and convert to milliseconds
@@ -138,7 +139,7 @@ server.listen(PORT, HOST, () => {
         const value = parseInt(interval.slice(0, -1), 10);
 
         if (isNaN(value)) {
-            console.warn(`Invalid interval format: ${interval}`);
+            logger.warn(`Invalid interval format: ${interval}`);
             return 120000; // Default to 120 seconds
         }
 
@@ -162,6 +163,6 @@ server.listen(PORT, HOST, () => {
 // Graceful shutdown handling
 process.on('SIGTERM', () => {
     server.close(() => {
-        console.log('Process terminated, server closed');
+        logger.info('Process terminated, server closed');
     });
 });
