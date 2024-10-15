@@ -26,6 +26,8 @@ function Get-ADObjectType {
             $value = $_.Value
             if ($_.Value -is [datetime]) {
                 $value = [math]::Round((Get-Date $_.Value).ToUniversalTime().Subtract([datetime]'1970-01-01').TotalMilliseconds)
+            } elseif ($_.Value -is [string]) {
+                $value = $_.Value -replace '\\', '\' # Replace double backslashes with single backslashes
             }
             $adObjectProperties[$_.Name] = $value
         }

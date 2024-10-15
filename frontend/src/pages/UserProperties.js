@@ -6,15 +6,14 @@ import '../styles/UserProperties.css'; // Import CSS for styling
 Modal.setAppElement('#root');
 
 const UserProperties = ({ adObjectData }) => {
+  const defaultProperties = ['sAMAccountName', 'Name', 'department', 'AccountLockoutTime', 'Enabled'];
   const [selectedProperties, setSelectedProperties] = useState([]);
   const [data, setData] = useState({});
   const [modalIsOpen, setModalIsOpen] = useState(false);
 
   useEffect(() => {
     // Load selected properties from local storage or set default properties
-    const savedProperties = JSON.parse(localStorage.getItem('selectedProperties')) || [
-      'sAMAccountName', 'Name', 'department', 'AccountLockoutTime', 'Enabled'
-    ];
+    const savedProperties = JSON.parse(localStorage.getItem('selectedProperties')) || defaultProperties;
     setSelectedProperties(savedProperties);
   }, []);
 
@@ -81,8 +80,11 @@ const UserProperties = ({ adObjectData }) => {
                     value={key}
                     checked={selectedProperties.includes(key)}
                     onChange={handlePropertyChange}
+                    disabled={defaultProperties.includes(key)} // Disable default properties
                   />
-                  {key}
+                  <span className={defaultProperties.includes(key) ? 'default-property' : ''}>
+                    {key}
+                  </span>
                 </label>
               </li>
             ))}
