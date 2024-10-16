@@ -37,26 +37,30 @@ const LockedOutUsers = () => {
     return (
         <div className="locked-out-users-container">
             <h2>Locked Out Users</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>UserID</th>
-                        <th>Name</th>
-                        <th>Department</th>
-                        <th>Account Lockout Time</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {sortedUsers.map(user => (
-                        <tr key={user.UserID} className={isRecentLockout(user.AccountLockoutTime) ? 'recent-lockout' : ''}>
-                            <td>{user.UserID}</td>
-                            <td>{user.name}</td>
-                            <td>{user.department}</td>
-                            <td>{formatDate(user.AccountLockoutTime)}</td>
+            {lockedOutUsers.length === 0 ? (
+                <p>No locked out users.</p>
+            ) : (
+                <table>
+                    <thead>
+                        <tr>
+                            <th>UserID</th>
+                            <th>Name</th>
+                            <th>Department</th>
+                            <th>Account Lockout Time</th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {sortedUsers.map(user => (
+                            <tr key={user.UserID} className={isRecentLockout(user.AccountLockoutTime) ? 'recent-lockout' : ''}>
+                                <td>{user.UserID}</td>
+                                <td>{user.name}</td>
+                                <td>{user.department}</td>
+                                <td>{formatDate(user.AccountLockoutTime)}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            )}
         </div>
     );
 };

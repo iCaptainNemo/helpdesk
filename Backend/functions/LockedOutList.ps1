@@ -29,6 +29,11 @@ $PDC = $domainControllers.PDC
 # Retrieve all locked-out users
 $lockedOutUsers = Search-ADAccount -LockedOut -UsersOnly
 
+if ($lockedOutUsers.Count -eq 0) {
+    # Return an empty array if no locked-out users
+    return @()
+}
+
 # Iterate through all locked-out users and get additional AD properties
 $lockedOutUsersWithProperties = foreach ($lockedOutUser in $lockedOutUsers) {
     Get-ADUser -Identity $lockedOutUser.SamAccountName -Properties SamAccountName, Name, Department, AccountLockoutTime, Enabled

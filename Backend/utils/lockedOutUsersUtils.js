@@ -8,6 +8,19 @@ async function updateLockedOutUsers() {
     try {
         const lockedOutUsers = await executePowerShellScript(scriptPath);
 
+        // Check if lockedOutUsers is an empty array
+        if (Array.isArray(lockedOutUsers) && lockedOutUsers.length === 0) {
+            // Clear the LockedOutUsers table
+            db.run('DELETE FROM LockedOutUsers', (err) => {
+                if (err) {
+                    console.error('Failed to clear locked out users:', err);
+                } else {
+                    console.log('Locked out users table cleared.');
+                }
+            });
+            return;
+        }
+
         // Start a transaction
         db.serialize(() => {
             db.run('BEGIN TRANSACTION');
