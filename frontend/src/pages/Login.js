@@ -68,12 +68,6 @@ const Login = ({ onLogin, onWindowsLogin }) => {
     handleLogin(); // Call the handleLogin function for LDAP login
   };
 
-  // Function to handle NTLM login
-  const handleWindowsLogin = () => {
-    // Call the onWindowsLogin prop for NTLM login
-    onWindowsLogin();
-  };
-
   return (
     <div>
       <form className="form" autoComplete="off" onSubmit={handleSubmit}>

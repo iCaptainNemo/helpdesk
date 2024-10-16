@@ -39,7 +39,6 @@ function App() {
   }, []);
 
   useEffect(() => {
-    // Check token validity on app load
     const token = localStorage.getItem('token');
     if (token) {
       fetch(`${ENDPOINT}/api/auth/verify-token`, {
@@ -49,62 +48,54 @@ function App() {
           'Authorization': `Bearer ${token}`
         }
       })
-      .then(response => {
-        console.log('Token verification response:', response);
-        return response.json();
-      })
-      .then(data => {
-        if (data.AdminID) {
-          setIsAuthenticated(true);
-          setAdminID(data.AdminID);
-        }
-        setInitialCheck(true); // Complete the initial check after verification
-      })
-      .catch(error => {
-        console.error('Session verification failed:', error);
-        setInitialCheck(true); // Complete the initial check even if failed
-      });
+        .then(response => response.json())
+        .then(data => {
+          if (data.AdminID) {
+            setIsAuthenticated(true);
+            setAdminID(data.AdminID);
+          }
+          setInitialCheck(true);
+        })
+        .catch(error => {
+          console.error('Session verification failed:', error);
+          setInitialCheck(true);
+        });
     } else {
-      setInitialCheck(true); // No token found, complete the initial check
+      setInitialCheck(true);
     }
   }, []);
 
-  const handleWindowsLogin = async () => {
-    // Handle NTLM-based login
-    try {
-      const response = await fetch(`${ENDPOINT}/api/auth/windows-login`, {
-        method: 'GET',
-        credentials: 'include', // NTLM requires cookies to be included
-      });
-      const data = await response.json();
-      if (data.token) {
-        localStorage.setItem('token', data.token); // Store token in localStorage
-        setIsAuthenticated(true);
-        setAdminID(data.AdminID);
-      } else {
-        console.error('Login failed: No token received');
-      }
-    } catch (error) {
-      console.error('Login failed:', error);
-    }
-  };
+  // const handleWindowsLogin = async () => {
+  //   try {
+  //     const response = await fetch(`${ENDPOINT}/api/auth/windows-login`, {
+  //       method: 'GET',
+  //       credentials: 'include',
+  //     });
+  //     const data = await response.json();
+  //     if (data.token) {
+  //       localStorage.setItem('token', data.token);
+  //       setIsAuthenticated(true);
+  //       setAdminID(data.AdminID);
+  //     } else {
+  //       console.error('Login failed: No token received');
+  //     }
+  //   } catch (error) {
+  //     console.error('Login failed:', error);
+  //   }
+  // };
 
   const handleLogin = async (AdminID, password) => {
-    // Handle LDAP login (assuming this is the structure for LDAP login)
     try {
       const response = await fetch(`${ENDPOINT}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          AdminID,
-          password,
-        }),
+        body: JSON.stringify({ AdminID, password }),
       });
       const data = await response.json();
       if (data.token) {
-        localStorage.setItem('token', data.token); // Store token in localStorage
+        localStorage.setItem('token', data.token);
         setIsAuthenticated(true);
         setAdminID(data.AdminID);
       } else {
@@ -115,35 +106,45 @@ function App() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token'); // Remove token from localStorage
-    setIsAuthenticated(false);
-    setAdminID(''); // Clear AdminID
+  const handleLogout = async () => {
+    try {
+      const response = await fetch(`${ENDPOINT}/api/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        localStorage.removeItem('token');
+        setIsAuthenticated(false);
+        setAdminID('');
+        console.log('Successfully logged out and session destroyed.');
+      } else {
+        console.error('Logout failed: Network response was not ok');
+      }
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   const handleFormSubmit = async (adObjectID) => {
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No token found');
-      }
+      if (!token) throw new Error('No token found');
 
-      const response = await fetch('/api/fetch-adobject', {
+      const response = await fetch(`${ENDPOINT}/api/fetch-adobject`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` // Include token in Authorization header
+          'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ adObjectID })
+        body: JSON.stringify({ adObjectID }),
       });
 
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
+      if (!response.ok) throw new Error('Network response was not ok');
 
       const data = await response.text();
-      setAdObjectData(data); // Store data in state
-      setSection('user-prop'); // Navigate to User Properties view
+      setAdObjectData(data);
+      setSection('user-prop');
     } catch (error) {
       console.error('Error fetching AD object properties:', error);
     }
@@ -163,7 +164,7 @@ function App() {
   };
 
   if (!initialCheck) {
-    return <div>Loading...</div>; // Show loading indicator while checking session
+    return <div>Loading...</div>;
   }
 
   return (
@@ -175,7 +176,7 @@ function App() {
           {renderSection()}
         </>
       ) : (
-        <Login onLogin={handleLogin} onWindowsLogin={handleWindowsLogin} />
+        <Login onLogin={handleLogin} />
       )}
     </div>
   );

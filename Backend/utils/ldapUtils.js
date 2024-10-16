@@ -1,10 +1,12 @@
 const ldap = require('ldapjs');
 const path = require('path');
-const { executePowerShellScript } = require('../powershell');
-const logger = require('../utils/logger'); // Import the logger
+const { executePowerShellScript, closePowerShellSession } = require('../powershell');
+const sessionStore = require('./sessionStore'); // Import session store
+const logger = require('../utils/logger');
 
 let cachedDomainInfo = null;
 
+// Function to get domain information
 async function getDomainInfo() {
     if (cachedDomainInfo) {
         return cachedDomainInfo;
@@ -21,58 +23,84 @@ async function getDomainInfo() {
         cachedDomainInfo = {
             domainRoot,
             ldapPath,
-            domainControllers
+            domainControllers,
         };
 
-        logger.info('Domain Info:', cachedDomainInfo); // Use logger
-
+        logger.info('Domain Info:', cachedDomainInfo);
         return cachedDomainInfo;
     } catch (error) {
-        logger.error('Failed to get domain info:', error); // Use logger
+        logger.error('Failed to get domain info:', error);
         throw new Error(`Failed to get domain info: ${error}`);
     }
 }
 
-async function authenticateUser(userID, password) {
-    logger.info('authenticateUser called with userID:', userID); // Debug log without password
-
-    if (!userID) {
-        logger.error('Empty userID provided'); // Use logger
-        return false;
-    }
+// Function to authenticate user via LDAP
+async function authenticateUser(userID, password, req) {
+    logger.info('Authenticating user:', userID);
 
     const domainInfo = await getDomainInfo();
-    const ldapServer = domainInfo.domainControllers[0]; // Use the first domain controller
-    let domainRoot = domainInfo.domainRoot; // Get the domain root from the domain info
-
-    // Convert domain root from 'DC=hs,DC=gov' to 'hs.gov'
-    domainRoot = domainRoot.replace(/DC=/g, '').replace(/,/g, '.');
-
-    // Format the userID as username@domain
+    const ldapServer = domainInfo.domainControllers[0];
+    const domainRoot = domainInfo.domainRoot.replace(/DC=/g, '').replace(/,/g, '.');
     const formattedUserID = `${userID}@${domainRoot}`;
 
+    return new Promise((resolve) => {
+        const client = ldap.createClient({ url: `ldap://${ldapServer}` });
 
-    logger.log(`Attempting to bind to LDAP server: ${ldapServer}`);
-    logger.log(`Using sAMAccountName: ${formattedUserID}`); // Log the formatted sAMAccountName
-
-    return new Promise((resolve, reject) => {
-        const client = ldap.createClient({
-            url: `ldap://${ldapServer}`
-        });
-
-        client.bind(formattedUserID, password, (err) => { // Use formatted sAMAccountName
+        client.bind(formattedUserID, password, async (err) => {
             client.unbind();
             if (err) {
                 logger.error('LDAP bind failed:', err);
                 return resolve(false);
             }
-            logger.log('LDAP bind successful');
-            return resolve(true);
+            logger.info('LDAP bind successful');
+
+            // Check for existing session
+            sessionStore.findSessionByUserID(formattedUserID, (err, existingSessionID) => {
+                if (existingSessionID) {
+                    logger.info(`Existing session found for user: ${userID}`);
+                    req.sessionID = existingSessionID;
+                    return resolve(true);
+                }
+
+                // Store user session in Express and session store
+                try {
+                    const session = { username: formattedUserID, password };
+                    req.session.powershellSession = session;
+
+                    sessionStore.set(req.sessionID, req.session, (err) => {
+                        if (err) logger.error('Failed to save session:', err);
+                    });
+
+                    logger.info(`PowerShell session started for user: ${userID}`);
+                    resolve(true);
+                } catch (error) {
+                    logger.error('Failed to start PowerShell session:', error);
+                    resolve(false);
+                }
+            });
+        });
+    });
+}
+
+// Function to log out user and destroy session
+function logoutUser(sessionID) {
+    sessionStore.get(sessionID, (err, session) => {
+        if (session && session.powershellSession) {
+            closePowerShellSession(session.powershellSession); // Close PowerShell session
+        }
+
+        sessionStore.destroy(sessionID, (err) => {
+            if (err) {
+                logger.error('Failed to destroy session:', err);
+            } else {
+                logger.info(`Session destroyed: ${sessionID}`);
+            }
         });
     });
 }
 
 module.exports = {
     getDomainInfo,
-    authenticateUser
+    authenticateUser,
+    logoutUser,
 };

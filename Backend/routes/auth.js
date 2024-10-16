@@ -5,6 +5,7 @@ const { body, validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const { authenticateUser } = require('../utils/ldapUtils'); // LDAP authentication function
 const logger = require('../utils/logger'); // Import the logger
+const sessionStore = require('../utils/sessionStore'); // Import sessionStore
 require('dotenv').config(); // Load environment variables from .env file
 
 const SECRET_KEY = process.env.JWT_SECRET || 'your-secret-key';
@@ -49,37 +50,6 @@ function verifyToken(req, res, next) {
   });
 }
 
-// Windows NTLM login route
-router.get('/windows-login', (req, res) => {
-  logger.log('Received request for /windows-login');
-  
-  if (req.ntlm) {
-    const AdminID = req.ntlm.UserName; // Extract the NTLM user
-    logger.log('NTLM User:', AdminID); // Log the extracted AdminID
-
-    // Check if user exists in the database
-    fetchAdminUser(AdminID)
-      .then((adminUser) => {
-        if (!adminUser) {
-          logger.log(`No account found for AdminID: ${AdminID}`);
-          return res.status(404).json({ error: 'No account found' });
-        }
-
-        // Generate JWT token
-        const token = jwt.sign({ AdminID }, SECRET_KEY, { expiresIn: JWT_EXPIRATION });
-        logger.log(`JWT token generated for AdminID: ${AdminID}`);
-        return res.json({ token, AdminID });
-      })
-      .catch((error) => {
-        logger.error('Error fetching admin user:', error);
-        return res.status(500).json({ error: 'Internal Server Error' });
-      });
-  } else {
-    logger.error('NTLM authentication failed:', req.ntlm);
-    res.status(401).json({ error: 'NTLM authentication failed' });
-  }
-});
-
 // Login route using LDAP
 router.post('/login', sanitizeInput, async (req, res) => {
   const { AdminID, password } = req.body;
@@ -87,7 +57,7 @@ router.post('/login', sanitizeInput, async (req, res) => {
 
   try {
     // Verify user via LDAP only
-    const isAuthenticated = await authenticateUser(AdminID, password);
+    const isAuthenticated = await authenticateUser(AdminID, password, req); // Pass req to authenticateUser
     if (!isAuthenticated) {
       logger.warn('Invalid ID or password for AdminID:', AdminID);
       return res.status(401).json({ error: 'Invalid ID or password' });
@@ -104,6 +74,10 @@ router.post('/login', sanitizeInput, async (req, res) => {
     const token = jwt.sign({ AdminID }, SECRET_KEY, { expiresIn: JWT_EXPIRATION });
     logger.info(`JWT token generated for AdminID: ${AdminID}`);
 
+    // Store session information
+    req.session.AdminID = AdminID; // Store AdminID in the session
+    logger.info(`Session created for AdminID: ${AdminID}`);
+
     res.json({ token, AdminID });
   } catch (error) {
     logger.error('Login failed:', error);
@@ -114,6 +88,17 @@ router.post('/login', sanitizeInput, async (req, res) => {
 // Token verification route
 router.post('/verify-token', verifyToken, (req, res) => {
   res.json({ AdminID: req.AdminID });
+});
+
+// Endpoint to get the number of active sessions
+router.get('/session-count', (req, res) => {
+  sessionStore.count((err, count) => {
+    if (err) {
+      logger.error('Failed to get session count:', err);
+      return res.status(500).json({ error: 'Internal Server Error' });
+    }
+    res.json({ sessionCount: count });
+  });
 });
 
 module.exports = router;

@@ -4,6 +4,7 @@ const path = require('path');
 const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
+const session = require('express-session'); // Import express-session
 require('dotenv').config();
 
 const db = require('./db/init');
@@ -11,6 +12,7 @@ const attachUserInfo = require('./middleware/attachUserInfo');
 const verifyToken = require('./middleware/verifyToken'); // Ensure JWT middleware is used
 const { updateLockedOutUsers } = require('./utils/lockedOutUsersUtils'); // Import the module
 const logger = require('./utils/logger'); // Import the logger
+const sessionStore = require('./utils/sessionStore'); // Import your session store
 
 const app = express();
 const server = http.createServer(app);
@@ -64,6 +66,15 @@ app.use((req, res, next) => {
     req.db = db;
     next();
 });
+
+// Session management middleware
+app.use(session({
+    store: sessionStore, // Use your session store here
+    secret: process.env.SESSION_SECRET || 'your-session-secret', // Secret for signing the session ID cookie
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: false } // Set to true if using HTTPS
+}));
 
 // Attach user information middleware
 app.use(attachUserInfo);
