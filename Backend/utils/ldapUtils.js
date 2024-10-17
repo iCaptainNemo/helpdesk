@@ -6,6 +6,19 @@ const logger = require('../utils/logger');
 
 let cachedDomainInfo = null;
 
+// Helper: Secure password encoding
+function encodeToBase64(password) {
+    return Buffer.from(password, 'utf8').toString('base64');
+}
+
+// Helper: Decode password in PowerShell sessions
+function decodeBase64Command(encodedPassword) {
+    return `
+        $DecodedPassword = [System.Text.Encoding]::Unicode.GetString([System.Convert]::FromBase64String('${encodedPassword}'));
+        ConvertTo-SecureString $DecodedPassword -AsPlainText -Force
+    `;
+}
+
 // Function to get domain information
 async function getDomainInfo() {
     if (cachedDomainInfo) {
@@ -64,7 +77,8 @@ async function authenticateUser(userID, password, req) {
 
                 // Store user session in Express and session store
                 try {
-                    const session = { username: formattedUserID, password };
+                    const encodedPassword = encodeToBase64(password);
+                    const session = { username: formattedUserID, password: encodedPassword };
                     req.session.powershellSession = session;
 
                     // Generate a new session ID if not already set
@@ -92,11 +106,28 @@ function generateSessionID() {
     return 'sess_' + Math.random().toString(36).substr(2, 9);
 }
 
+// PowerShell command execution with encoded password
+function executeSecurePowerShellScript(scriptPath, params, userSession) {
+    const paramString = params.join(' ');
+    const command = `
+        powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& {
+            $SecurePassword = ${decodeBase64Command(userSession.password)};
+            $Cred = New-Object System.Management.Automation.PSCredential('${userSession.username}', $SecurePassword);
+            Start-Process powershell.exe -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File ${scriptPath} ${paramString}' -Credential $Cred;
+        }"
+    `;
+    return executePowerShellScript(command);
+}
+
 // Function to log out user and destroy session
 function logoutUser(sessionID) {
     sessionStore.get(sessionID, (err, session) => {
         if (session && session.powershellSession) {
-            closePowerShellSession(session.powershellSession); // Close PowerShell session
+            try {
+                closePowerShellSession(session.powershellSession);
+            } catch (err) {
+                logger.warn(`Error closing PowerShell session: ${err.message}`);
+            }
         }
 
         sessionStore.destroy(sessionID, (err) => {
@@ -113,4 +144,5 @@ module.exports = {
     getDomainInfo,
     authenticateUser,
     logoutUser,
+    executeSecurePowerShellScript,
 };
