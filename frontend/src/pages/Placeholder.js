@@ -1,6 +1,34 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 const Placeholder = () => {
+    const [sessions, setSessions] = useState([]);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchSessions = async () => {
+            try {
+                const response = await fetch('/api/check-session', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch sessions');
+                }
+
+                const data = await response.json();
+                setSessions(data);
+            } catch (error) {
+                console.error('Error fetching sessions:', error);
+                setError('Error fetching sessions');
+            }
+        };
+
+        fetchSessions();
+    }, []);
+
     return (
         <div>
             <h2>Placeholder</h2>
@@ -9,6 +37,18 @@ const Placeholder = () => {
                 <button type="submit">Check Token</button>
             </form>
             <div id="tokenCheckOutput"></div>
+
+            <div id="sessionList">
+                {error ? (
+                    <p>{error}</p>
+                ) : (
+                    <ul>
+                        {sessions.map((session, index) => (
+                            <li key={index}>{JSON.stringify(session)}</li>
+                        ))}
+                    </ul>
+                )}
+            </div>
         </div>
     );
 };

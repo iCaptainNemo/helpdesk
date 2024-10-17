@@ -1,6 +1,7 @@
 const path = require('path');
 const { executePowerShellScript } = require('../powershell');
 const db = require('../db/init');
+const { log, info, warn, error } = require('../utils/logger'); 
 
 const scriptPath = path.join(__dirname, '../functions/LockedOutList.ps1');
 
@@ -13,9 +14,9 @@ async function updateLockedOutUsers() {
             // Clear the LockedOutUsers table
             db.run('DELETE FROM LockedOutUsers', (err) => {
                 if (err) {
-                    console.error('Failed to clear locked out users:', err);
+                    error('Failed to clear locked out users:', err);
                 } else {
-                    console.log('Locked out users table cleared.');
+                    info('Locked out users table cleared.');
                 }
             });
             return;
@@ -28,7 +29,7 @@ async function updateLockedOutUsers() {
             // Get the current locked out users from the database
             db.all('SELECT UserID FROM LockedOutUsers', (err, rows) => {
                 if (err) {
-                    console.error('Failed to fetch locked out users:', err);
+                    error('Failed to fetch locked out users:', err);
                     return;
                 }
 
@@ -63,9 +64,9 @@ async function updateLockedOutUsers() {
             });
         });
 
-        console.log('Locked out users updated successfully.');
+        info('Locked out users updated successfully.');
     } catch (error) {
-        console.error('Failed to update locked out users:', error);
+        error('Failed to update locked out users:', error);
     }
 }
 

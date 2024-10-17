@@ -1,4 +1,10 @@
 const { exec } = require('child_process');
+const { log, info, warn, error } = require('./utils/logger'); // Import the custom logger
+
+// List of scripts that should not log stdout
+const scriptsToSuppressLogging = [
+    'LockedOutList.ps1' // Add more script names or paths as needed
+];
 
 /**
  * Executes a PowerShell script.
@@ -8,38 +14,48 @@ const { exec } = require('child_process');
  * @returns {Promise} - Resolves with the JSON output of the script.
  */
 function executePowerShellScript(scriptPath, params = [], userSession = null) {
+    // Escape parameters to avoid injection issues
     const paramString = params
         .filter(param => param) // Omit empty parameters
-        .join(' '); // Join parameters without wrapping in quotes
+        .map(param => `"${param.replace(/"/g, '\\"')}"`) // Escape double quotes
+        .join(' '); // Join parameters with spaces
 
     // Command string varies based on whether a user session is provided
     const command = userSession 
         ? `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& { Start-Process powershell.exe -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File ${scriptPath} ${paramString}' -Credential (New-Object System.Management.Automation.PSCredential('${userSession.username}', (ConvertTo-SecureString '${userSession.password}' -AsPlainText -Force))) }"`
         : `powershell.exe -NoProfile -ExecutionPolicy Bypass -File ${scriptPath} ${paramString}`;
 
-    console.log(`Executing command: ${command}`); // Log the command for debugging
+    // Check if the script should suppress stdout logging
+    const shouldSuppressLogging = scriptsToSuppressLogging.some(script => scriptPath.includes(script));
+
+    if (!shouldSuppressLogging) {
+        info(`Executing command: ${command}`); // Log the command for debugging
+    }
 
     return new Promise((resolve, reject) => {
-        exec(command, (error, stdout, stderr) => {
-            if (error) {
-                console.error(`exec error: ${error}`);
-                return reject(`exec error: ${error}\n${stderr}`);
+        exec(command, (execError, stdout, stderr) => {
+            if (execError) {
+                error(`exec error: ${execError}`);
+                return reject(`exec error: ${execError}\n${stderr}`);
             }
             if (stderr) {
-                console.error(`stderr: ${stderr}`);
+                error(`stderr: ${stderr}`);
             }
             if (!stdout) {
-                console.error('No output from PowerShell script');
+                error('No output from PowerShell script');
                 return reject('No output from PowerShell script');
             }
-            console.log(`stdout: ${stdout}`); // Log the output for debugging
+
+            if (!shouldSuppressLogging) {
+                info(`stdout: ${stdout}`); // Log the output for debugging
+            }
 
             try {
                 const cleanedOutput = stdout.trim();
                 const jsonOutput = JSON.parse(cleanedOutput);
                 resolve(jsonOutput); // Return parsed JSON output
             } catch (parseError) {
-                console.error(`JSON parse error: ${parseError}`);
+                error(`JSON parse error: ${parseError}`);
                 reject(`JSON parse error: ${parseError}\n${stdout}`);
             }
         });
@@ -52,22 +68,22 @@ function executePowerShellScript(scriptPath, params = [], userSession = null) {
  */
 function closePowerShellSession(session) {
     if (!session || !session.username) {
-        console.error('Invalid session provided for closing.');
+        error('Invalid session provided for closing.');
         return;
     }
 
     const command = `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Stop-Process -Name powershell -Force -ErrorAction SilentlyContinue"`;
-    console.log(`Closing PowerShell session for user: ${session.username}`);
+    info(`Closing PowerShell session for user: ${session.username}`);
 
-    exec(command, (error, stdout, stderr) => {
-        if (error) {
-            console.error(`Failed to close PowerShell session: ${error}`);
+    exec(command, (execError, stdout, stderr) => {
+        if (execError) {
+            error(`Failed to close PowerShell session: ${execError}`);
             return;
         }
         if (stderr) {
-            console.error(`stderr: ${stderr}`);
+            error(`stderr: ${stderr}`);
         }
-        console.log(`PowerShell session closed for user: ${session.username}`);
+        info(`PowerShell session closed for user: ${session.username}`);
     });
 }
 

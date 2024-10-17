@@ -45,6 +45,12 @@ class CustomSessionStore extends session.Store {
         });
         callback(null, sessionID);
     }
+
+    // Retrieve all sessions
+    all(callback) {
+        const allSessions = Object.keys(this.sessions).map(sid => JSON.parse(this.sessions[sid]));
+        callback(null, allSessions);
+    }
 }
 
 module.exports = new CustomSessionStore();

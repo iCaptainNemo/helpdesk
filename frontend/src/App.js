@@ -107,23 +107,31 @@ function App() {
   };
 
   const handleLogout = async () => {
-    try {
-      const response = await fetch(`${ENDPOINT}/api/logout`, {
-        method: 'POST',
-        credentials: 'include',
-      });
+      try {
+          const sessionID = localStorage.getItem('sessionID');
 
-      if (response.ok) {
-        localStorage.removeItem('token');
-        setIsAuthenticated(false);
-        setAdminID('');
-        console.log('Successfully logged out and session destroyed.');
-      } else {
-        console.error('Logout failed: Network response was not ok');
+          const response = await fetch(`${ENDPOINT}/api/logout`, {
+              method: 'POST',
+              credentials: 'include',
+              headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${localStorage.getItem('token')}` // Include token in Authorization header
+              },
+              body: JSON.stringify({ sessionID })
+          });
+
+          if (response.ok) {
+              localStorage.removeItem('token');
+              localStorage.removeItem('sessionID');
+              setIsAuthenticated(false);
+              setAdminID('');
+              console.log('Successfully logged out and session destroyed.');
+          } else {
+              console.error('Logout failed: Network response was not ok');
+          }
+      } catch (error) {
+          console.error('Logout failed:', error);
       }
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
   };
 
   const handleFormSubmit = async (adObjectID) => {

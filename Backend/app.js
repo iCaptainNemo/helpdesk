@@ -87,19 +87,23 @@ const helloWorldMiddleware = require('./middleware/helloWorldMiddleware');
 const forbidden = require('./middleware/forbidden');
 const notFound = require('./middleware/notfound');
 const authRoutes = require('./routes/auth');
-const getLockedOutUsersRoute = require('./routes/getLockedOutUsers'); // New route for fetching locked out users
+const getLockedOutUsersRoute = require('./routes/getLockedOutUsers'); // Route for fetching locked out users
+const executeScriptRoute = require('./routes/executeScript'); // Route for executing PowerShell scripts
+const updateLockedOutUsersRoute = require('./routes/updateLockedOutUsers'); // Route for updating locked out users
+const logoutRoute = require('./routes/logout'); // Route for logout
+const checkSessionRoute = require('./routes/checkSession'); // Route for checking powershell sessions
 
 // Use routes and pass db to them
 app.use('/api/fetch-adobject', verifyToken, fetchADObjectRoute); 
 app.use('/api/fetch-user', verifyToken, fetchUserRoute); 
 app.use('/api/hello-world', helloWorldRoute);
 app.use('/api', helloWorldMiddleware);
-
-// Authentication routes (no token required for login)
-app.use('/api/auth', authRoutes); // Includes /windows-login
-
-// Route to fetch locked out users
-app.use('/api/get-locked-out-users', getLockedOutUsersRoute); // New route
+app.use('/api/auth', authRoutes); // // Authentication routes
+app.use('/api/get-locked-out-users', getLockedOutUsersRoute); // Route to fetch locked out users
+app.use('/api/execute-script', executeScriptRoute); // Route to execute PowerShell scripts
+app.use('/api/update-locked-out-users', updateLockedOutUsersRoute); // Route to update locked out users
+app.use('/api/logout', logoutRoute); // Register the logout route
+app.use('/api/check-session', checkSessionRoute); // Check powershell sessions on backend
 
 // Middleware to handle 403 Forbidden errors
 app.use(forbidden);
