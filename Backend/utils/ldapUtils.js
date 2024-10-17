@@ -67,6 +67,11 @@ async function authenticateUser(userID, password, req) {
                     const session = { username: formattedUserID, password };
                     req.session.powershellSession = session;
 
+                    // Generate a new session ID if not already set
+                    if (!req.sessionID) {
+                        req.sessionID = generateSessionID(); // Implement generateSessionID function
+                    }
+
                     sessionStore.set(req.sessionID, req.session, (err) => {
                         if (err) logger.error('Failed to save session:', err);
                     });
@@ -80,6 +85,11 @@ async function authenticateUser(userID, password, req) {
             });
         });
     });
+}
+
+// Function to generate a new session ID
+function generateSessionID() {
+    return 'sess_' + Math.random().toString(36).substr(2, 9);
 }
 
 // Function to log out user and destroy session

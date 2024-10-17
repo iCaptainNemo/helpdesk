@@ -19,7 +19,22 @@ const Placeholder = () => {
                 }
 
                 const data = await response.json();
-                setSessions(data);
+
+                // Mask passwords in the session data
+                const maskedData = data.map(session => {
+                    if (session.powershellSession && session.powershellSession.password) {
+                        return {
+                            ...session,
+                            powershellSession: {
+                                ...session.powershellSession,
+                                password: '****' // Mask the password
+                            }
+                        };
+                    }
+                    return session;
+                });
+
+                setSessions(maskedData);
             } catch (error) {
                 console.error('Error fetching sessions:', error);
                 setError('Error fetching sessions');

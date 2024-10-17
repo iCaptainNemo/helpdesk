@@ -96,6 +96,7 @@ function App() {
       const data = await response.json();
       if (data.token) {
         localStorage.setItem('token', data.token);
+        localStorage.setItem('sessionID', data.sessionID); // Store session ID in local storage
         setIsAuthenticated(true);
         setAdminID(data.AdminID);
       } else {
@@ -107,31 +108,31 @@ function App() {
   };
 
   const handleLogout = async () => {
-      try {
-          const sessionID = localStorage.getItem('sessionID');
+    try {
+      const sessionID = localStorage.getItem('sessionID');
 
-          const response = await fetch(`${ENDPOINT}/api/logout`, {
-              method: 'POST',
-              credentials: 'include',
-              headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${localStorage.getItem('token')}` // Include token in Authorization header
-              },
-              body: JSON.stringify({ sessionID })
-          });
+      const response = await fetch(`${ENDPOINT}/api/logout`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}` // Include token in Authorization header
+        },
+        body: JSON.stringify({ sessionID })
+      });
 
-          if (response.ok) {
-              localStorage.removeItem('token');
-              localStorage.removeItem('sessionID');
-              setIsAuthenticated(false);
-              setAdminID('');
-              console.log('Successfully logged out and session destroyed.');
-          } else {
-              console.error('Logout failed: Network response was not ok');
-          }
-      } catch (error) {
-          console.error('Logout failed:', error);
+      if (response.ok) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('sessionID');
+        setIsAuthenticated(false);
+        setAdminID('');
+        console.log('Successfully logged out and session destroyed.');
+      } else {
+        console.error('Logout failed: Network response was not ok');
       }
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   const handleFormSubmit = async (adObjectID) => {

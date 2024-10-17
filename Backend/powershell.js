@@ -3,7 +3,8 @@ const { log, info, warn, error } = require('./utils/logger'); // Import the cust
 
 // List of scripts that should not log stdout
 const scriptsToSuppressLogging = [
-    'LockedOutList.ps1' // Add more script names or paths as needed
+    'LockedOutList.ps1',
+    'getDomainInfo.ps1'
 ];
 
 /**
@@ -33,7 +34,7 @@ function executePowerShellScript(scriptPath, params = [], userSession = null) {
     }
 
     return new Promise((resolve, reject) => {
-        exec(command, (execError, stdout, stderr) => {
+        const child = exec(command, (execError, stdout, stderr) => {
             if (execError) {
                 error(`exec error: ${execError}`);
                 return reject(`exec error: ${execError}\n${stderr}`);
@@ -59,6 +60,11 @@ function executePowerShellScript(scriptPath, params = [], userSession = null) {
                 reject(`JSON parse error: ${parseError}\n${stdout}`);
             }
         });
+
+        // Store the process ID in the user session
+        if (userSession) {
+            userSession.processId = child.pid;
+        }
     });
 }
 
@@ -67,13 +73,13 @@ function executePowerShellScript(scriptPath, params = [], userSession = null) {
  * @param {Object} session - The user session object with credentials.
  */
 function closePowerShellSession(session) {
-    if (!session || !session.username) {
+    if (!session || !session.username || !session.processId) {
         error('Invalid session provided for closing.');
         return;
     }
 
-    const command = `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Stop-Process -Name powershell -Force -ErrorAction SilentlyContinue"`;
-    info(`Closing PowerShell session for user: ${session.username}`);
+    const command = `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Stop-Process -Id ${session.processId} -Force -ErrorAction SilentlyContinue"`;
+    info(`Closing PowerShell session for user: ${session.username} with process ID: ${session.processId}`);
 
     exec(command, (execError, stdout, stderr) => {
         if (execError) {

@@ -43,6 +43,7 @@ const Login = ({ onLogin, onWindowsLogin }) => {
       const data = await response.json();
       console.log('Login successful, token:', data.token); // Debug log
       localStorage.setItem('token', data.token); // Store token in local storage
+      localStorage.setItem('sessionID', data.sessionID); // Store session ID in local storage
       if (rememberMe) {
         localStorage.setItem('rememberedUsername', upperCaseSAMAccountName); // Store uppercase username
       } else {

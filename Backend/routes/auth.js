@@ -78,7 +78,8 @@ router.post('/login', sanitizeInput, async (req, res) => {
     req.session.AdminID = AdminID; // Store AdminID in the session
     logger.info(`Session created for AdminID: ${AdminID}`);
 
-    res.json({ token, AdminID });
+    // Include session ID in the response
+    res.json({ token, AdminID, sessionID: req.sessionID });
   } catch (error) {
     logger.error('Login failed:', error);
     res.status(500).json({ error: 'Internal Server Error' });

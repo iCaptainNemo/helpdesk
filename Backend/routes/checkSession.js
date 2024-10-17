@@ -10,7 +10,21 @@ router.get('/', (req, res) => {
             return res.status(500).json({ error: 'Failed to retrieve sessions' });
         }
 
-        res.json(sessions);
+        // Mask passwords in the session data
+        const maskedSessions = sessions.map(session => {
+            if (session.powershellSession && session.powershellSession.password) {
+                return {
+                    ...session,
+                    powershellSession: {
+                        ...session.powershellSession,
+                        password: '****' // Mask the password
+                    }
+                };
+            }
+            return session;
+        });
+
+        res.json(maskedSessions);
     });
 });
 
