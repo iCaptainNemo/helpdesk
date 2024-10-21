@@ -5,6 +5,7 @@ const Login = ({ onLogin, onWindowsLogin }) => {
   const [sAMAccountName, setSAMAccountName] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [adminComputer, setAdminComputer] = useState(''); // Add state for adminComputer
 
   useEffect(() => {
     const savedUsername = localStorage.getItem('rememberedUsername');
@@ -12,6 +13,10 @@ const Login = ({ onLogin, onWindowsLogin }) => {
       setSAMAccountName(savedUsername);
       setRememberMe(true);
     }
+
+    // Automatically detect the computer name
+    const computerName = window.location.hostname;
+    setAdminComputer(computerName);
   }, []);
 
   const handleLogin = async () => {
@@ -31,7 +36,8 @@ const Login = ({ onLogin, onWindowsLogin }) => {
         },
         body: JSON.stringify({
           AdminID: upperCaseSAMAccountName, // Use uppercase AdminID
-          password
+          password,
+          adminComputer // Include adminComputer in the request body
         })
       });
 

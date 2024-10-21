@@ -15,7 +15,7 @@ const JWT_EXPIRATION = process.env.JWT_EXPIRATION || '1d'; // Default to 1 day i
 const sanitizeInput = [
   body('AdminID').trim().escape(),
   body('password').trim().escape(),
-  body('computerName').trim().escape(),
+  body('adminComputer').trim().escape(), // Changed to adminComputer
   (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -45,14 +45,15 @@ function verifyToken(req, res, next) {
       return res.status(401).json({ message: 'Failed to authenticate token' });
     }
     req.AdminID = decoded.AdminID;
-    logger.info('Token verified, AdminID:', req.AdminID);
+    req.adminComputer = decoded.adminComputer; // Extract adminComputer from the token
+    logger.info('Token verified, AdminID:', req.AdminID, 'AdminComputer:', req.adminComputer);
     next();
   });
 }
 
 // Login route using LDAP
 router.post('/login', sanitizeInput, async (req, res) => {
-  const { AdminID, password } = req.body;
+  const { AdminID, password, adminComputer } = req.body; // Changed to adminComputer
   logger.info('Received login request for AdminID:', AdminID);
 
   try {
@@ -70,16 +71,17 @@ router.post('/login', sanitizeInput, async (req, res) => {
       return res.status(404).json({ error: 'No account found' });
     }
 
-    // Generate JWT token
-    const token = jwt.sign({ AdminID }, SECRET_KEY, { expiresIn: JWT_EXPIRATION });
-    logger.info(`JWT token generated for AdminID: ${AdminID}`);
+    // Generate JWT token with adminComputer
+    const token = jwt.sign({ AdminID, adminComputer }, SECRET_KEY, { expiresIn: JWT_EXPIRATION });
+    logger.info(`JWT token generated for AdminID: ${AdminID}, AdminComputer: ${adminComputer}`);
 
     // Store session information
     req.session.AdminID = AdminID; // Store AdminID in the session
-    logger.info(`Session created for AdminID: ${AdminID}`);
+    req.session.adminComputer = adminComputer; // Store adminComputer in the session
+    logger.info(`Session created for AdminID: ${AdminID}, AdminComputer: ${adminComputer}`);
 
-    // Include session ID in the response
-    res.json({ token, AdminID, sessionID: req.sessionID });
+    // Include session ID and adminComputer in the response
+    res.json({ token, AdminID, adminComputer, sessionID: req.sessionID });
   } catch (error) {
     logger.error('Login failed:', error);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -88,7 +90,7 @@ router.post('/login', sanitizeInput, async (req, res) => {
 
 // Token verification route
 router.post('/verify-token', verifyToken, (req, res) => {
-  res.json({ AdminID: req.AdminID });
+  res.json({ AdminID: req.AdminID, adminComputer: req.adminComputer });
 });
 
 // Endpoint to get the number of active sessions

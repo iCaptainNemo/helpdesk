@@ -65,33 +65,15 @@ function App() {
     }
   }, []);
 
-  // const handleWindowsLogin = async () => {
-  //   try {
-  //     const response = await fetch(`${ENDPOINT}/api/auth/windows-login`, {
-  //       method: 'GET',
-  //       credentials: 'include',
-  //     });
-  //     const data = await response.json();
-  //     if (data.token) {
-  //       localStorage.setItem('token', data.token);
-  //       setIsAuthenticated(true);
-  //       setAdminID(data.AdminID);
-  //     } else {
-  //       console.error('Login failed: No token received');
-  //     }
-  //   } catch (error) {
-  //     console.error('Login failed:', error);
-  //   }
-  // };
-
   const handleLogin = async (AdminID, password) => {
     try {
+      const adminComputer = window.location.hostname; // Automatically detect the computer name
       const response = await fetch(`${ENDPOINT}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ AdminID, password }),
+        body: JSON.stringify({ AdminID, password, adminComputer }), // Include adminComputer in the request body
       });
       const data = await response.json();
       if (data.token) {
@@ -99,6 +81,7 @@ function App() {
         localStorage.setItem('sessionID', data.sessionID); // Store session ID in local storage
         setIsAuthenticated(true);
         setAdminID(data.AdminID);
+        console.log(`Login successful, AdminID: ${data.AdminID}, AdminComputer: ${adminComputer}`); // Log adminComputer
       } else {
         console.error('Login failed: No token received');
       }

@@ -20,7 +20,8 @@ const verifyToken = (req, res, next) => {
       return res.status(401).json({ message: 'Failed to authenticate token' });
     }
     req.AdminID = decoded.AdminID;
-    logger.info('Token verified, AdminID:', req.AdminID);
+    req.adminComputer = decoded.adminComputer; // Extract adminComputer from the token
+    logger.info('Token verified, AdminID:', req.AdminID, 'AdminComputer:', req.adminComputer);
     next();
   });
 };

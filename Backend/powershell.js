@@ -12,30 +12,26 @@ const scriptsToSuppressLogging = [
  * @param {string} scriptPath - Path to the PowerShell script.
  * @param {Array} params - Parameters to pass to the script.
  * @param {Object} [userSession] - Optional user session containing credentials.
+ * @param {string} [adminComputer] - The admin computer name.
  * @returns {Promise} - Resolves with the parsed JSON output of the script.
  */
-function executePowerShellScript(scriptPath, params = [], userSession = null) {
+function executePowerShellScript(scriptPath, params = [], userSession = null, adminComputer = 'localhost') {
     const paramString = params
         .filter(param => param) // Omit empty parameters
-        .map(param => `"${param.replace(/"/g, '\\"')}"`) // Escape double quotes
-        .join(' '); // Join with spaces
+        .map(param => param.replace(/"/g, '\\"')) // Escape double quotes without adding extra quotes
+        .join(' ');
 
     let command;
 
-    if (userSession) {
-        // Decode Base64 password for use in the PowerShell session
-        const decodedPasswordCommand = `
-            $DecodedPassword = [System.Text.Encoding]::Unicode.GetString(
-                [System.Convert]::FromBase64String('${userSession.password}')
-            );
-            $SecurePassword = ConvertTo-SecureString $DecodedPassword -AsPlainText -Force;
-            $Cred = New-Object System.Management.Automation.PSCredential('${userSession.username}', $SecurePassword);
-            Start-Process powershell.exe -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File ${scriptPath} ${paramString}' -Credential $Cred;
+    if (userSession && adminComputer && adminComputer.toLowerCase() !== 'localhost') {
+        const invokeCommand = `
+            Invoke-Command -ComputerName ${adminComputer} -ScriptBlock {
+                Start-Process -FilePath powershell.exe -ArgumentList '-File', '${scriptPath}', '${paramString}' -NoNewWindow -Wait;
+            }
         `;
-
-        command = `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& { ${decodedPasswordCommand} }"`;
+        command = `powershell.exe -Command "& {${invokeCommand}}"`; // Note the closing brace
     } else {
-        command = `powershell.exe -NoProfile -ExecutionPolicy Bypass -File ${scriptPath} ${paramString}`;
+        command = `powershell.exe -File ${scriptPath} ${paramString}`;
     }
 
     const shouldSuppressLogging = scriptsToSuppressLogging.some(script => scriptPath.includes(script));
@@ -72,7 +68,6 @@ function executePowerShellScript(scriptPath, params = [], userSession = null) {
             }
         });
 
-        // Store the process ID in the user session for future management
         if (userSession) {
             userSession.processId = child.pid;
         }
@@ -89,7 +84,7 @@ function closePowerShellSession(session) {
         return;
     }
 
-    const command = `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Stop-Process -Id ${session.processId} -Force -ErrorAction SilentlyContinue"`;
+    const command = `powershell.exe -Command "Stop-Process -Id ${session.processId} -Force -ErrorAction SilentlyContinue"`;
 
     info(`Closing PowerShell session for user: ${session.username} with process ID: ${session.processId}`);
 

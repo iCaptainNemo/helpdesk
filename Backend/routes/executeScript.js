@@ -3,12 +3,13 @@ const router = express.Router();
 const { executePowerShellScript } = require('../powershell');
 const sessionStore = require('../utils/sessionStore');
 const logger = require('../utils/logger'); 
+const verifyToken = require('../middleware/verifyToken');
 
-router.post('/', async (req, res) => {
-    const { scriptName, params, sessionID } = req.body;
+router.post('/', verifyToken, async (req, res) => {
+    const { scriptName, params, sessionID, adminComputer } = req.body; // Extract adminComputer from the request body
     const scriptPath = `./functions/${scriptName}.ps1`;
 
-    logger.info(`Received request to execute script: ${scriptName} with params: ${JSON.stringify(params)} and sessionID: ${sessionID}`);
+    logger.info(`Received request to execute script: ${scriptName} with params: ${JSON.stringify(params)}, adminComputer: ${adminComputer}, and sessionID: ${sessionID}`);
 
     if (!sessionID) {
         logger.error('No session ID provided');
@@ -27,7 +28,7 @@ router.post('/', async (req, res) => {
         }
 
         try {
-            const result = await executePowerShellScript(scriptPath, [params.userID], session.powershellSession);
+            const result = await executePowerShellScript(scriptPath, [params.userID, adminComputer], session.powershellSession); // Pass adminComputer to the script
             logger.info(`Script executed successfully: ${result}`);
             res.json(result);
         } catch (error) {
