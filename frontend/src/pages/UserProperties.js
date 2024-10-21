@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Modal from 'react-modal';
 import '../styles/UserProperties.css'; // Import CSS for styling
 
@@ -6,7 +6,19 @@ import '../styles/UserProperties.css'; // Import CSS for styling
 Modal.setAppElement('#root');
 
 const UserProperties = ({ adObjectData }) => {
-  const defaultProperties = ['sAMAccountName', 'Name', 'department', 'AccountLockoutTime', 'Enabled'];
+  const defaultProperties = useMemo(() => [
+    'sAMAccountName',
+    'Name',
+    'mail',
+    'title',
+    'department',
+    'AccountLockoutTime',
+    'homeDirectory',
+    'streetAddress',
+    'physicalDeliveryOfficeName',
+    'telephoneNumber',
+    'memberOf',
+  ], []);
   const [selectedProperties, setSelectedProperties] = useState([]);
   const [data, setData] = useState({});
   const [modalIsOpen, setModalIsOpen] = useState(false);
@@ -15,7 +27,7 @@ const UserProperties = ({ adObjectData }) => {
     // Load selected properties from local storage or set default properties
     const savedProperties = JSON.parse(localStorage.getItem('selectedProperties')) || defaultProperties;
     setSelectedProperties(savedProperties);
-  }, []);
+  }, [defaultProperties]); // Include defaultProperties in the dependency array
 
   useEffect(() => {
     // Parse adObjectData whenever it changes
@@ -30,8 +42,10 @@ const UserProperties = ({ adObjectData }) => {
     }
   }, [adObjectData]);
 
-  const formatDate = (unixTime) => {
-    const date = new Date(parseInt(unixTime, 10));
+  const formatDate = (windowsFileTime) => {
+    const windowsEpochStart = new Date('1601-01-01T00:00:00Z').getTime(); // Windows epoch start in milliseconds
+    const windowsFileTimeInMs = parseInt(windowsFileTime, 10) / 10000; // Convert 100-nanosecond intervals to milliseconds
+    const date = new Date(windowsEpochStart + windowsFileTimeInMs);
     return date.toLocaleString(); // Converts to local date and time string
   };
 
@@ -49,6 +63,20 @@ const UserProperties = ({ adObjectData }) => {
   const clearData = () => {
     setData({});
     localStorage.removeItem('adObjectData');
+  };
+
+  const formatValue = (value) => {
+    if (Array.isArray(value)) {
+      return value.join(', ');
+    } else if (typeof value === 'string' && value.match(/^\d+$/)) {
+      return formatDate(value);
+    } else if (typeof value === 'object' && value !== null) {
+      return JSON.stringify(value, null, 2); // Pretty print JSON objects
+    } else if (value === null) {
+      return 'N/A'; // Placeholder for null values
+    } else {
+      return value;
+    }
   };
 
   return (
@@ -104,13 +132,7 @@ const UserProperties = ({ adObjectData }) => {
             {selectedProperties.map((key) => (
               <tr key={key}>
                 <td>{key}</td>
-                <td>
-                  {Array.isArray(data[key])
-                    ? data[key].join(', ')
-                    : typeof data[key] === 'string' && data[key].match(/^\d+$/)
-                    ? formatDate(data[key])
-                    : JSON.stringify(data[key])}
-                </td>
+                <td>{formatValue(data[key])}</td>
               </tr>
             ))}
           </tbody>

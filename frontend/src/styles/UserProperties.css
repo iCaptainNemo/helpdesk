@@ -47,8 +47,8 @@
     bottom: auto;
     margin-right: -50%;
     transform: translate(-50%, -50%);
-    background: grey; /* Change background to grey */
-    color: white; /* Change text color to white */
+    background: rgb(196, 195, 195); /* Change background to grey */
+    color: rgb(0, 0, 0); /* Change text color to white */
     padding: 20px;
     border-radius: 4px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
@@ -70,5 +70,5 @@
     overflow-y: auto; /* Add scroll bar if content is too long */
   }
   .default-property {
-    color: grey; /* Grey out default properties */
+    color: #868686 /* Grey out default properties */
   }
