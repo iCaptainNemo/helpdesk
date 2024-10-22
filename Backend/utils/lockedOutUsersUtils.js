@@ -9,8 +9,14 @@ async function updateLockedOutUsers() {
     try {
         const lockedOutUsers = await executePowerShellScript(scriptPath);
 
+        // Ensure lockedOutUsers is an array
+        if (!Array.isArray(lockedOutUsers)) {
+            logger.error('Expected lockedOutUsers to be an array, but got:', typeof lockedOutUsers);
+            return;
+        }
+
         // Check if lockedOutUsers is an empty array
-        if (Array.isArray(lockedOutUsers) && lockedOutUsers.length === 0) {
+        if (lockedOutUsers.length === 0) {
             // Clear the LockedOutUsers table
             db.run('DELETE FROM LockedOutUsers', (err) => {
                 if (err) {

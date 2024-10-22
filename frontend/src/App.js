@@ -65,6 +65,13 @@ function App() {
     }
   }, []);
 
+  useEffect(() => {
+    const currentADObjectID = localStorage.getItem('currentADObjectID');
+    if (currentADObjectID) {
+      fetchADObject(currentADObjectID);
+    }
+  }, []);
+
   const handleLogin = async (AdminID, password) => {
     try {
       const response = await fetch(`${ENDPOINT}/api/auth/login`, {
@@ -106,6 +113,7 @@ function App() {
       if (response.ok) {
         localStorage.removeItem('token');
         localStorage.removeItem('sessionID');
+        localStorage.removeItem('currentADObjectID'); // Remove current AD object ID from local storage
         setIsAuthenticated(false);
         setAdminID('');
         console.log('Successfully logged out and session destroyed.');
@@ -118,6 +126,32 @@ function App() {
   };
 
   const handleFormSubmit = async (adObjectID) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No token found');
+
+      const response = await fetch(`${ENDPOINT}/api/fetch-adobject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ adObjectID }),
+      });
+
+      if (!response.ok) throw new Error('Network response was not ok');
+
+      const data = await response.text();
+      setAdObjectData(data);
+      setSection('user-prop');
+      localStorage.setItem('currentView', 'user-prop'); // Store the current view in local storage
+      localStorage.setItem('currentADObjectID', adObjectID); // Store the current AD object ID in local storage
+    } catch (error) {
+      console.error('Error fetching AD object properties:', error);
+    }
+  };
+
+  const fetchADObject = async (adObjectID) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No token found');

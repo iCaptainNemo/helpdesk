@@ -30,8 +30,8 @@ $PDC = $domainControllers.PDC
 $lockedOutUsers = Search-ADAccount -LockedOut -UsersOnly
 
 if ($lockedOutUsers.Count -eq 0) {
-    # Return an empty array if no locked-out users
-    return @()
+    # Return an empty JSON array if no locked-out users
+    return @() | ConvertTo-Json -Compress
 }
 
 # Iterate through all locked-out users and get additional AD properties
