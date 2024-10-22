@@ -15,7 +15,7 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [AdminID, setAdminID] = useState(''); // Store AdminID from the server
   const [initialCheck, setInitialCheck] = useState(false); // Track the first authentication check
-  const [section, setSection] = useState('dashboard'); // Track the current section
+  const [section, setSection] = useState(localStorage.getItem('currentView') || 'dashboard'); // Track the current section
   const [adObjectData, setAdObjectData] = useState(''); // Store AD object data
 
   useEffect(() => {
@@ -136,9 +136,15 @@ function App() {
       const data = await response.text();
       setAdObjectData(data);
       setSection('user-prop');
+      localStorage.setItem('currentView', 'user-prop'); // Store the current view in local storage
     } catch (error) {
       console.error('Error fetching AD object properties:', error);
     }
+  };
+
+  const handleSectionChange = (newSection) => {
+    setSection(newSection);
+    localStorage.setItem('currentView', newSection); // Store the current view in local storage
   };
 
   const renderSection = () => {
@@ -163,7 +169,7 @@ function App() {
       {isAuthenticated ? (
         <>
           <Header AdminID={AdminID} onLogout={handleLogout} onFormSubmit={handleFormSubmit} />
-          <Navbar setCurrentView={setSection} />
+          <Navbar setCurrentView={handleSectionChange} />
           {renderSection()}
         </>
       ) : (
