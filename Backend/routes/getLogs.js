@@ -2,9 +2,11 @@ const express = require('express');
 const router = express.Router();
 const { executePowerShellScript } = require('../powershell');
 const logger = require('../utils/logger'); // Import the logger module
+const path = require('path');
+require('dotenv').config(); // Load environment variables from .env file
 
 // Define the path to the PowerShell script
-const scriptPath = './functions/Get-Logs.ps1';
+const scriptPath = path.join(__dirname, '../functions/Get-Logs.ps1');
 
 // Hardcoded log file path for testing
 const logFilePath = '\\\\hssserver037\\login-tracking\\';
@@ -20,6 +22,9 @@ router.post('/', async (req, res) => {
         // Execute the PowerShell script with the log file path and currentADObjectID as arguments
         const result = await executePowerShellScript(scriptPath, [logFilePath, currentADObjectID]);
         
+        // Log the raw result from the PowerShell script
+        logger.info('Raw result from PowerShell script:', result);
+
         // Check if the result contains valid JSON
         let parsedResult;
         try {
@@ -29,7 +34,7 @@ router.post('/', async (req, res) => {
             return res.status(500).json({ error: 'Failed to parse logs' });
         }
         
-        // Log the result
+        // Log the parsed result
         logger.info('Logs fetched successfully:', parsedResult);
         
         // Send the result as JSON

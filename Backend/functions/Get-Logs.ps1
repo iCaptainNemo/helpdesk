@@ -1,15 +1,16 @@
-# Import the Active Directory module
-Import-Module ActiveDirectory
-
 param (
     [string]$logFilePath,
     [string]$currentADObjectID
 )
 
+# Import the Active Directory module
+Import-Module ActiveDirectory
+
 # Function to display last 10 log entries with parsed information
 function Show-LastLogEntries {
     param (
-        [string]$logFilePath
+        [string]$logFilePath,
+        [string]$currentADObjectID
     )
 
     # Function to parse log entry
@@ -40,24 +41,24 @@ function Show-LastLogEntries {
     try {
         # Construct the full log file path using the currentADObjectID
         $fullLogFilePath = Join-Path -Path $logFilePath -ChildPath "$currentADObjectID.log"
-        Write-Host "Full log file path: $fullLogFilePath"
+        Write-Debug "Full log file path: $fullLogFilePath"
 
         # Check if the log file exists
         if (Test-Path $fullLogFilePath -PathType Leaf) {
-            $logEntries = Get-Content $fullLogFilePath -Tail 10
-            Write-Host "Last 10 login entries.:"
-            # Add a line break or additional Write-Host statements for space
-            Write-Host "`n"
+            $logEntries = Get-Content $fullLogFilePath
+            Write-Debug "Last 10 login entries:"
+            # Add a line break or additional Write-Debug statements for space
+            Write-Debug "`n"
             foreach ($entry in $logEntries) {
                 $parsedInfo = Parse-LogEntry -logEntry $entry
                 # Add the log entry to the $logTable array
                 $logTable += "$($parsedInfo.PossibleComputerName) $($parsedInfo.Day) $($parsedInfo.Date) $($parsedInfo.Time)"
             }
         } else {
-            Write-Host "No computer logs found" -ForegroundColor Yellow
+            Write-Debug "No computer logs found"
         }
     } catch {
-        Write-Host "No computer logs found" -ForegroundColor Yellow
+        Write-Debug "No computer logs found"
     }
     # Return $logTable as JSON
     return @{
@@ -66,4 +67,4 @@ function Show-LastLogEntries {
 }
 
 # Call the function and output the result
-Show-LastLogEntries -logFilePath $logFilePath
+Show-LastLogEntries -logFilePath $logFilePath -currentADObjectID $currentADObjectID
