@@ -1,0 +1,46 @@
+.logs-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.logs-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.logs-table th, .logs-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+.logs-table th {
+    background-color: #f2f2f2;
+    text-align: left;
+}
+
+.clickable-cell {
+    cursor: pointer;
+    position: relative;
+}
+
+.clickable-cell:hover {
+    background-color: #f0f0f0;
+}
+
+.clickable-cell::after {
+    content: "Click to copy";
+    position: absolute;
+    bottom: -20px;
+    left: 0;
+    background-color: black;
+    color: white;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+    display: none;
+}
+
+.clickable-cell:hover::after {
+    display: block;
+}

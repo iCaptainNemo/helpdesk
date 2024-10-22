@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Modal from 'react-modal';
+import Logs from '../components/Logs'; // Import the Logs component
 import '../styles/UserProperties.css'; // Import CSS for styling
 
 // Set the app element for react-modal
@@ -103,6 +104,32 @@ const UserProperties = ({ adObjectData }) => {
           Clear
         </button>
       </div>
+      <div className="tables-container">
+        <div className="logs-table-container">
+          <Logs adObjectData={adObjectData} /> {/* Pass adObjectData to Logs component */}
+        </div>
+        <div id="userPropertiesContainer">
+          <table className="properties-table">
+            <thead>
+              <tr>
+                <th>Property</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {selectedProperties.map((key) => (
+                <tr key={key}>
+                  <td>{key}</td>
+                  <td onClick={() => copyToClipboard(formatValue(data[key]))} className="clickable-cell">
+                    {formatValue(data[key])}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {tooltip.visible && <div className="tooltip">{tooltip.message}</div>}
       <Modal
         isOpen={modalIsOpen}
         onRequestClose={() => setModalIsOpen(false)}
@@ -133,27 +160,6 @@ const UserProperties = ({ adObjectData }) => {
         </div>
         <button onClick={() => setModalIsOpen(false)}>Close</button>
       </Modal>
-      <div id="userPropertiesContainer">
-        <table className="properties-table">
-          <thead>
-            <tr>
-              <th>Property</th>
-              <th>Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            {selectedProperties.map((key) => (
-              <tr key={key}>
-                <td>{key}</td>
-                <td onClick={() => copyToClipboard(formatValue(data[key]))} className="clickable-cell">
-                  {formatValue(data[key])}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {tooltip.visible && <div className="tooltip">{tooltip.message}</div>}
     </div>
   );
 };

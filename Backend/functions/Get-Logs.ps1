@@ -1,7 +1,10 @@
 # Import the Active Directory module
 Import-Module ActiveDirectory
 
-
+param (
+    [string]$logFilePath,
+    [string]$currentADObjectID
+)
 
 # Function to display last 10 log entries with parsed information
 function Show-LastLogEntries {
@@ -31,34 +34,36 @@ function Show-LastLogEntries {
         }
     }
 
-    # Initialize $possibleComputers and $logTable as empty arrays
-    $possibleComputers = @()
+    # Initialize $logTable as an empty array
     $logTable = @()
 
     try {
+        # Construct the full log file path using the currentADObjectID
+        $fullLogFilePath = Join-Path -Path $logFilePath -ChildPath "$currentADObjectID.log"
+        Write-Host "Full log file path: $fullLogFilePath"
+
         # Check if the log file exists
-        if (Test-Path $logFilePath -PathType Leaf) {
-            $logEntries = Get-Content $logFilePath -Tail 10
+        if (Test-Path $fullLogFilePath -PathType Leaf) {
+            $logEntries = Get-Content $fullLogFilePath -Tail 10
             Write-Host "Last 10 login entries.:"
             # Add a line break or additional Write-Host statements for space
             Write-Host "`n"
             foreach ($entry in $logEntries) {
                 $parsedInfo = Parse-LogEntry -logEntry $entry
-                # Add the PossibleComputerName to the $possibleComputers array
-                $possibleComputers += $parsedInfo.PossibleComputerName
                 # Add the log entry to the $logTable array
                 $logTable += "$($parsedInfo.PossibleComputerName) $($parsedInfo.Day) $($parsedInfo.Date) $($parsedInfo.Time)"
             }
         } else {
-            Write-Host " No computer logs found" -ForegroundColor Yellow
+            Write-Host "No computer logs found" -ForegroundColor Yellow
         }
     } catch {
-        # Write-Host "Error: $_" -ForegroundColor Red
         Write-Host "No computer logs found" -ForegroundColor Yellow
     }
-    # Return $possibleComputers and $logTable
+    # Return $logTable as JSON
     return @{
-        PossibleComputers = $possibleComputers
         LogTable = $logTable
-    }
+    } | ConvertTo-Json -Compress
 }
+
+# Call the function and output the result
+Show-LastLogEntries -logFilePath $logFilePath

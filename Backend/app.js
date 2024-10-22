@@ -92,6 +92,7 @@ const executeScriptRoute = require('./routes/executeScript'); // Route for execu
 const updateLockedOutUsersRoute = require('./routes/updateLockedOutUsers'); // Route for updating locked out users
 const logoutRoute = require('./routes/logout'); // Route for logout
 const checkSessionRoute = require('./routes/checkSession'); // Route for checking powershell sessions
+const getLogsRoute = require('./routes/getLogs'); // Route for fetching logs
 
 // Use routes and pass db to them
 app.use('/api/fetch-adobject', verifyToken, fetchADObjectRoute); 
@@ -104,6 +105,7 @@ app.use('/api/execute-script', executeScriptRoute); // Route to execute PowerShe
 app.use('/api/update-locked-out-users', updateLockedOutUsersRoute); // Route to update locked out users
 app.use('/api/logout', logoutRoute); // Register the logout route
 app.use('/api/check-session', checkSessionRoute); // Check powershell sessions on backend
+app.use('/api/get-logs', getLogsRoute); // Route to fetch logs
 
 // Middleware to handle 403 Forbidden errors
 app.use(forbidden);
