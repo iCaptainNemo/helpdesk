@@ -185,9 +185,17 @@ function Unlock-User {
 
             if ($user) {
                 $userEntry = $user.GetDirectoryEntry()
-                $userEntry.Properties["lockoutTime"].Value = 0
-                $userEntry.CommitChanges()
-                $unlockResults[$dc.Name] = $true
+                try {
+                    $userEntry.Properties["lockoutTime"].Value = 0
+                    $userEntry.CommitChanges()
+                    $unlockResults[$dc.Name] = $true
+                } catch {
+                    if ($_.Exception.Message -match "Access is denied") {
+                        $unlockResults[$dc.Name] = "Access Denied"
+                    } else {
+                        $unlockResults[$dc.Name] = "An Error Occurred"
+                    }
+                }
             } else {
                 $unlockResults[$dc.Name] = $false
             }
@@ -200,14 +208,22 @@ function Unlock-User {
                 Write-Debug "Unlock-User2: User search result - $user"
                 if ($user) {
                     $userEntry = $user.GetDirectoryEntry()
-                    $userEntry.Properties["lockoutTime"].Value = 0
-                    $userEntry.CommitChanges()
-                    $unlockResults[$targetDC] = $true
+                    try {
+                        $userEntry.Properties["lockoutTime"].Value = 0
+                        $userEntry.CommitChanges()
+                        $unlockResults[$targetDC] = $true
+                    } catch {
+                        if ($_.Exception.Message -match "Access is denied") {
+                            $unlockResults[$targetDC] = "Access Denied"
+                        } else {
+                            $unlockResults[$targetDC] = "An Error Occurred"
+                        }
+                    }
                 } else {
                     $unlockResults[$targetDC] = $false
                 }
             } catch {
-                $unlockResults[$targetDC] = $false
+                $unlockResults[$targetDC] = "An Error Occurred"
             }
         } else {
             $unlockResults[$targetDC] = $false
@@ -227,5 +243,14 @@ if ($targetDC -ne '0') {
     Unlock-User -userId $UserID -targetDC $DDC -dcList $dcList -domainRoot $domainRoot.DomainRoot
 }
 
-# Output the results as JSON
-$unlockResults | ConvertTo-Json -Compress
+# Determine the final result
+$finalResult = if ($unlockResults.Values -contains $true) {
+    "$UserID Unlocked"
+} elseif ($unlockResults.Values -contains "Access Denied") {
+    "Access Denied"
+} else {
+    "An Error Occurred"
+}
+
+# Output the final result as JSON
+$finalResult | ConvertTo-Json -Compress

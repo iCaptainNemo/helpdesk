@@ -11,7 +11,8 @@ const tables = [
         name: 'Admin',
         columns: [
             'AdminID TEXT PRIMARY KEY',
-            'AdminComputer TEXT'
+            'AdminComputer TEXT',
+            'password TEXT',
         ]
     },
     {
@@ -21,24 +22,7 @@ const tables = [
             'LastHelped DATETIME',
             'TimesUnlocked INT',
             'PasswordResets INT',
-            'badPwdCount INT',
-            'City TEXT',
-            'Created DATETIME',
-            'department TEXT',
-            'givenName TEXT',
-            'homeDirectory TEXT',
-            'lastLogon DATETIME',
-            'Modified DATETIME',
-            'badPasswordTime DATETIME',
-            'lockoutTime DATETIME',
-            'mail TEXT',
-            'pwdLastSet DATETIME',
-            'sn TEXT',
-            'streetAddress TEXT',
-            'telephoneNumber TEXT',
-            'Title TEXT',
-            'MemberOf TEXT',
-            'Computers TEXT'
+            'TimesHelped INT'
         ]
     },
     {

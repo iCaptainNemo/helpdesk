@@ -38,7 +38,10 @@ const LockedOutUsers = () => {
         return () => clearInterval(intervalId);
     }, []);
 
-    const handleUnlockSuccess = () => {
+    const handleUnlockSuccess = (result, userID) => {
+        if (result.message.includes('Unlocked')) {
+            setLockedOutUsers(prevUsers => prevUsers.filter(user => user.UserID !== userID));
+        }
         updateLockedOutUsers()
             .then(() => fetchLockedOutUsers()) // Fetch the updated list after updating
             .catch(error => console.error('Error updating or fetching locked out users:', error));
@@ -81,11 +84,11 @@ const LockedOutUsers = () => {
                                 <td>{formatDate(user.AccountLockoutTime)}</td>
                                 <td>
                                     <ScriptButton
-                                    scriptName="unlocker"
-                                    params={{ userID: user.UserID }}
-                                    sessionID={sessionID} // Pass sessionID to ScriptButton
-                                    buttonText="Unlock"
-                                    onSuccess={handleUnlockSuccess}
+                                        scriptName="unlocker"
+                                        params={{ userID: user.UserID }}
+                                        sessionID={sessionID} // Pass sessionID to ScriptButton
+                                        buttonText="Unlock"
+                                        onSuccess={(result) => handleUnlockSuccess(result, user.UserID)}
                                     />
                                 </td>
                             </tr>

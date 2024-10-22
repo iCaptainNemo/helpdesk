@@ -65,9 +65,13 @@ const UserProperties = ({ adObjectData }) => {
     localStorage.removeItem('adObjectData');
   };
 
+  const stripDistinguishedName = (dn) => {
+    return dn.split(',').filter(part => part.startsWith('CN=')).map(part => part.replace('CN=', '')).join(', ');
+  };
+
   const formatValue = (value) => {
     if (Array.isArray(value)) {
-      return value.join(', ');
+      return value.map(stripDistinguishedName).join(', ');
     } else if (typeof value === 'string' && value.match(/^\d+$/)) {
       return formatDate(value);
     } else if (typeof value === 'object' && value !== null) {
@@ -100,7 +104,7 @@ const UserProperties = ({ adObjectData }) => {
         <h3>Select Properties to Display</h3>
         <div className="modal-content">
           <ul>
-            {Object.keys(data).map((key) => (
+            {Object.keys(data).sort().map((key) => (
               <li key={key}>
                 <label>
                   <input

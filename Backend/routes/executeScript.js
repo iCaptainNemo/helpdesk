@@ -6,7 +6,7 @@ const logger = require('../utils/logger');
 const verifyToken = require('../middleware/verifyToken');
 
 router.post('/', verifyToken, async (req, res) => {
-    const { scriptName, params, sessionID } = req.body; // Remove adminComputer from the request body
+    const { scriptName, params, sessionID } = req.body;
     const scriptPath = `./functions/${scriptName}.ps1`;
 
     logger.info(`Received request to execute script: ${scriptName} with params: ${JSON.stringify(params)} and sessionID: ${sessionID}`);
@@ -27,15 +27,15 @@ router.post('/', verifyToken, async (req, res) => {
             return res.status(500).json({ error: 'Session not found' });
         }
 
-        const { adminComputer } = session; // Fetch adminComputer from the session
+        const { adminComputer } = session;
 
         try {
-            const result = await executePowerShellScript(scriptPath, [params.userID, adminComputer], session.powershellSession); // Pass adminComputer to the script
+            const result = await executePowerShellScript(scriptPath, [params.userID, adminComputer], session.powershellSession);
             logger.info(`Script executed successfully: ${result}`);
-            res.json(result);
+            res.json({ message: result });
         } catch (error) {
             logger.error(`Error executing PowerShell script: ${error}`);
-            res.status(500).json({ error: error.message });
+            res.status(500).json({ error: 'Failed to execute script' });
         }
     });
 });
