@@ -12,7 +12,6 @@ const UserProperties = ({ adObjectData }) => {
     'mail',
     'title',
     'department',
-    'AccountLockoutTime',
     'homeDirectory',
     'streetAddress',
     'physicalDeliveryOfficeName',
@@ -22,6 +21,7 @@ const UserProperties = ({ adObjectData }) => {
   const [selectedProperties, setSelectedProperties] = useState([]);
   const [data, setData] = useState({});
   const [modalIsOpen, setModalIsOpen] = useState(false);
+  const [tooltip, setTooltip] = useState({ visible: false, message: '' });
 
   useEffect(() => {
     // Load selected properties from local storage or set default properties
@@ -83,6 +83,15 @@ const UserProperties = ({ adObjectData }) => {
     }
   };
 
+  const copyToClipboard = (value) => {
+    navigator.clipboard.writeText(value).then(() => {
+      setTooltip({ visible: true, message: 'Copied!' });
+      setTimeout(() => setTooltip({ visible: false, message: '' }), 2000);
+    }).catch(err => {
+      console.error('Failed to copy: ', err);
+    });
+  };
+
   return (
     <div className="user-properties-container">
       <h2>User Properties</h2>
@@ -136,12 +145,15 @@ const UserProperties = ({ adObjectData }) => {
             {selectedProperties.map((key) => (
               <tr key={key}>
                 <td>{key}</td>
-                <td>{formatValue(data[key])}</td>
+                <td onClick={() => copyToClipboard(formatValue(data[key]))} className="clickable-cell">
+                  {formatValue(data[key])}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      {tooltip.visible && <div className="tooltip">{tooltip.message}</div>}
     </div>
   );
 };

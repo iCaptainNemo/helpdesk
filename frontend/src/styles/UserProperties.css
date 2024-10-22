@@ -1,74 +1,114 @@
 .user-properties-container {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
-  }
-  
-  .properties-table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  
-  .properties-table th, .properties-table td {
-    border: 1px solid #ddd;
-    padding: 8px;
-  }
-  
-  .properties-table th {
-    background-color: #f2f2f2;
-    text-align: left;
-  }
-  
-  .button-container {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 20px;
-  }
-  
-  .settings-button, .clear-button {
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    margin: 0 10px;
-  }
-  
-  .clear-button {
-    font-size: 16px;
-    background-color: #ffffff;
-    color: #000000;
-  }
-  
-  .modal {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    right: auto;
-    bottom: auto;
-    margin-right: -50%;
-    transform: translate(-50%, -50%);
-    background: rgb(196, 195, 195); /* Change background to grey */
-    color: rgb(0, 0, 0); /* Change text color to white */
-    padding: 20px;
-    border-radius: 4px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    max-height: 80vh; /* Limit the height of the modal */
-    overflow-y: auto; /* Add scroll bar if content is too long */
-  }
-  
-  .overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.75);
-  }
-  
-  .modal-content {
-    max-height: 60vh; /* Limit the height of the modal content */
-    overflow-y: auto; /* Add scroll bar if content is too long */
-  }
-  .default-property {
-    color: #868686 /* Grey out default properties */
-  }
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.properties-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.properties-table th, .properties-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+.properties-table th {
+  background-color: #f2f2f2;
+  text-align: left;
+}
+
+.button-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.settings-button, .clear-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  margin: 0 10px;
+}
+
+.clear-button {
+  font-size: 16px;
+  background-color: #ffffff;
+  color: #000000;
+}
+
+.modal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  margin-right: -50%;
+  transform: translate(-50%, -50%);
+  background: rgb(196, 195, 195); /* Change background to grey */
+  color: rgb(0, 0, 0); /* Change text color to white */
+  padding: 20px;
+  border-radius: 4px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  max-height: 80vh; /* Limit the height of the modal */
+  overflow-y: auto; /* Add scroll bar if content is too long */
+}
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+}
+
+.modal-content {
+  max-height: 60vh; /* Limit the height of the modal content */
+  overflow-y: auto; /* Add scroll bar if content is too long */
+}
+
+.default-property {
+  color: #868686 /* Grey out default properties */
+}
+
+.clickable-cell {
+  cursor: pointer;
+  position: relative;
+}
+
+.clickable-cell:hover {
+  background-color: #f0f0f0;
+}
+
+.clickable-cell::after {
+  content: "Click to copy";
+  position: absolute;
+  bottom: -20px;
+  left: 0;
+  background-color: rgb(207, 207, 207);
+  color: rgb(0, 0, 0);
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 12px;
+  display: none;
+}
+
+.clickable-cell:hover::after {
+  display: block;
+}
+
+.tooltip {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: black;
+  color: white;
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+}
