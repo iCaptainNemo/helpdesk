@@ -67,13 +67,12 @@ function App() {
 
   const handleLogin = async (AdminID, password) => {
     try {
-      const adminComputer = window.location.hostname; // Automatically detect the computer name
       const response = await fetch(`${ENDPOINT}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ AdminID, password, adminComputer }), // Include adminComputer in the request body
+        body: JSON.stringify({ AdminID, password }), // Remove adminComputer from the request body
       });
       const data = await response.json();
       if (data.token) {
@@ -81,7 +80,7 @@ function App() {
         localStorage.setItem('sessionID', data.sessionID); // Store session ID in local storage
         setIsAuthenticated(true);
         setAdminID(data.AdminID);
-        console.log(`Login successful, AdminID: ${data.AdminID}, AdminComputer: ${adminComputer}`); // Log adminComputer
+        console.log(`Login successful, AdminID: ${data.AdminID}`); // Log AdminID
       } else {
         console.error('Login failed: No token received');
       }
