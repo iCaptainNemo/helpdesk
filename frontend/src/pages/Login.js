@@ -5,7 +5,6 @@ const Login = ({ onLogin, onWindowsLogin }) => {
   const [sAMAccountName, setSAMAccountName] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const [adminComputer, setAdminComputer] = useState(''); // Add state for adminComputer
 
   useEffect(() => {
     const savedUsername = localStorage.getItem('rememberedUsername');
@@ -13,10 +12,6 @@ const Login = ({ onLogin, onWindowsLogin }) => {
       setSAMAccountName(savedUsername);
       setRememberMe(true);
     }
-
-    // Automatically detect the computer name
-    const computerName = window.location.hostname;
-    setAdminComputer(computerName);
   }, []);
 
   const handleLogin = async () => {
@@ -36,8 +31,7 @@ const Login = ({ onLogin, onWindowsLogin }) => {
         },
         body: JSON.stringify({
           AdminID: upperCaseSAMAccountName, // Use uppercase AdminID
-          password,
-          adminComputer // Include adminComputer in the request body
+          password
         })
       });
 
@@ -55,7 +49,7 @@ const Login = ({ onLogin, onWindowsLogin }) => {
       } else {
         localStorage.removeItem('rememberedUsername');
       }
-      onLogin(data.AdminID);
+      onLogin(data.AdminID, data.AdminComputer); // Pass AdminComputer to onLogin
     } catch (error) {
       console.error('Login failed:', error);
       if (error.message === 'Invalid ID or password') {
@@ -138,21 +132,6 @@ const Login = ({ onLogin, onWindowsLogin }) => {
           </label>
         </div>
       </form>
-      {/* <div className="or-divider">
-        <span>Or</span>
-      </div> */}
-      {/* <button className="btn block-cube block-cube-hover" onClick={handleWindowsLogin} style={{ width: '100%' }}>
-        <div className="bg-top">
-          <div className="bg-inner"></div>
-        </div>
-        <div className="bg-right">
-          <div className="bg-inner"></div>
-        </div>
-        <div className="bg">
-          <div className="bg-inner"></div>
-        </div>
-        <div className="text">Login with Windows</div>
-      </button> */}
     </div>
   );
 };

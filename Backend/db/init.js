@@ -11,7 +11,7 @@ const tables = [
         name: 'Admin',
         columns: [
             'AdminID TEXT PRIMARY KEY',
-            'computername TEXT'
+            'AdminComputer TEXT'
         ]
     },
     {
