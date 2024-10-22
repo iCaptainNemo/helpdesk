@@ -20,7 +20,7 @@ const Logs = ({ adObjectData }) => {
                     throw new Error('Failed to fetch logs');
                 }
                 const data = await response.json();
-                setLogs(data.LogTable);
+                setLogs(data);
             } catch (error) {
                 console.error('Error fetching logs:', error);
                 setError('Error fetching logs');
@@ -43,32 +43,40 @@ const Logs = ({ adObjectData }) => {
     return (
         <div className="logs-container">
             <h2>Logs</h2>
-            <table className="logs-table">
-                <thead>
-                    <tr>
-                        <th>Log Entry</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {error ? (
+            <div className="table-container">
+                <table className="logs-table">
+                    <thead>
                         <tr>
-                            <td>{error}</td>
+                            <th>Computer</th>
+                            <th>Day</th>
+                            <th>Date</th>
+                            <th>Time</th>
                         </tr>
-                    ) : logs.length === 0 ? (
-                        <tr>
-                            <td>No logs available.</td>
-                        </tr>
-                    ) : (
-                        logs.map((log, index) => (
-                            <tr key={index}>
-                                <td onClick={() => copyToClipboard(log)} className="clickable-cell">
-                                    {log}
-                                </td>
+                    </thead>
+                    <tbody>
+                        {error ? (
+                            <tr>
+                                <td colSpan="4">{error}</td>
                             </tr>
-                        ))
-                    )}
-                </tbody>
-            </table>
+                        ) : logs.length === 0 ? (
+                            <tr>
+                                <td colSpan="4">No logs available.</td>
+                            </tr>
+                        ) : (
+                            logs.map((log, index) => (
+                                <tr key={index}>
+                                    <td onClick={() => copyToClipboard(log.Computer)} className="clickable-cell">
+                                        {log.Computer}
+                                    </td>
+                                    <td>{log.Day}</td>
+                                    <td>{log.Date}</td>
+                                    <td>{log.Time}</td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 };

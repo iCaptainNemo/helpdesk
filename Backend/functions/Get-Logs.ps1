@@ -3,9 +3,6 @@ param (
     [string]$currentADObjectID
 )
 
-# Import the Active Directory module
-Import-Module ActiveDirectory
-
 # Function to display last 10 log entries with parsed information
 function Show-LastLogEntries {
     param (
@@ -28,7 +25,7 @@ function Show-LastLogEntries {
 
         # Return parsed information
         return @{
-            PossibleComputerName = $PossibleComputerName
+            Computer = $PossibleComputerName
             Day = $day
             Date = $date
             Time = $time
@@ -41,30 +38,30 @@ function Show-LastLogEntries {
     try {
         # Construct the full log file path using the currentADObjectID
         $fullLogFilePath = Join-Path -Path $logFilePath -ChildPath "$currentADObjectID.log"
-        Write-Debug "Full log file path: $fullLogFilePath"
 
         # Check if the log file exists
         if (Test-Path $fullLogFilePath -PathType Leaf) {
-            $logEntries = Get-Content $fullLogFilePath
-            Write-Debug "Last 10 login entries:"
-            # Add a line break or additional Write-Debug statements for space
-            Write-Debug "`n"
+            $logEntries = Get-Content $fullLogFilePath -Tail 50
             foreach ($entry in $logEntries) {
                 $parsedInfo = Parse-LogEntry -logEntry $entry
-                # Add the log entry to the $logTable array
-                $logTable += "$($parsedInfo.PossibleComputerName) $($parsedInfo.Day) $($parsedInfo.Date) $($parsedInfo.Time)"
+                # Add the parsed log entry to the $logTable array
+                $logTable += [PSCustomObject]@{
+                    Computer = $parsedInfo.Computer
+                    Day = $parsedInfo.Day
+                    Date = $parsedInfo.Date
+                    Time = $parsedInfo.Time
+                }
             }
-        } else {
-            Write-Debug "No computer logs found"
         }
     } catch {
-        Write-Debug "No computer logs found"
+        # Handle errors if needed
     }
     # Return $logTable as JSON
-    return @{
-        LogTable = $logTable
-    } | ConvertTo-Json -Compress
+    return $logTable | ConvertTo-Json -Compress
 }
 
-# Call the function and output the result
-Show-LastLogEntries -logFilePath $logFilePath -currentADObjectID $currentADObjectID
+# Store the result of the function call
+$logs = Show-LastLogEntries -logFilePath $logFilePath -currentADObjectID $currentADObjectID
+
+# Output the result as JSON
+$logs | ConvertTo-Json -Compress
