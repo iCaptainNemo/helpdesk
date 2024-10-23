@@ -14,7 +14,6 @@ async function updateLockedOutUsers() {
             logger.error('Expected lockedOutUsers to be an array, but got:', typeof lockedOutUsers);
             return;
         }
-
         // Check if lockedOutUsers is an empty array
         if (lockedOutUsers.length === 0) {
             // Clear the LockedOutUsers table
@@ -25,6 +24,7 @@ async function updateLockedOutUsers() {
                     logger.info('Locked out users table cleared.');
                 }
             });
+            logger.info('No locked out users found.');
             return;
         }
 
