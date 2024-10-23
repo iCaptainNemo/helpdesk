@@ -1,22 +1,10 @@
 .user-properties-container {
-  max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
-}
-
-.properties-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.properties-table th, .properties-table td {
-  border: 1px solid #ddd;
-  padding: 8px;
-}
-
-.properties-table th {
-  background-color: #f2f2f2;
-  text-align: left;
 }
 
 .button-container {
@@ -25,53 +13,52 @@
   margin-bottom: 20px;
 }
 
-.settings-button, .clear-button {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
+.tables-container {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.logs-table-container,
+#userPropertiesContainer {
+  flex: 1;
   margin: 0 10px;
+  display: flex;
+  flex-direction: column;
 }
 
-.clear-button {
-  font-size: 16px;
-  background-color: #ffffff;
-  color: #000000;
+.logs-table-container {
+  overflow-y: auto;
+  max-height: 100%;
 }
 
-.modal {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  right: auto;
-  bottom: auto;
-  margin-right: -50%;
-  transform: translate(-50%, -50%);
-  background: rgb(196, 195, 195); /* Change background to grey */
-  color: rgb(0, 0, 0); /* Change text color to white */
-  padding: 20px;
-  border-radius: 4px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  max-height: 80vh; /* Limit the height of the modal */
-  overflow-y: auto; /* Add scroll bar if content is too long */
+.properties-table,
+.logs-table {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-.overlay {
-  position: fixed;
+.properties-table th,
+.properties-table td,
+.logs-table th,
+.logs-table td {
+  border: 1px solid #ddd;
+  padding: 7px;
+}
+
+.properties-table th,
+.logs-table th {
+  background-color: #f2f2f2;
+  text-align: center; /* Center-align the headers */
+  position: sticky;
   top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.75);
-}
-
-.modal-content {
-  max-height: 60vh; /* Limit the height of the modal content */
-  overflow-y: auto; /* Add scroll bar if content is too long */
-}
-
-.default-property {
-  color: #868686 /* Grey out default properties */
+  z-index: 1;
 }
 
 .clickable-cell {
@@ -88,7 +75,7 @@
   position: absolute;
   bottom: -20px;
   left: 0;
-  background-color: rgb(207, 207, 207);
+  background-color: rgb(185, 185, 185);
   color: rgb(0, 0, 0);
   padding: 2px 5px;
   border-radius: 3px;
@@ -105,10 +92,11 @@
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background-color: black;
-  color: white;
+  background-color: rgb(64, 250, 39);
+  color: rgb(0, 0, 0);
   padding: 10px;
   border-radius: 5px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   z-index: 1000;
+  font-weight: bold; /* Make the text bold */
 }

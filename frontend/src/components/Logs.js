@@ -4,6 +4,7 @@ import '../styles/Logs.css'; // Import the CSS file
 const Logs = ({ adObjectData }) => {
     const [logs, setLogs] = useState([]);
     const [error, setError] = useState(null);
+    const [tooltip, setTooltip] = useState({ visible: false, message: '' });
 
     useEffect(() => {
         const fetchLogs = async () => {
@@ -34,7 +35,8 @@ const Logs = ({ adObjectData }) => {
 
     const copyToClipboard = (value) => {
         navigator.clipboard.writeText(value).then(() => {
-            alert('Copied to clipboard');
+            setTooltip({ visible: true, message: 'Copied!' });
+            setTimeout(() => setTooltip({ visible: false, message: '' }), 2000);
         }).catch(err => {
             console.error('Failed to copy: ', err);
         });
@@ -42,7 +44,6 @@ const Logs = ({ adObjectData }) => {
 
     return (
         <div className="logs-container">
-            <h2>Logs</h2>
             <div className="table-container">
                 <table className="logs-table">
                     <thead>
@@ -77,6 +78,7 @@ const Logs = ({ adObjectData }) => {
                     </tbody>
                 </table>
             </div>
+            {tooltip.visible && <div className="tooltip">{tooltip.message}</div>}
         </div>
     );
 };

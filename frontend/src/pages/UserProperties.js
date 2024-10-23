@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Modal from 'react-modal';
 import Logs from '../components/Logs'; // Import the Logs component
 import '../styles/UserProperties.css'; // Import CSS for styling
@@ -23,6 +23,8 @@ const UserProperties = ({ adObjectData }) => {
   const [data, setData] = useState({});
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [tooltip, setTooltip] = useState({ visible: false, message: '' });
+  const logsTableRef = useRef(null);
+  const userPropertiesTableRef = useRef(null);
 
   useEffect(() => {
     // Load selected properties from local storage or set default properties
@@ -42,6 +44,14 @@ const UserProperties = ({ adObjectData }) => {
       }
     }
   }, [adObjectData]);
+
+  useEffect(() => {
+    // Synchronize the heights of the tables
+    if (logsTableRef.current && userPropertiesTableRef.current) {
+      const userPropertiesTableHeight = userPropertiesTableRef.current.offsetHeight;
+      logsTableRef.current.style.maxHeight = `${userPropertiesTableHeight}px`;
+    }
+  }, [selectedProperties, data]);
 
   const formatDate = (windowsFileTime) => {
     const windowsEpochStart = new Date('1601-01-01T00:00:00Z').getTime(); // Windows epoch start in milliseconds
@@ -95,7 +105,6 @@ const UserProperties = ({ adObjectData }) => {
 
   return (
     <div className="user-properties-container">
-      <h2>User Properties</h2>
       <div className="button-container">
         <button onClick={() => setModalIsOpen(true)} className="settings-button">
           ⚙️
@@ -104,11 +113,13 @@ const UserProperties = ({ adObjectData }) => {
           Clear
         </button>
       </div>
+      <div className="table-header">
+      </div>
       <div className="tables-container">
-        <div className="logs-table-container">
+        <div className="logs-table-container" ref={logsTableRef}>
           <Logs adObjectData={adObjectData} /> {/* Pass adObjectData to Logs component */}
         </div>
-        <div id="userPropertiesContainer">
+        <div id="userPropertiesContainer" ref={userPropertiesTableRef}>
           <table className="properties-table">
             <thead>
               <tr>
