@@ -87,7 +87,15 @@ async function insertOrUpdateAdminUser(adminUser) {
 
 function fetchAdminUser(adminID) {
     const query = `SELECT * FROM Admin WHERE AdminID = ?;`;
-    return executeQuery(query, [adminID]);
+    return new Promise((resolve, reject) => {
+        db.get(query, [adminID], (err, row) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(row);
+            }
+        });
+    });
 }
 
 module.exports = {

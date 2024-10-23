@@ -53,7 +53,7 @@ function verifyToken(req, res, next) {
 
 // Login route using LDAP
 router.post('/login', sanitizeInput, async (req, res) => {
-  const { AdminID, password, adminComputer } = req.body; // Changed to adminComputer
+  const { AdminID, password } = req.body; // Removed adminComputer from request body
   logger.info('Received login request for AdminID:', AdminID);
 
   try {
@@ -66,22 +66,29 @@ router.post('/login', sanitizeInput, async (req, res) => {
 
     // Check if user exists in the database
     const adminUser = await fetchAdminUser(AdminID);
+    logger.info(`Fetched admin user for AdminID ${AdminID}:`, adminUser);
     if (!adminUser) {
       logger.warn(`No account found for AdminID: ${AdminID}`);
       return res.status(404).json({ error: 'No account found' });
     }
 
+    // Check if adminComputer is present in the adminUser object
+    if (!adminUser.AdminComputer) {
+      logger.warn(`AdminComputer not found for AdminID: ${AdminID}`);
+      return res.status(404).json({ error: 'AdminComputer not found' });
+    }
+
     // Generate JWT token with adminComputer
-    const token = jwt.sign({ AdminID, adminComputer }, SECRET_KEY, { expiresIn: JWT_EXPIRATION });
-    logger.info(`JWT token generated for AdminID: ${AdminID}, AdminComputer: ${adminComputer}`);
+    const token = jwt.sign({ AdminID, adminComputer: adminUser.AdminComputer }, SECRET_KEY, { expiresIn: JWT_EXPIRATION });
+    logger.info(`JWT token generated for AdminID: ${AdminID}, AdminComputer: ${adminUser.AdminComputer}`);
 
     // Store session information
     req.session.AdminID = AdminID; // Store AdminID in the session
-    req.session.adminComputer = adminComputer; // Store adminComputer in the session
-    logger.info(`Session created for AdminID: ${AdminID}, AdminComputer: ${adminComputer}`);
+    req.session.adminComputer = adminUser.AdminComputer; // Store adminComputer in the session
+    logger.info(`Session created for AdminID: ${AdminID}, AdminComputer: ${adminUser.AdminComputer}`);
 
     // Include session ID and adminComputer in the response
-    res.json({ token, AdminID, adminComputer, sessionID: req.sessionID });
+    res.json({ token, AdminID, adminComputer: adminUser.AdminComputer, sessionID: req.sessionID });
   } catch (error) {
     logger.error('Login failed:', error);
     res.status(500).json({ error: 'Internal Server Error' });
