@@ -103,12 +103,12 @@ router.post('/login', sanitizeInput, async (req, res) => {
 
 // Route to update password
 router.post('/update-password', sanitizeInput, async (req, res) => {
-  const { AdminID, password } = req.body;
+  const { AdminID, newPassword } = req.body;
   logger.info('Received password update request for AdminID:', AdminID);
 
   try {
     // Hash the new password
-    const hashedPassword = await hashPassword(password);
+    const hashedPassword = await hashPassword(newPassword);
 
     // Update the password in the database
     await insertOrUpdateAdminUser({ AdminID, password: hashedPassword });

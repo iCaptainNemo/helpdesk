@@ -135,23 +135,25 @@ const Login = ({ onLogin }) => {
             <div className="bg-inner"></div>
           </div>
         </div>
-        <div className="control block-cube block-input">
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <div className="bg-top">
-            <div className="bg-inner"></div>
+        {!isPasswordUpdateRequired && (
+          <div className="control block-cube block-input">
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <div className="bg-top">
+              <div className="bg-inner"></div>
+            </div>
+            <div className="bg-right">
+              <div className="bg-inner"></div>
+            </div>
+            <div className="bg">
+              <div className="bg-inner"></div>
+            </div>
           </div>
-          <div className="bg-right">
-            <div className="bg-inner"></div>
-          </div>
-          <div className="bg">
-            <div className="bg-inner"></div>
-          </div>
-        </div>
+        )}
         {isPasswordUpdateRequired && (
           <>
             <div className="control block-cube block-input">
