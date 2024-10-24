@@ -7,7 +7,7 @@ const LockedOutUsers = () => {
     const sessionID = localStorage.getItem('sessionID'); // Retrieve session ID from local storage
 
     const fetchLockedOutUsers = () => {
-        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/get-locked-out-users`)
+        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/protected/get-locked-out-users`)
             .then(response => response.json())
             .then(data => setLockedOutUsers(Array.isArray(data) ? data : [])) // Ensure data is an array
             .catch(error => console.error('Error fetching locked out users:', error));

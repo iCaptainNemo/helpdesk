@@ -72,32 +72,11 @@ function App() {
     }
   }, []);
 
-  const handleLogin = async (AdminID, password) => {
-    try {
-      const response = await fetch(`${ENDPOINT}/api/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ AdminID, password }), // Remove adminComputer from the request body
-      });
-      const data = await response.json();
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('sessionID', data.sessionID); // Store session ID in local storage
-        setIsAuthenticated(true);
-        setAdminID(data.AdminID);
-        console.log(`Login successful, AdminID: ${data.AdminID}`); // Log AdminID
-      } else if (data.error === 'Password needs to be updated') {
-        alert('Password needs to be updated. Please update your password.');
-        // Handle password update logic here
-        handlePasswordUpdate(AdminID);
-      } else {
-        console.error('Login failed: No token received');
-      }
-    } catch (error) {
-      console.error('Login failed:', error);
-    }
+  const handleLogin = (AdminID, AdminComputer, token) => {
+    setIsAuthenticated(true);
+    setAdminID(AdminID);
+    localStorage.setItem('token', token); // Store token in local storage
+    console.log(`Logged in as ${AdminID} on ${AdminComputer}`);
   };
 
   const handlePasswordUpdate = async (AdminID) => {

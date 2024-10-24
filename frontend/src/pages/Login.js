@@ -52,7 +52,7 @@ const Login = ({ onLogin }) => {
       } else {
         localStorage.removeItem('rememberedUsername');
       }
-      onLogin(data.AdminID, data.AdminComputer); // Pass AdminComputer to onLogin
+      onLogin(data.AdminID, data.AdminComputer, data.token); // Pass AdminComputer and token to onLogin
     } catch (error) {
       console.error('Login failed:', error);
       if (error.message === 'Password needs to be updated') {
