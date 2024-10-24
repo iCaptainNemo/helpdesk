@@ -57,25 +57,32 @@ async function insertOrUpdateAdminUser(adminUser) {
 
     if (existingUser.length === 0) {
         const insertQuery = `
-            INSERT INTO Admin (AdminID, temppassword, logfile, computername)
+            INSERT INTO Admin (AdminID, temppassword, computername, password)
             VALUES (?, ?, ?, ?);
         `;
         const params = [
-            adminUser.AdminID, adminUser.temppassword, adminUser.logfile, adminUser.computername
+            adminUser.AdminID, adminUser.temppassword, adminUser.computername, adminUser.password
         ];
         await executeQuery(insertQuery, params);
     } else {
         const fieldsToUpdate = {};
+
+        // Check if temppassword needs to be updated
         if (adminUser.temppassword && adminUser.temppassword !== existingUser[0].temppassword) {
             fieldsToUpdate.temppassword = adminUser.temppassword;
         }
-        if (adminUser.logfile && adminUser.logfile !== existingUser[0].logfile) {
-            fieldsToUpdate.logfile = adminUser.logfile;
-        }
+
+        // Check if computername needs to be updated
         if (adminUser.computername && adminUser.computername !== existingUser[0].computername) {
             fieldsToUpdate.computername = adminUser.computername;
         }
 
+        // Check if password needs to be updated
+        if (adminUser.password) {
+            fieldsToUpdate.password = adminUser.password;
+        }
+
+        // If there are fields to update, construct and execute the update query
         if (Object.keys(fieldsToUpdate).length > 0) {
             const setClause = Object.keys(fieldsToUpdate).map(field => `${field} = ?`).join(', ');
             const updateQuery = `UPDATE Admin SET ${setClause} WHERE AdminID = ?;`;

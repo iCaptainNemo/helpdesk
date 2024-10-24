@@ -1,21 +1,19 @@
 const express = require('express');
 const router = express.Router();
-const { fetchAdminUser } = require('../db/queries');
+const { fetchAdminUser, insertOrUpdateAdminUser } = require('../db/queries');
 const { body, validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
-const { authenticateUser } = require('../utils/ldapUtils'); // LDAP authentication function
 const logger = require('../utils/logger'); // Import the logger
 const sessionStore = require('../utils/sessionStore'); // Import sessionStore
+const { hashPassword, verifyPassword } = require('../utils/hashUtils'); // Import password hashing and verification functions
 require('dotenv').config(); // Load environment variables from .env file
-
-const SECRET_KEY = process.env.JWT_SECRET || 'your-secret-key';
+const SECRET_KEY = process.env.JWT_SECRET || '-secret-key';
 const JWT_EXPIRATION = process.env.JWT_EXPIRATION || '1d'; // Default to 1 day if not set
 
 // Middleware to sanitize inputs
 const sanitizeInput = [
   body('AdminID').trim().escape(),
   body('password').trim().escape(),
-  body('adminComputer').trim().escape(), // Changed to adminComputer
   (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -51,19 +49,12 @@ function verifyToken(req, res, next) {
   });
 }
 
-// Login route using LDAP
+// Login route using database authentication
 router.post('/login', sanitizeInput, async (req, res) => {
-  const { AdminID, password } = req.body; // Removed adminComputer from request body
+  const { AdminID, password } = req.body;
   logger.info('Received login request for AdminID:', AdminID);
 
   try {
-    // Verify user via LDAP only
-    const isAuthenticated = await authenticateUser(AdminID, password, req); // Pass req to authenticateUser
-    if (!isAuthenticated) {
-      logger.warn('Invalid ID or password for AdminID:', AdminID);
-      return res.status(401).json({ error: 'Invalid ID or password' });
-    }
-
     // Check if user exists in the database
     const adminUser = await fetchAdminUser(AdminID);
     logger.info(`Fetched admin user for AdminID ${AdminID}:`, adminUser);
@@ -72,10 +63,25 @@ router.post('/login', sanitizeInput, async (req, res) => {
       return res.status(404).json({ error: 'No account found' });
     }
 
+    // Check if password is null and prompt for an update
+    if (!adminUser.password) {
+      logger.warn(`Password is null for AdminID: ${AdminID}`);
+      return res.status(403).json({ error: 'Password needs to be updated' });
+    }
+
     // Check if adminComputer is present in the adminUser object
     if (!adminUser.AdminComputer) {
       logger.warn(`AdminComputer not found for AdminID: ${AdminID}`);
       return res.status(404).json({ error: 'AdminComputer not found' });
+    }
+
+    // Verify password
+    const isPasswordValid = await verifyPassword(password, adminUser.password);
+    logger.info(`Password verification result for AdminID ${AdminID}: ${isPasswordValid}`); // Add logging
+
+    if (!isPasswordValid) {
+      logger.warn('Invalid password for AdminID:', AdminID);
+      return res.status(401).json({ error: 'Invalid password' });
     }
 
     // Generate JWT token with adminComputer
@@ -91,6 +97,26 @@ router.post('/login', sanitizeInput, async (req, res) => {
     res.json({ token, AdminID, adminComputer: adminUser.AdminComputer, sessionID: req.sessionID });
   } catch (error) {
     logger.error('Login failed:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// Route to update password
+router.post('/update-password', sanitizeInput, async (req, res) => {
+  const { AdminID, password } = req.body;
+  logger.info('Received password update request for AdminID:', AdminID);
+
+  try {
+    // Hash the new password
+    const hashedPassword = await hashPassword(password);
+
+    // Update the password in the database
+    await insertOrUpdateAdminUser({ AdminID, password: hashedPassword });
+    logger.info(`Password updated for AdminID: ${AdminID}`);
+
+    res.status(200).json({ message: 'Password updated successfully' });
+  } catch (error) {
+    logger.error('Password update failed:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
