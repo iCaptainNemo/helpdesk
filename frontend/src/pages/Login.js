@@ -1,25 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/Login.css'; // Ensure this path is correct
 
-const Login = ({ onLogin, onWindowsLogin }) => {
-  const [sAMAccountName, setSAMAccountName] = useState('');
+const Login = ({ onLogin }) => {
+  const [AdminID, setAdminID] = useState('');
   const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [isPasswordUpdateRequired, setIsPasswordUpdateRequired] = useState(false);
 
   useEffect(() => {
     const savedUsername = localStorage.getItem('rememberedUsername');
     if (savedUsername) {
-      setSAMAccountName(savedUsername);
+      setAdminID(savedUsername);
       setRememberMe(true);
     }
   }, []);
 
   const handleLogin = async () => {
-    const upperCaseSAMAccountName = sAMAccountName.toUpperCase(); // Convert to uppercase
-    console.log(`Attempting login with sAMAccountName: ${upperCaseSAMAccountName}`); // Debug log
+    const upperCaseAdminID = AdminID.toUpperCase(); // Convert to uppercase
+    console.log(`Attempting login with AdminID: ${upperCaseAdminID}`); // Debug log
 
-    if (!upperCaseSAMAccountName) {
-      console.error('Empty sAMAccountName provided');
+    if (!upperCaseAdminID) {
+      console.error('Empty AdminID provided');
       return;
     }
 
@@ -30,7 +33,7 @@ const Login = ({ onLogin, onWindowsLogin }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          AdminID: upperCaseSAMAccountName, // Use uppercase AdminID
+          AdminID: upperCaseAdminID, // Use uppercase AdminID
           password
         })
       });
@@ -45,14 +48,16 @@ const Login = ({ onLogin, onWindowsLogin }) => {
       localStorage.setItem('token', data.token); // Store token in local storage
       localStorage.setItem('sessionID', data.sessionID); // Store session ID in local storage
       if (rememberMe) {
-        localStorage.setItem('rememberedUsername', upperCaseSAMAccountName); // Store uppercase username
+        localStorage.setItem('rememberedUsername', upperCaseAdminID); // Store uppercase username
       } else {
         localStorage.removeItem('rememberedUsername');
       }
       onLogin(data.AdminID, data.AdminComputer); // Pass AdminComputer to onLogin
     } catch (error) {
       console.error('Login failed:', error);
-      if (error.message === 'Invalid ID or password') {
+      if (error.message === 'Password needs to be updated') {
+        setIsPasswordUpdateRequired(true);
+      } else if (error.message === 'Invalid ID or password') {
         alert('Invalid ID or password');
       } else if (error.message === 'No account found') {
         alert('No account found');
@@ -64,9 +69,47 @@ const Login = ({ onLogin, onWindowsLogin }) => {
     }
   };
 
+  const handlePasswordUpdate = async () => {
+    if (newPassword !== confirmPassword) {
+      alert('Passwords do not match');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/update-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          AdminID,
+          newPassword
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error);
+      }
+
+      alert('Password updated successfully. Please log in with your new password.');
+      setIsPasswordUpdateRequired(false);
+      setPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      console.error('Password update failed:', error);
+      alert(`Password update failed: ${error.message}`);
+    }
+  };
+
   const handleSubmit = (event) => {
     event.preventDefault();
-    handleLogin(); // Call the handleLogin function for LDAP login
+    if (isPasswordUpdateRequired) {
+      handlePasswordUpdate();
+    } else {
+      handleLogin();
+    }
   };
 
   return (
@@ -79,8 +122,8 @@ const Login = ({ onLogin, onWindowsLogin }) => {
           <input
             type="text"
             placeholder="Username"
-            value={sAMAccountName}
-            onChange={(e) => setSAMAccountName(e.target.value)}
+            value={AdminID}
+            onChange={(e) => setAdminID(e.target.value)}
           />
           <div className="bg-top">
             <div className="bg-inner"></div>
@@ -109,6 +152,44 @@ const Login = ({ onLogin, onWindowsLogin }) => {
             <div className="bg-inner"></div>
           </div>
         </div>
+        {isPasswordUpdateRequired && (
+          <>
+            <div className="control block-cube block-input">
+              <input
+                type="password"
+                placeholder="New Password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+              <div className="bg-top">
+                <div className="bg-inner"></div>
+              </div>
+              <div className="bg-right">
+                <div className="bg-inner"></div>
+              </div>
+              <div className="bg">
+                <div className="bg-inner"></div>
+              </div>
+            </div>
+            <div className="control block-cube block-input">
+              <input
+                type="password"
+                placeholder="Confirm New Password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+              <div className="bg-top">
+                <div className="bg-inner"></div>
+              </div>
+              <div className="bg-right">
+                <div className="bg-inner"></div>
+              </div>
+              <div className="bg">
+                <div className="bg-inner"></div>
+              </div>
+            </div>
+          </>
+        )}
         <button className="btn block-cube block-cube-hover" type="submit">
           <div className="bg-top">
             <div className="bg-inner"></div>
@@ -119,7 +200,7 @@ const Login = ({ onLogin, onWindowsLogin }) => {
           <div className="bg">
             <div className="bg-inner"></div>
           </div>
-          <div className="text">Log In</div>
+          <div className="text">{isPasswordUpdateRequired ? 'Update Password' : 'Log In'}</div>
         </button>
         <div className="control remember-me">
           <label>

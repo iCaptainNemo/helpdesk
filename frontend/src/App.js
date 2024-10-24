@@ -88,11 +88,45 @@ function App() {
         setIsAuthenticated(true);
         setAdminID(data.AdminID);
         console.log(`Login successful, AdminID: ${data.AdminID}`); // Log AdminID
+      } else if (data.error === 'Password needs to be updated') {
+        alert('Password needs to be updated. Please update your password.');
+        // Handle password update logic here
+        handlePasswordUpdate(AdminID);
       } else {
         console.error('Login failed: No token received');
       }
     } catch (error) {
       console.error('Login failed:', error);
+    }
+  };
+
+  const handlePasswordUpdate = async (AdminID) => {
+    const newPassword = prompt('Enter your new password:');
+    const confirmPassword = prompt('Confirm your new password:');
+
+    if (newPassword !== confirmPassword) {
+      alert('Passwords do not match');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${ENDPOINT}/api/auth/update-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ AdminID, newPassword }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error);
+      }
+
+      alert('Password updated successfully. Please log in with your new password.');
+    } catch (error) {
+      console.error('Password update failed:', error);
+      alert(`Password update failed: ${error.message}`);
     }
   };
 

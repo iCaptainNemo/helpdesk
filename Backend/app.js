@@ -8,7 +8,6 @@ const session = require('express-session'); // Import express-session
 require('dotenv').config();
 
 const db = require('./db/init');
-const attachUserInfo = require('./middleware/attachUserInfo');
 const verifyToken = require('./middleware/verifyToken'); // Ensure JWT middleware is used
 const { updateLockedOutUsers } = require('./utils/lockedOutUsersUtils'); // Import the module
 const logger = require('./utils/logger'); // Import the logger
@@ -76,9 +75,6 @@ app.use(session({
     cookie: { secure: false } // Set to true if using HTTPS
 }));
 
-// Attach user information middleware
-app.use(attachUserInfo);
-
 // Import routes
 const fetchADObjectRoute = require('./routes/fetchADObject');
 const fetchUserRoute = require('./routes/fetchUser');
@@ -100,17 +96,17 @@ const checkSession = require('./middleware/checkSession');
 app.use('/api/protected', checkSession, protectedRoutes);
 
 // Use routes and pass db to them
-app.use('/api/fetch-adobject', verifyToken, fetchADObjectRoute); 
-app.use('/api/fetch-user', verifyToken, fetchUserRoute); 
+app.use('/api/protected/fetch-adobject', fetchADObjectRoute); 
+app.use('/api/protected/fetch-user', fetchUserRoute); 
 app.use('/api/hello-world', helloWorldRoute);
 app.use('/api', helloWorldMiddleware);
 app.use('/api/auth', authRoutes); // Authentication routes
-app.use('/api/get-locked-out-users', getLockedOutUsersRoute); // Route to fetch locked out users
-app.use('/api/execute-script', executeScriptRoute); // Route to execute PowerShell scripts
-app.use('/api/update-locked-out-users', updateLockedOutUsersRoute); // Route to update locked out users
+app.use('/api/protected/get-locked-out-users', getLockedOutUsersRoute); // Route to fetch locked out users
+app.use('/api/protected/execute-script', executeScriptRoute); // Route to execute PowerShell scripts
+app.use('/api/protected/update-locked-out-users', updateLockedOutUsersRoute); // Route to update locked out users
 app.use('/api/logout', logoutRoute); // Register the logout route
 app.use('/api/check-session', checkSessionRoute); // Check powershell sessions on backend
-app.use('/api/get-logs', getLogsRoute); // Route to fetch logs
+app.use('/api/protected/get-logs', getLogsRoute); // Route to fetch logs
 
 // Middleware to handle 403 Forbidden errors
 app.use(forbidden);
