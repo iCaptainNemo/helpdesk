@@ -1,10 +1,9 @@
 const session = require('express-session');
-const { closePowerShellSession } = require('../powershell');
 
 class CustomSessionStore extends session.Store {
     constructor() {
         super();
-        this.sessions = {}; // Store both session data and PowerShell sessions
+        this.sessions = {}; // Store session data
     }
 
     // Retrieve a session by ID
@@ -13,21 +12,14 @@ class CustomSessionStore extends session.Store {
         callback(null, sessionData ? JSON.parse(sessionData) : null);
     }
 
-    // Store session data and associated PowerShell session
+    // Store session data
     set(sid, session, callback) {
         this.sessions[sid] = JSON.stringify(session);
         callback(null);
     }
 
-    // Destroy a session and clean up PowerShell session if it exists
+    // Destroy a session
     destroy(sid, callback) {
-        const sessionData = this.sessions[sid] ? JSON.parse(this.sessions[sid]) : null;
-
-        if (sessionData && sessionData.powershellSession) {
-            const { powershellSession } = sessionData;
-            closePowerShellSession(powershellSession); // Ensure session is closed
-        }
-
         delete this.sessions[sid]; // Remove from store
         callback(null);
     }
@@ -41,7 +33,7 @@ class CustomSessionStore extends session.Store {
     findSessionByUserID(userID, callback) {
         const sessionID = Object.keys(this.sessions).find(sid => {
             const session = JSON.parse(this.sessions[sid]);
-            return session && session.powershellSession && session.powershellSession.username === userID;
+            return session && session.userID === userID;
         });
         callback(null, sessionID);
     }
