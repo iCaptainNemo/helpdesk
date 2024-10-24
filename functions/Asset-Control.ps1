@@ -451,11 +451,29 @@ function Asset-Control {
                 break
             }
             '16'{
-                # Get the Recovery key info
-                $bitLockerRecoveryInfo = Get-ADObject -Filter {objectclass -eq 'msFVE-RecoveryInformation'} -SearchBase $(Get-AdComputer $computerName).DistinguishedName -Properties 'msFVE-RecoveryPassword'
-                # Prepare the recovery password
-                $recoveryPassword = if ($bitLockerRecoveryInfo) { $bitLockerRecoveryInfo | Select-Object -ExpandProperty msFVE-RecoveryPassword } else { "No recovery info found" }
-                Write-Host "`n The Bitlocker key is: `n $recoveryPassword `n"
+                try {
+                    # Get BitLocker recovery information
+                    $distinguishedName = (Get-ADComputer -Identity $computerName -ErrorAction Stop).DistinguishedName
+                    $bitLockerRecoveryInfo = Get-ADObject -Filter { ObjectClass -eq "msFVE-RecoveryInformation" } -SearchBase $distinguishedName -Properties 'msFVE-RecoveryPassword', 'whenCreated'
+                
+                    if ($bitLockerRecoveryInfo) {
+                        # Find the latest recovery key
+                        $latestRecoveryKey = $bitLockerRecoveryInfo | Sort-Object whenCreated -Descending | Select-Object -First 1
+                        $bitLockerRecoveryInfo | ForEach-Object {
+                            if ($latestRecoveryKey -eq $_) {
+                                Write-Host "`nDate: $($_.whenCreated)" -ForegroundColor Yellow
+                                Write-Host "Recovery Password:`n $($_.'msFVE-RecoveryPassword')" -ForegroundColor Green
+                            } else {
+                                Write-Host "`nDate: $($_.whenCreated)"
+                                Write-Host "Recovery Password:`n $($_.'msFVE-RecoveryPassword')"
+                            }   
+                        }
+                    } else {
+                        Write-Host "No recovery info found for $computerName." -ForegroundColor Yellow
+                    }
+                } catch {
+                    Write-Host "Error retrieving BitLocker recovery info for $computerName : $_" -ForegroundColor Red
+                }   Write-Host "`n"
             }
             '66' {
                 $minutes = Read-Host "Please enter the number of minutes before restart"
