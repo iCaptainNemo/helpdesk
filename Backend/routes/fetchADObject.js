@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { executePowerShellScript } = require('../powershell');
+const { serverPowerShellScript } = require('../powershell');
 const sanitizeInput = require('../middleware/sanitizeInput');
 
 router.post('/', sanitizeInput, async (req, res) => {
@@ -9,7 +9,7 @@ router.post('/', sanitizeInput, async (req, res) => {
     const params = [adObjectID]; // Pass adObjectID as a positional argument
 
     try {
-        const adObjectProperties = await executePowerShellScript(scriptPath, params);
+        const adObjectProperties = await serverPowerShellScript(scriptPath, params);
         res.json(adObjectProperties); // Return the AD object properties as JSON
     } catch (error) {
         console.error('Error executing PowerShell script:', error);

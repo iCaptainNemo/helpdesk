@@ -1,5 +1,5 @@
 const path = require('path');
-const { executePowerShellScript } = require('../powershell');
+const { serverPowerShellScript } = require('../powershell');
 const db = require('../db/init');
 const logger = require('../utils/logger'); // Import the logger module
 
@@ -7,7 +7,7 @@ const scriptPath = path.join(__dirname, '../functions/LockedOutList.ps1');
 
 async function updateLockedOutUsers() {
     try {
-        const lockedOutUsers = await executePowerShellScript(scriptPath);
+        const lockedOutUsers = await serverPowerShellScript(scriptPath);
 
         // Ensure lockedOutUsers is an array
         if (!Array.isArray(lockedOutUsers)) {
