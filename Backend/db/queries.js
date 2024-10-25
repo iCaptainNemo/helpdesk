@@ -13,35 +13,17 @@ function executeQuery(query, params = []) {
     });
 }
 
-function insertOrUpdateUser(user) {
+function storeUser(user) {
     const query = `
-        INSERT INTO Users (UserID, LastHelped, TimesUnlocked, PasswordResets, badPwdCount, City, Created, department, givenName, homeDirectory, lastLogon, Modified, badPasswordTime, lockoutTime, mail, pwdLastSet, sn, streetAddress, telephoneNumber, Title, MemberOf, Computers)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO Users (UserID, LastHelped, TimesUnlocked, PasswordResets)
+        VALUES (?, ?, ?, ?)
         ON CONFLICT(UserID) DO UPDATE SET
-            LastHelped=excluded.LastHelped,
-            TimesUnlocked=excluded.TimesUnlocked,
-            PasswordResets=excluded.PasswordResets,
-            badPwdCount=excluded.badPwdCount,
-            City=excluded.City,
-            Created=excluded.Created,
-            department=excluded.department,
-            givenName=excluded.givenName,
-            homeDirectory=excluded.homeDirectory,
-            lastLogon=excluded.lastLogon,
-            Modified=excluded.Modified,
-            badPasswordTime=excluded.badPasswordTime,
-            lockoutTime=excluded.lockoutTime,
-            mail=excluded.mail,
-            pwdLastSet=excluded.pwdLastSet,
-            sn=excluded.sn,
-            streetAddress=excluded.streetAddress,
-            telephoneNumber=excluded.telephoneNumber,
-            Title=excluded.Title,
-            MemberOf=excluded.MemberOf,
-            Computers=excluded.Computers;
+            LastHelped = excluded.LastHelped,
+            TimesUnlocked = excluded.TimesUnlocked,
+            PasswordResets = excluded.PasswordResets
     `;
     const params = [
-        user.UserID, user.LastHelped, user.TimesUnlocked, user.PasswordResets, user.badPwdCount, user.City, user.Created, user.department, user.givenName, user.homeDirectory, user.lastLogon, user.Modified, user.badPasswordTime, user.lockoutTime, user.mail, user.pwdLastSet, user.sn, user.streetAddress, user.telephoneNumber, user.Title, user.MemberOf, user.Computers
+        user.UserID, user.LastHelped, user.TimesUnlocked, user.PasswordResets
     ];
     return executeQuery(query, params);
 }
@@ -106,7 +88,7 @@ function fetchAdminUser(adminID) {
 }
 
 module.exports = {
-    insertOrUpdateUser,
+    storeUser,
     fetchUser,
     insertOrUpdateAdminUser,
     fetchAdminUser

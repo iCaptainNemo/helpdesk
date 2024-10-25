@@ -5,7 +5,8 @@ const { log, info, warn, error } = require('./utils/logger');
 const scriptsToSuppressLogging = [
     'LockedOutList.ps1',
     'getDomainInfo.ps1',
-    'Get-ADObject.ps1'
+    'Get-ADObject.ps1',
+    'logFilePath.ps1'
 ];
 
 /**
@@ -16,7 +17,7 @@ const scriptsToSuppressLogging = [
  * @param {string} [adminComputer] - The admin computer name.
  * @returns {Promise} - Resolves with the parsed JSON output of the script.
  */
-function executePowerShellScript(scriptPath, params = [], userSession = null, adminComputer = 'localhost') {
+function executePowerShellScript(scriptPath, params = [], sessionID, adminComputer) {
     const paramString = params
         .filter(param => param) // Omit empty parameters
         .map(param => param.replace(/"/g, '\\"')) // Escape double quotes without adding extra quotes
@@ -24,13 +25,15 @@ function executePowerShellScript(scriptPath, params = [], userSession = null, ad
 
     let command;
 
-    if (userSession && adminComputer && adminComputer.toLowerCase() !== 'localhost') {
-        const invokeCommand = `
-            Invoke-Command -ComputerName ${adminComputer} -ScriptBlock {
-                Start-Process -FilePath powershell.exe -ArgumentList '-File', '${scriptPath}', '${paramString}' -NoNewWindow -Wait;
-            }
-        `;
-        command = `powershell.exe -Command "& {${invokeCommand}}"`; // Note the closing brace
+    if (!adminComputer) {
+        const errorMessage = 'Admin computer is not provided.';
+        error(errorMessage);
+        return Promise.reject(new Error(errorMessage));
+    }
+
+    if (adminComputer.toLowerCase() !== 'localhost') {
+        const invokeCommand = `Invoke-Command -FilePath'${scriptPath}', '${paramString}' -ComputerName ${adminComputer}}`;
+        command = `powershell.exe -Command "& {${invokeCommand}}"`;
     } else {
         command = `powershell.exe -File ${scriptPath} ${paramString}`;
     }
