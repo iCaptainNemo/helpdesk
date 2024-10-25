@@ -32,7 +32,7 @@ function executePowerShellScript(scriptPath, params = [], sessionID, adminComput
         return Promise.reject(new Error(errorMessage));
     }
 
-    if (adminComputer.toLowerCase() !== 'localhost') {
+    if (adminComputer !== 'localhost') {
         const invokeCommand = `Invoke-Command -FilePath '${scriptPath}' -ArgumentList '${paramString}' -ComputerName ${adminComputer}`;
         command = `powershell.exe -Command "& {${invokeCommand}}"`;
     } else {
