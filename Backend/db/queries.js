@@ -87,9 +87,53 @@ function fetchAdminUser(adminID) {
     });
 }
 
+// New functions for managing servers
+function InsertServer(server) {
+    const query = `
+        INSERT INTO Servers (ServerName, Description, Status, Location, Downtime, LastOnline, BackOnline)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    `;
+    const params = [
+        server.ServerName, server.Description, server.Status, server.Location, server.Downtime, server.LastOnline, server.BackOnline
+    ];
+    return executeQuery(query, params);
+}
+
+function updateServer(server) {
+    const query = `
+        UPDATE Servers
+        SET Description = ?, Status = ?, Location = ?, Downtime = ?, LastOnline = ?, BackOnline = ?
+        WHERE ServerName = ?
+    `;
+    const params = [
+        server.Description, server.Status, server.Location, server.Downtime, server.LastOnline, server.BackOnline, server.ServerName
+    ];
+    return executeQuery(query, params);
+}
+
+function deleteServer(serverName) {
+    const query = `DELETE FROM Servers WHERE ServerName = ?;`;
+    return executeQuery(query, [serverName]);
+}
+
+function fetchServer(serverName) {
+    const query = `SELECT * FROM Servers WHERE ServerName = ?;`;
+    return executeQuery(query, [serverName]);
+}
+
+function fetchAllServers() {
+    const query = `SELECT * FROM Servers;`;
+    return executeQuery(query);
+}
+
 module.exports = {
     storeUser,
     fetchUser,
     insertOrUpdateAdminUser,
-    fetchAdminUser
+    fetchAdminUser,
+    InsertServer,
+    updateServer,
+    deleteServer,
+    fetchServer,
+    fetchAllServers
 };

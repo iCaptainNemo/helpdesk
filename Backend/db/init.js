@@ -8,7 +8,7 @@ console.log(`Attempting to open database at path: ${dbPath}`);
 
 const tables = [
     {
-        name: 'Admin',
+        name: 'Admin', //IT Staff
         columns: [
             'AdminID TEXT PRIMARY KEY',
             'AdminComputer TEXT',
@@ -16,7 +16,7 @@ const tables = [
         ]
     },
     {
-        name: 'Users',
+        name: 'Users', //Active Directory Users
         columns: [
             'UserID TEXT PRIMARY KEY',
             'LastHelped DATETIME',
@@ -26,12 +26,24 @@ const tables = [
         ]
     },
     {
-        name: 'LockedOutUsers', // New table definition
+        name: 'LockedOutUsers', // Locked out users
         columns: [
             'UserID TEXT PRIMARY KEY',
             'name TEXT',
             'department TEXT',
             'AccountLockoutTime DATETIME'
+        ]
+    },
+    {
+        name: 'Servers', // Servers
+        columns: [
+            'ServerName TEXT PRIMARY KEY',
+            'Description TEXT',
+            'Status TEXT',
+            'Location TEXT',
+            'Downtime DATETIME',
+            'LastOnline DATETIME',
+            'BackOnline DATETIME'
         ]
     }
 ];
