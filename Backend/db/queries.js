@@ -126,6 +126,27 @@ function fetchAllServers() {
     return executeQuery(query);
 }
 
+// New functions for managing roles and permissions
+function fetchRoles() {
+    const query = `SELECT * FROM Roles;`;
+    return executeQuery(query);
+}
+
+function fetchPermissions() {
+    const query = `SELECT * FROM Permissions;`;
+    return executeQuery(query);
+}
+
+function assignRoleToUser(adminID, roleID) {
+    const query = `INSERT INTO UserRoles (AdminID, RoleID) VALUES (?, ?);`;
+    return executeQuery(query, [adminID, roleID]);
+}
+
+function assignPermissionToRole(roleID, permissionID) {
+    const query = `INSERT INTO RolePermissions (RoleID, PermissionID) VALUES (?, ?);`;
+    return executeQuery(query, [roleID, permissionID]);
+}
+
 module.exports = {
     storeUser,
     fetchUser,
@@ -135,5 +156,9 @@ module.exports = {
     updateServer,
     deleteServer,
     fetchServer,
-    fetchAllServers
+    fetchAllServers,
+    fetchRoles,
+    fetchPermissions,
+    assignRoleToUser,
+    assignPermissionToRole
 };

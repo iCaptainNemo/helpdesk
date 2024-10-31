@@ -3,8 +3,9 @@ const router = express.Router();
 const { executePowerShellScript } = require('../powershell');
 const logger = require('../utils/logger'); 
 const verifyToken = require('../middleware/verifyToken');
+const verifyPermissions = require('../middleware/verifyPermissions');
 
-router.post('/', verifyToken, async (req, res) => {
+router.post('/', verifyToken, verifyPermissions('execute_script'), async (req, res) => {
     const { scriptName, params } = req.body;
     const scriptPath = `./functions/${scriptName}.ps1`;
 

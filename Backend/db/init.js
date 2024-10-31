@@ -8,15 +8,16 @@ console.log(`Attempting to open database at path: ${dbPath}`);
 
 const tables = [
     {
-        name: 'Admin', //IT Staff
+        name: 'Admin', // IT Staff
         columns: [
             'AdminID TEXT PRIMARY KEY',
             'AdminComputer TEXT',
             'password TEXT',
+            'role TEXT'
         ]
     },
     {
-        name: 'Users', //Active Directory Users
+        name: 'Users', // Active Directory Users
         columns: [
             'UserID TEXT PRIMARY KEY',
             'LastHelped DATETIME',
@@ -44,6 +45,40 @@ const tables = [
             'Downtime DATETIME',
             'LastOnline DATETIME',
             'BackOnline DATETIME'
+        ]
+    },
+    {
+        name: 'Roles', // Roles
+        columns: [
+            'RoleID INTEGER PRIMARY KEY AUTOINCREMENT',
+            'RoleName TEXT UNIQUE NOT NULL'
+        ]
+    },
+    {
+        name: 'Permissions', // Permissions
+        columns: [
+            'PermissionID INTEGER PRIMARY KEY AUTOINCREMENT',
+            'PermissionName TEXT UNIQUE NOT NULL'
+        ]
+    },
+    {
+        name: 'RolePermissions', // Role-Permission mapping
+        columns: [
+            'RoleID INTEGER',
+            'PermissionID INTEGER',
+            'FOREIGN KEY (RoleID) REFERENCES Roles(RoleID)',
+            'FOREIGN KEY (PermissionID) REFERENCES Permissions(PermissionID)',
+            'PRIMARY KEY (RoleID, PermissionID)'
+        ]
+    },
+    {
+        name: 'UserRoles', // User-Role mapping
+        columns: [
+            'AdminID TEXT',
+            'RoleID INTEGER',
+            'FOREIGN KEY (AdminID) REFERENCES Admin(AdminID)',
+            'FOREIGN KEY (RoleID) REFERENCES Roles(RoleID)',
+            'PRIMARY KEY (AdminID, RoleID)'
         ]
     }
 ];
@@ -83,7 +118,7 @@ function checkAndAddMissingColumns(table) {
         const existingColumns = rows.map(row => row.name);
         table.columns.forEach(column => {
             const columnName = column.split(' ')[0];
-            if (!existingColumns.includes(columnName)) {
+            if (!existingColumns.includes(columnName) && !column.includes('FOREIGN') && !column.includes('PRIMARY')) {
                 const addColumnQuery = `ALTER TABLE ${table.name} ADD COLUMN ${column};`;
                 db.run(addColumnQuery, (err) => {
                     if (err) {
