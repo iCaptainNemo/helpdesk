@@ -85,8 +85,8 @@ router.post('/login', sanitizeInput, async (req, res) => {
     }
 
     // Generate JWT token with adminComputer
-    const token = jwt.sign({ AdminID, adminComputer: adminUser.AdminComputer }, SECRET_KEY, { expiresIn: JWT_EXPIRATION });
-    logger.info(`JWT token generated for AdminID: ${AdminID}, AdminComputer: ${adminUser.AdminComputer}`);
+    const token = jwt.sign({ AdminID, sessionID: req.sessionID }, SECRET_KEY, { expiresIn: JWT_EXPIRATION });
+    logger.info(`JWT token generated for AdminID: ${AdminID}, SessionID: ${req.sessionID}`);
 
     // Store session information
     req.session.AdminID = AdminID; // Store AdminID in the session

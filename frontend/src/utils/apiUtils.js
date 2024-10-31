@@ -1,12 +1,12 @@
-export const executePowerShellScript = async (scriptName, params = {}, sessionID, adminComputer) => {
+export const executePowerShellScript = async (scriptName, params = {}) => {
     try {
         const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-script`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}` // Include token in Authorization header
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
             },
-            body: JSON.stringify({ scriptName, params, sessionID, adminComputer }) // Include adminComputer in the request body
+            body: JSON.stringify({ scriptName, params }) 
         });
 
         if (!response.ok) {
@@ -38,8 +38,6 @@ export const login = async (AdminID, password) => {
 
         const data = await response.json();
         localStorage.setItem('token', data.token); // Store token in local storage
-        localStorage.setItem('sessionID', data.sessionID); // Store session ID in local storage
-        localStorage.setItem('adminComputer', data.adminComputer); // Store adminComputer in local storage
         return data;
     } catch (error) {
         console.error('Login failed:', error);

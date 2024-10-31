@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { executePowerShellScript } from '../utils/apiUtils';
 import '../styles/ScriptButton.css'; // Import the CSS file
 
-const ScriptButton = ({ scriptName, params, sessionID, adminComputer, buttonText, onSuccess }) => {
+const ScriptButton = ({ scriptName, params, buttonText, onSuccess }) => {
     const [status, setStatus] = useState('initial'); // initial, loading, success, error
     const [message, setMessage] = useState('');
 
@@ -10,7 +10,7 @@ const ScriptButton = ({ scriptName, params, sessionID, adminComputer, buttonText
         setStatus('loading');
         setMessage('');
         try {
-            const result = await executePowerShellScript(scriptName, params, sessionID, adminComputer);
+            const result = await executePowerShellScript(scriptName, params);
             console.log('Script executed successfully:', result);
             if (result.message.includes('Unlocked')) {
                 setStatus('success');

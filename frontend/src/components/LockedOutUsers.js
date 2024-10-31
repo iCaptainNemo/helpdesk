@@ -4,8 +4,6 @@ import ScriptButton from './ScriptButton'; // Import the ScriptButton component
 
 const LockedOutUsers = () => {
     const [lockedOutUsers, setLockedOutUsers] = useState([]);
-    const sessionID = localStorage.getItem('sessionID'); // Retrieve session ID from local storage
-    const adminComputer = localStorage.getItem('adminComputer'); // Retrieve adminComputer from local storage
 
     const fetchLockedOutUsers = () => {
         fetch(`${process.env.REACT_APP_BACKEND_URL}/api/get-locked-out-users`)
@@ -87,8 +85,6 @@ const LockedOutUsers = () => {
                                     <ScriptButton
                                         scriptName="unlocker"
                                         params={{ userID: user.UserID }}
-                                        sessionID={sessionID} // Pass sessionID to ScriptButton
-                                        adminComputer={adminComputer} // Pass adminComputer to ScriptButton
                                         buttonText="Unlock"
                                         onSuccess={(result) => handleUnlockSuccess(result, user.UserID)}
                                     />

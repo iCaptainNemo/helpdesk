@@ -19,9 +19,11 @@ const verifyToken = (req, res, next) => {
       logger.error('Failed to authenticate token:', err);
       return res.status(401).json({ message: 'Failed to authenticate token' });
     }
+
     req.AdminID = decoded.AdminID;
-    req.adminComputer = decoded.adminComputer; // Extract adminComputer from the token
-    logger.info('Token verified, AdminID:', req.AdminID, 'AdminComputer:', req.adminComputer);
+    req.sessionID = decoded.sessionID; // Attach sessionID to the request object if needed
+
+    logger.info('Token verified, AdminID:', req.AdminID, 'SessionID:', req.sessionID);
     next();
   });
 };
