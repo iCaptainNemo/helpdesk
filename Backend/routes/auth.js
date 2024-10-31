@@ -44,7 +44,7 @@ function verifyToken(req, res, next) {
     }
     req.AdminID = decoded.AdminID;
     req.adminComputer = decoded.adminComputer; // Extract adminComputer from the token
-    logger.info('Token verified, AdminID:', req.AdminID, 'AdminComputer:', req.adminComputer);
+    logger.info('Token verified, AdminID:', req.AdminID);
     next();
   });
 }
