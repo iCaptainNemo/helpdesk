@@ -100,7 +100,7 @@ app.use('/api/hello-world', helloWorldRoute);
 app.use('/api', helloWorldMiddleware);
 app.use('/api/auth', authRoutes); // Authentication routes
 app.use('/api/get-locked-out-users', getLockedOutUsersRoute); // Route to fetch locked out users
-app.use('/api/execute-script', verifyToken, verifyPermissions('execute_script'), executeScriptRoute); // Route to execute PowerShell scripts with permissions
+app.use('/api/execute-script', executeScriptRoute); // Route to execute PowerShell scripts
 app.use('/api/update-locked-out-users', updateLockedOutUsersRoute); // Route to update locked out users
 app.use('/api/logout', logoutRoute); // Register the logout route
 app.use('/api/check-session', checkSessionRoute); // Check powershell sessions on backend

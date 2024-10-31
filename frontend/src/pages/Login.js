@@ -10,7 +10,7 @@ const Login = ({ onLogin }) => {
   const [isPasswordUpdateRequired, setIsPasswordUpdateRequired] = useState(false);
 
   useEffect(() => {
-    const savedUsername = localStorage.getItem('rememberedUsername');
+    const savedUsername = localStorage.getItem('AdminID');
     if (savedUsername) {
       setAdminID(savedUsername);
       setRememberMe(true);
@@ -45,13 +45,21 @@ const Login = ({ onLogin }) => {
 
       const data = await response.json();
       console.log('Login successful, token:', data.token); // Debug log
-      localStorage.setItem('token', data.token); // Store token in local storage
-      if (rememberMe) {
-        localStorage.setItem('AdminID', upperCaseAdminID); // Store uppercase username
+
+      // Check if the token is present in the response
+      if (data.token) {
+        localStorage.setItem('token', data.token); // Store token in local storage
+        console.log('Token stored in local storage:', localStorage.getItem('token')); // Debug log
+
+        if (rememberMe) {
+          localStorage.setItem('AdminID', upperCaseAdminID); // Store uppercase username
+        } else {
+          localStorage.removeItem('AdminID');
+        }
+        onLogin(data.AdminID, data.token); // Pass AdminID and token to onLogin
       } else {
-        localStorage.removeItem('AdminID');
+        console.error('Token not found in response');
       }
-      onLogin(data.AdminID, data.AdminComputer, data.token); // Pass AdminComputer and token to onLogin
     } catch (error) {
       console.error('Login failed:', error);
       if (error.message === 'Password needs to be updated') {
