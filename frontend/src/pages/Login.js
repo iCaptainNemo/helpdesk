@@ -46,11 +46,10 @@ const Login = ({ onLogin }) => {
       const data = await response.json();
       console.log('Login successful, token:', data.token); // Debug log
       localStorage.setItem('token', data.token); // Store token in local storage
-      localStorage.setItem('sessionID', data.sessionID); // Store session ID in local storage
       if (rememberMe) {
-        localStorage.setItem('rememberedUsername', upperCaseAdminID); // Store uppercase username
+        localStorage.setItem('AdminID', upperCaseAdminID); // Store uppercase username
       } else {
-        localStorage.removeItem('rememberedUsername');
+        localStorage.removeItem('AdminID');
       }
       onLogin(data.AdminID, data.AdminComputer, data.token); // Pass AdminComputer and token to onLogin
     } catch (error) {

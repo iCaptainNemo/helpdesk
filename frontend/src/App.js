@@ -72,41 +72,11 @@ function App() {
     }
   }, []);
 
-  const handleLogin = (AdminID, AdminComputer, token) => {
+  const handleLogin = (AdminID, token) => {
     setIsAuthenticated(true);
     setAdminID(AdminID);
     localStorage.setItem('token', token); // Store token in local storage
-    console.log(`Logged in as ${AdminID} on ${AdminComputer}`);
-  };
-
-  const handlePasswordUpdate = async (AdminID) => {
-    const newPassword = prompt('Enter your new password:');
-    const confirmPassword = prompt('Confirm your new password:');
-
-    if (newPassword !== confirmPassword) {
-      alert('Passwords do not match');
-      return;
-    }
-
-    try {
-      const response = await fetch(`${ENDPOINT}/api/auth/update-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ AdminID, newPassword }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error);
-      }
-
-      alert('Password updated successfully. Please log in with your new password.');
-    } catch (error) {
-      console.error('Password update failed:', error);
-      alert(`Password update failed: ${error.message}`);
-    }
+    console.log(`${AdminID} Logged in successfully`);
   };
 
   const handleLogout = async () => {
@@ -125,7 +95,6 @@ function App() {
 
       if (response.ok) {
         localStorage.removeItem('token');
-        localStorage.removeItem('sessionID');
         localStorage.removeItem('currentADObjectID'); // Remove current AD object ID from local storage
         setIsAuthenticated(false);
         setAdminID('');
