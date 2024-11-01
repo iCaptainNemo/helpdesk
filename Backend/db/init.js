@@ -106,6 +106,30 @@ function initializeDatabase() {
             }
         });
     });
+
+    // Insert the initial role and permission
+    const insertRoleQuery = `INSERT OR IGNORE INTO Roles (RoleName) VALUES ('superadmin');`;
+    const insertPermissionQuery = `INSERT OR IGNORE INTO Permissions (PermissionName) VALUES ('access_configure_page');`;
+    db.run(insertRoleQuery);
+    db.run(insertPermissionQuery);
+
+    // Assign the permission to the role
+    const assignPermissionToRoleQuery = `
+        INSERT OR IGNORE INTO RolePermissions (RoleID, PermissionID)
+        SELECT Roles.RoleID, Permissions.PermissionID
+        FROM Roles, Permissions
+        WHERE Roles.RoleName = 'superadmin' AND Permissions.PermissionName = 'access_configure_page';
+    `;
+    db.run(assignPermissionToRoleQuery);
+
+    // Assign the role to the first admin user
+    const assignRoleToUserQuery = `
+        INSERT OR IGNORE INTO UserRoles (AdminID, RoleID)
+        SELECT Admin.AdminID, Roles.RoleID
+        FROM Admin, Roles
+        WHERE Admin.AdminID = (SELECT AdminID FROM Admin LIMIT 1) AND Roles.RoleName = 'superadmin';
+    `;
+    db.run(assignRoleToUserQuery);
 }
 
 function checkAndAddMissingColumns(table) {

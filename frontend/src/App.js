@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import UserProperties from './pages/UserProperties';
 import Placeholder from './pages/Placeholder';
 import Login from './pages/Login';
+import Configure from './pages/Configure'; // Import the Configure page
 
 // Always use the backend server IP address
 const ENDPOINT = process.env.REACT_APP_BACKEND_URL;
@@ -17,6 +18,7 @@ function App() {
   const [initialCheck, setInitialCheck] = useState(false); // Track the first authentication check
   const [section, setSection] = useState(localStorage.getItem('currentView') || 'dashboard'); // Track the current section
   const [adObjectData, setAdObjectData] = useState(''); // Store AD object data
+  const [permissions, setPermissions] = useState([]); // Store user permissions
 
   useEffect(() => {
     const socket = socketIOClient(ENDPOINT);
@@ -53,6 +55,7 @@ function App() {
           if (data.AdminID) {
             setIsAuthenticated(true);
             setAdminID(data.AdminID);
+            setPermissions(data.permissions || []); // Set user permissions
           }
           setInitialCheck(true);
         })
@@ -72,9 +75,10 @@ function App() {
     }
   }, []);
 
-  const handleLogin = (AdminID, token) => {
+  const handleLogin = (AdminID, token, permissions) => {
     setIsAuthenticated(true);
     setAdminID(AdminID);
+    setPermissions(permissions || []); // Set user permissions
     localStorage.setItem('token', token); // Store token in local storage
     console.log(`${AdminID} Logged in successfully`);
   };
@@ -98,6 +102,7 @@ function App() {
         localStorage.removeItem('currentADObjectID'); // Remove current AD object ID from local storage
         setIsAuthenticated(false);
         setAdminID('');
+        setPermissions([]); // Clear user permissions
         console.log('Successfully logged out and session destroyed.');
       } else {
         console.error('Logout failed: Network response was not ok');
@@ -171,6 +176,12 @@ function App() {
         return <UserProperties adObjectData={adObjectData} />;
       case 'placeholder':
         return <Placeholder />;
+      case 'configure':
+        if (permissions.includes('access_configure_page')) {
+          return <Configure />;
+        } else {
+          return <div>Access Denied</div>;
+        }
       default:
         return <Dashboard />;
     }

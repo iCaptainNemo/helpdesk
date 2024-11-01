@@ -1,5 +1,4 @@
-const { fetchAdminUser } = require('../db/queries');
-const { executeQuery } = require('../db/queries');
+const { fetchAdminUser, executeQuery } = require('../db/queries'); // Ensure executeQuery is imported
 
 function verifyPermissions(requiredPermission) {
   return async (req, res, next) => {

@@ -92,6 +92,7 @@ const checkSessionRoute = require('./routes/checkSession'); // Route for checkin
 const getLogsRoute = require('./routes/getLogs'); // Route for fetching logs
 const rolesRoute = require('./routes/roles'); // Route for managing roles
 const permissionsRoute = require('./routes/permissions'); // Route for managing permissions
+const configureRoute = require('./routes/configure'); // Route for the configure page
 
 // Use routes and pass db to them
 app.use('/api/fetch-adobject', fetchADObjectRoute); 
@@ -100,13 +101,14 @@ app.use('/api/hello-world', helloWorldRoute);
 app.use('/api', helloWorldMiddleware);
 app.use('/api/auth', authRoutes); // Authentication routes
 app.use('/api/get-locked-out-users', getLockedOutUsersRoute); // Route to fetch locked out users
-app.use('/api/execute-script', executeScriptRoute); // Route to execute PowerShell scripts
+app.use('/api/execute-script', verifyToken, verifyPermissions('execute_script'), executeScriptRoute); // Route to execute PowerShell scripts with permissions
 app.use('/api/update-locked-out-users', updateLockedOutUsersRoute); // Route to update locked out users
 app.use('/api/logout', logoutRoute); // Register the logout route
 app.use('/api/check-session', checkSessionRoute); // Check powershell sessions on backend
 app.use('/api/get-logs', getLogsRoute); // Route to fetch logs
 app.use('/api/roles', rolesRoute); // Route to manage roles
 app.use('/api/permissions', permissionsRoute); // Route to manage permissions
+app.use('/api/configure', verifyToken, verifyPermissions('access_configure_page'), configureRoute); // Route to access the configure page
 
 // Middleware to handle 403 Forbidden errors
 app.use(forbidden);

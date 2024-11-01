@@ -148,6 +148,7 @@ function assignPermissionToRole(roleID, permissionID) {
 }
 
 module.exports = {
+    executeQuery,
     storeUser,
     fetchUser,
     insertOrUpdateAdminUser,
