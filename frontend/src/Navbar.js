@@ -1,10 +1,12 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
-const Navbar = ({ setCurrentView }) => (
+const Navbar = () => (
   <div className="navbar">
-    <button className="button-link" onClick={() => setCurrentView('dashboard')}>Dashboard</button>
-    <button className="button-link" onClick={() => setCurrentView('user-prop')}>User Properties</button>
-    <button className="button-link" onClick={() => setCurrentView('placeholder')}>Placeholder</button>
+    <Link className="button-link" to="/dashboard">Dashboard</Link>
+    <Link className="button-link" to="/user-prop">User Properties</Link>
+    <Link className="button-link" to="/placeholder">Placeholder</Link>
+    <Link className="button-link" to="/configure">Configure</Link>
   </div>
 );
 

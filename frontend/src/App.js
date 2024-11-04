@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import socketIOClient from 'socket.io-client';
 import './styles.css'; // Import the CSS file
 import Header from './Header';
@@ -16,7 +17,6 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [AdminID, setAdminID] = useState(''); // Store AdminID from the server
   const [initialCheck, setInitialCheck] = useState(false); // Track the first authentication check
-  const [section, setSection] = useState(localStorage.getItem('currentView') || 'dashboard'); // Track the current section
   const [adObjectData, setAdObjectData] = useState(''); // Store AD object data
   const [permissions, setPermissions] = useState([]); // Store user permissions
 
@@ -65,13 +65,6 @@ function App() {
         });
     } else {
       setInitialCheck(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    const currentADObjectID = localStorage.getItem('currentADObjectID');
-    if (currentADObjectID) {
-      fetchADObject(currentADObjectID);
     }
   }, []);
 
@@ -130,60 +123,10 @@ function App() {
 
       const data = await response.text();
       setAdObjectData(data);
-      setSection('user-prop');
       localStorage.setItem('currentView', 'user-prop'); // Store the current view in local storage
       localStorage.setItem('currentADObjectID', adObjectID); // Store the current AD object ID in local storage
     } catch (error) {
       console.error('Error fetching AD object properties:', error);
-    }
-  };
-
-  const fetchADObject = async (adObjectID) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No token found');
-
-      const response = await fetch(`${ENDPOINT}/api/fetch-adobject`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ adObjectID }),
-      });
-
-      if (!response.ok) throw new Error('Network response was not ok');
-
-      const data = await response.text();
-      setAdObjectData(data);
-      setSection('user-prop');
-      localStorage.setItem('currentView', 'user-prop'); // Store the current view in local storage
-    } catch (error) {
-      console.error('Error fetching AD object properties:', error);
-    }
-  };
-
-  const handleSectionChange = (newSection) => {
-    setSection(newSection);
-    localStorage.setItem('currentView', newSection); // Store the current view in local storage
-  };
-
-  const renderSection = () => {
-    switch (section) {
-      case 'dashboard':
-        return <Dashboard />;
-      case 'user-prop':
-        return <UserProperties adObjectData={adObjectData} />;
-      case 'placeholder':
-        return <Placeholder />;
-      case 'configure':
-        if (permissions.includes('access_configure_page')) {
-          return <Configure />;
-        } else {
-          return <div>Access Denied</div>;
-        }
-      default:
-        return <Dashboard />;
     }
   };
 
@@ -192,17 +135,34 @@ function App() {
   }
 
   return (
-    <div className="App">
-      {isAuthenticated ? (
-        <>
-          <Header AdminID={AdminID} onLogout={handleLogout} onFormSubmit={handleFormSubmit} />
-          <Navbar setCurrentView={handleSectionChange} />
-          {renderSection()}
-        </>
-      ) : (
-        <Login onLogin={handleLogin} />
-      )}
-    </div>
+    <Router>
+      <div className="App">
+        {isAuthenticated ? (
+          <>
+            <Header AdminID={AdminID} onLogout={handleLogout} onFormSubmit={handleFormSubmit} />
+            <Navbar />
+            <Routes>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/user-prop" element={<UserProperties />} />
+              <Route path="/placeholder" element={<Placeholder />} />
+              <Route
+                path="/configure"
+                element={
+                  permissions.includes('access_configure_page') ? (
+                    <Configure />
+                  ) : (
+                    <div>Access Denied</div>
+                  )
+                }
+              />
+              <Route path="*" element={<Navigate to="/dashboard" />} />
+            </Routes>
+          </>
+        ) : (
+          <Login onLogin={handleLogin} />
+        )}
+      </div>
+    </Router>
   );
 }
 
