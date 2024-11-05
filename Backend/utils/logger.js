@@ -39,9 +39,17 @@ const error = (message, ...optionalParams) => {
     }
 };
 
+const verbose = (message, ...optionalParams) => {
+    if (process.env.NODE_ENV !== 'production') {
+        const [sanitizedMessage, ...sanitizedParams] = sanitizeMessage(message, ...optionalParams);
+        console.debug(sanitizedMessage, ...sanitizedParams);
+    }
+};
+
 module.exports = {
     log,
     info,
     warn,
-    error
+    error,
+    verbose
 };

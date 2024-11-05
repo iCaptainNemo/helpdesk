@@ -1,25 +1,30 @@
 const { fetchAdminUser, fetchRolesForUser, fetchPermissionsForRoles } = require('../db/queries');
+const logger = require('../utils/logger');
 
 function verifyPermissions(requiredPermission) {
   return async (req, res, next) => {
     try {
       const adminID = req.AdminID;
+      logger.verbose(`Verifying permissions for AdminID: ${adminID}`);
+
       const adminUser = await fetchAdminUser(adminID);
 
       if (!adminUser) {
+        logger.verbose(`Access denied: AdminID ${adminID} is not an Admin`);
         return res.status(403).json({ message: 'Access denied: Not an Admin' });
       }
 
       const roles = await fetchRolesForUser(adminID);
-      console.log(`User roles: ${roles}`);
+      logger.verbose(`AdminID ${adminID} roles: ${roles}`);
 
       const permissions = await fetchPermissionsForRoles(roles);
-      console.log(`Required permission: ${requiredPermission}`);
-      console.log(`User permissions: ${permissions}`);
+      logger.verbose(`AdminID ${adminID} required permission: ${requiredPermission}`);
+      logger.verbose(`AdminID ${adminID} permissions: ${permissions}`);
 
       if (permissions.includes(requiredPermission)) {
         next();
       } else {
+        logger.verbose(`Access denied: AdminID ${adminID} is missing permission ${requiredPermission}`);
         res.status(403).json({ message: `Access denied: Missing permission ${requiredPermission}` });
       }
     } catch (error) {
