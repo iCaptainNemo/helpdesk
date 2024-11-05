@@ -12,8 +12,7 @@ const tables = [
         columns: [
             'AdminID TEXT PRIMARY KEY',
             'AdminComputer TEXT',
-            'password TEXT',
-            'role TEXT'
+            'password TEXT'
         ]
     },
     {
@@ -107,22 +106,47 @@ function initializeDatabase() {
         });
     });
 
-    // Insert the initial role and permission
-    const insertRoleQuery = `INSERT OR IGNORE INTO Roles (RoleName) VALUES ('superadmin');`;
-    const insertPermissionQuery = `INSERT OR IGNORE INTO Permissions (PermissionName) VALUES ('access_configure_page');`;
-    db.run(insertRoleQuery);
-    db.run(insertPermissionQuery);
+    // Insert initial roles
+    const roles = ['superadmin', 'admin', 'support_agent', 'user'];
+    roles.forEach(role => {
+        const insertRoleQuery = `INSERT OR IGNORE INTO Roles (RoleName) VALUES (?);`;
+        db.run(insertRoleQuery, [role]);
+    });
 
-    // Assign the permission to the role
-    const assignPermissionToRoleQuery = `
-        INSERT OR IGNORE INTO RolePermissions (RoleID, PermissionID)
-        SELECT Roles.RoleID, Permissions.PermissionID
-        FROM Roles, Permissions
-        WHERE Roles.RoleName = 'superadmin' AND Permissions.PermissionName = 'access_configure_page';
-    `;
-    db.run(assignPermissionToRoleQuery);
+    // Insert initial permissions
+    const permissions = [
+        'access_configure_page',
+        'manage_users',
+        'manage_tickets',
+        'view_reports',
+        'execute_script'
+    ];
+    permissions.forEach(permission => {
+        const insertPermissionQuery = `INSERT OR IGNORE INTO Permissions (PermissionName) VALUES (?);`;
+        db.run(insertPermissionQuery, [permission]);
+    });
 
-    // Assign the role to the first admin user
+    // Assign permissions to roles
+    const rolePermissions = {
+        superadmin: ['access_configure_page', 'manage_users', 'manage_tickets', 'view_reports', 'execute_script'],
+        admin: ['manage_users', 'manage_tickets', 'view_reports'],
+        support_agent: ['manage_tickets', 'view_reports'],
+        user: []
+    };
+
+    Object.keys(rolePermissions).forEach(role => {
+        rolePermissions[role].forEach(permission => {
+            const assignPermissionToRoleQuery = `
+                INSERT OR IGNORE INTO RolePermissions (RoleID, PermissionID)
+                SELECT Roles.RoleID, Permissions.PermissionID
+                FROM Roles, Permissions
+                WHERE Roles.RoleName = ? AND Permissions.PermissionName = ?;
+            `;
+            db.run(assignPermissionToRoleQuery, [role, permission]);
+        });
+    });
+
+    // Assign the superadmin role to the first admin user
     const assignRoleToUserQuery = `
         INSERT OR IGNORE INTO UserRoles (AdminID, RoleID)
         SELECT Admin.AdminID, Roles.RoleID

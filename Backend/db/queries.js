@@ -88,7 +88,7 @@ function fetchAdminUser(adminID) {
 }
 
 // New functions for managing servers
-function InsertServer(server) {
+function insertServer(server) {
     const query = `
         INSERT INTO Servers (ServerName, Description, Status, Location, Downtime, LastOnline, BackOnline)
         VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -147,13 +147,28 @@ function assignPermissionToRole(roleID, permissionID) {
     return executeQuery(query, [roleID, permissionID]);
 }
 
+async function fetchRolesForUser(adminID) {
+    const query = `SELECT RoleID FROM UserRoles WHERE AdminID = ?;`;
+    const roles = await executeQuery(query, [adminID]);
+    return roles.map(role => role.RoleID);
+}
+
+async function fetchPermissionsForRoles(roleIDs) {
+    const placeholders = roleIDs.map(() => '?').join(',');
+    const query = `SELECT PermissionName FROM Permissions
+                   JOIN RolePermissions ON Permissions.PermissionID = RolePermissions.PermissionID
+                   WHERE RolePermissions.RoleID IN (${placeholders});`;
+    const permissions = await executeQuery(query, roleIDs);
+    return permissions.map(permission => permission.PermissionName);
+}
+
 module.exports = {
     executeQuery,
     storeUser,
     fetchUser,
     insertOrUpdateAdminUser,
     fetchAdminUser,
-    InsertServer,
+    insertServer,
     updateServer,
     deleteServer,
     fetchServer,
@@ -161,5 +176,7 @@ module.exports = {
     fetchRoles,
     fetchPermissions,
     assignRoleToUser,
-    assignPermissionToRole
+    assignPermissionToRole,
+    fetchRolesForUser,
+    fetchPermissionsForRoles
 };
