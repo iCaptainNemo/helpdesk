@@ -1,0 +1,50 @@
+.ad-properties-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+.button-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.tables-container {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+.logs-table-container,
+#adPropertiesContainer {
+  flex: 1;
+  margin: 0 10px;
+  display: flex;
+  flex-direction: column;
+}
+.logs-table-container {
+  overflow-y: auto;
+  max-height: 100%;
+}
+.properties-table,
+.logs-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.properties-table th,
+.properties-table td,
+.logs-table th,
+.logs-table td {
+  border: 1px solid #ddd;
+  padding: 7px;
+}
+.properties-table th,
+.logs-table th {
+  background-color: #f2f2f2;
+}

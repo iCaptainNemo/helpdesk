@@ -1,12 +1,17 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useParams } from 'react-router-dom';
 import Modal from 'react-modal';
 import Logs from '../components/Logs'; // Import the Logs component
-import '../styles/UserProperties.css'; // Import CSS for styling
+import '../styles/ADProperties.css'; // Import CSS for styling
 
 // Set the app element for react-modal
 Modal.setAppElement('#root');
 
-const UserProperties = ({ adObjectData }) => {
+// Define the ENDPOINT variable
+const ENDPOINT = process.env.REACT_APP_BACKEND_URL;
+
+const ADProperties = () => {
+  const { adObjectID } = useParams(); // Get adObjectID from URL parameters
   const defaultProperties = useMemo(() => [
     'sAMAccountName',
     'Name',
@@ -24,7 +29,7 @@ const UserProperties = ({ adObjectData }) => {
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [tooltip, setTooltip] = useState({ visible: false, message: '' });
   const logsTableRef = useRef(null);
-  const userPropertiesTableRef = useRef(null);
+  const adPropertiesTableRef = useRef(null);
 
   useEffect(() => {
     // Load selected properties from local storage or set default properties
@@ -33,23 +38,41 @@ const UserProperties = ({ adObjectData }) => {
   }, [defaultProperties]); // Include defaultProperties in the dependency array
 
   useEffect(() => {
-    // Parse adObjectData whenever it changes
-    if (adObjectData) {
+    // Fetch AD object data when adObjectID changes
+    const fetchADObjectData = async () => {
       try {
-        const parsedData = JSON.parse(adObjectData);
-        setData(parsedData);
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('No token found');
+
+        const response = await fetch(`${ENDPOINT}/api/fetch-adobject`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ adObjectID }),
+        });
+
+        if (!response.ok) throw new Error('Network response was not ok');
+
+        const data = await response.text();
+        setData(JSON.parse(data));
       } catch (error) {
-        console.error('Failed to parse adObjectData:', error);
+        console.error('Error fetching AD object properties:', error);
         setData({});
       }
+    };
+
+    if (adObjectID) {
+      fetchADObjectData();
     }
-  }, [adObjectData]);
+  }, [adObjectID]);
 
   useEffect(() => {
     // Synchronize the heights of the tables
-    if (logsTableRef.current && userPropertiesTableRef.current) {
-      const userPropertiesTableHeight = userPropertiesTableRef.current.offsetHeight;
-      logsTableRef.current.style.maxHeight = `${userPropertiesTableHeight}px`;
+    if (logsTableRef.current && adPropertiesTableRef.current) {
+      const adPropertiesTableHeight = adPropertiesTableRef.current.offsetHeight;
+      logsTableRef.current.style.maxHeight = `${adPropertiesTableHeight}px`;
     }
   }, [selectedProperties, data]);
 
@@ -104,7 +127,7 @@ const UserProperties = ({ adObjectData }) => {
   };
 
   return (
-    <div className="user-properties-container">
+    <div className="ad-properties-container">
       <div className="button-container">
         <button onClick={() => setModalIsOpen(true)} className="settings-button">
           ⚙️
@@ -117,9 +140,9 @@ const UserProperties = ({ adObjectData }) => {
       </div>
       <div className="tables-container">
         <div className="logs-table-container" ref={logsTableRef}>
-          <Logs adObjectData={adObjectData} /> {/* Pass adObjectData to Logs component */}
+          <Logs adObjectData={JSON.stringify(data)} /> {/* Pass adObjectData to Logs component */}
         </div>
-        <div id="userPropertiesContainer" ref={userPropertiesTableRef}>
+        <div id="adPropertiesContainer" ref={adPropertiesTableRef}>
           <table className="properties-table">
             <thead>
               <tr>
@@ -175,4 +198,4 @@ const UserProperties = ({ adObjectData }) => {
   );
 };
 
-export default UserProperties;
+export default ADProperties;

@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate, useNavigate } from 'react-router-dom';
 import socketIOClient from 'socket.io-client';
 import './styles.css'; // Import the CSS file
 import Header from './Header';
 import Navbar from './Navbar';
 import Dashboard from './pages/Dashboard';
-import UserProperties from './pages/UserProperties';
+import ADProperties from './pages/ADProperties'; // Update import
 import Placeholder from './pages/Placeholder';
 import Login from './pages/Login';
 import Configure from './pages/Configure'; // Import the Configure page
@@ -14,12 +14,12 @@ import Configure from './pages/Configure'; // Import the Configure page
 const ENDPOINT = process.env.REACT_APP_BACKEND_URL;
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false); // Track authentication status
   const [AdminID, setAdminID] = useState(''); // Store AdminID from the server
   const [initialCheck, setInitialCheck] = useState(false); // Track the first authentication check
-  const [adObjectData, setAdObjectData] = useState(''); // Store AD object data
   const [permissions, setPermissions] = useState([]); // Store user permissions
 
+  // Establish WebSocket connection
   useEffect(() => {
     const socket = socketIOClient(ENDPOINT);
 
@@ -40,6 +40,7 @@ function App() {
     };
   }, []);
 
+  // Verify token and check authentication status
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -68,6 +69,7 @@ function App() {
     }
   }, []);
 
+  // Handle login
   const handleLogin = (AdminID, token, permissions) => {
     setIsAuthenticated(true);
     setAdminID(AdminID);
@@ -76,6 +78,7 @@ function App() {
     console.log(`${AdminID} Logged in successfully`);
   };
 
+  // Handle logout
   const handleLogout = async () => {
     try {
       const sessionID = localStorage.getItem('sessionID');
@@ -105,31 +108,7 @@ function App() {
     }
   };
 
-  const handleFormSubmit = async (adObjectID) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No token found');
-
-      const response = await fetch(`${ENDPOINT}/api/fetch-adobject`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ adObjectID }),
-      });
-
-      if (!response.ok) throw new Error('Network response was not ok');
-
-      const data = await response.text();
-      setAdObjectData(data);
-      localStorage.setItem('currentView', 'user-prop'); // Store the current view in local storage
-      localStorage.setItem('currentADObjectID', adObjectID); // Store the current AD object ID in local storage
-    } catch (error) {
-      console.error('Error fetching AD object properties:', error);
-    }
-  };
-
+  // Show loading screen until initial authentication check is complete
   if (!initialCheck) {
     return <div>Loading...</div>;
   }
@@ -139,11 +118,11 @@ function App() {
       <div className="App">
         {isAuthenticated ? (
           <>
-            <Header AdminID={AdminID} onLogout={handleLogout} onFormSubmit={handleFormSubmit} />
+            <HeaderWrapper AdminID={AdminID} onLogout={handleLogout} />
             <Navbar />
             <Routes>
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/user-prop" element={<UserProperties />} />
+              <Route path="/ad-object/:adObjectID" element={<ADProperties />} /> {/* Update route */}
               <Route path="/placeholder" element={<Placeholder />} />
               <Route
                 path="/configure"
@@ -164,6 +143,38 @@ function App() {
       </div>
     </Router>
   );
+}
+
+// Move the handleFormSubmit function inside a component that is rendered within the <Router> context
+function HeaderWrapper({ AdminID, onLogout }) {
+  const navigate = useNavigate();
+
+  const handleFormSubmit = async (adObjectID) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No token found');
+
+      const response = await fetch(`${ENDPOINT}/api/fetch-adobject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ adObjectID }),
+      });
+
+      if (!response.ok) throw new Error('Network response was not ok');
+
+      const data = await response.text();
+      console.log('Fetched AD object data:', data); // Add this log
+      localStorage.setItem('currentADObjectID', adObjectID); // Store the current AD object ID in local storage
+      navigate(`/ad-object/${adObjectID}`); // Navigate to the AD properties page with adObjectID in the URL
+    } catch (error) {
+      console.error('Error fetching AD object properties:', error);
+    }
+  };
+
+  return <Header AdminID={AdminID} onLogout={onLogout} onFormSubmit={handleFormSubmit} />;
 }
 
 export default App;
