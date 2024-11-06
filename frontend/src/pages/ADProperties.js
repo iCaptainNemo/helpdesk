@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import Modal from 'react-modal';
 import Logs from '../components/Logs'; // Import the Logs component
 import '../styles/ADProperties.css'; // Import CSS for styling
@@ -12,6 +12,7 @@ const ENDPOINT = process.env.REACT_APP_BACKEND_URL;
 
 const ADProperties = () => {
   const { adObjectID } = useParams(); // Get adObjectID from URL parameters
+  const navigate = useNavigate();
   const defaultProperties = useMemo(() => [
     'sAMAccountName',
     'Name',
@@ -39,7 +40,7 @@ const ADProperties = () => {
 
   useEffect(() => {
     // Fetch AD object data when adObjectID changes
-    const fetchADObjectData = async () => {
+    const fetchADObjectData = async (id) => {
       try {
         const token = localStorage.getItem('token');
         if (!token) throw new Error('No token found');
@@ -50,7 +51,7 @@ const ADProperties = () => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
           },
-          body: JSON.stringify({ adObjectID }),
+          body: JSON.stringify({ adObjectID: id }),
         });
 
         if (!response.ok) throw new Error('Network response was not ok');
@@ -64,9 +65,14 @@ const ADProperties = () => {
     };
 
     if (adObjectID) {
-      fetchADObjectData();
+      fetchADObjectData(adObjectID);
+    } else {
+      const currentADObjectID = localStorage.getItem('currentADObjectID');
+      if (currentADObjectID) {
+        navigate(`/ad-object/${currentADObjectID}`);
+      }
     }
-  }, [adObjectID]);
+  }, [adObjectID, navigate]);
 
   useEffect(() => {
     // Synchronize the heights of the tables

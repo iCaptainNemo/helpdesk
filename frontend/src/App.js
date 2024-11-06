@@ -145,7 +145,6 @@ function App() {
   );
 }
 
-// Move the handleFormSubmit function inside a component that is rendered within the <Router> context
 function HeaderWrapper({ AdminID, onLogout }) {
   const navigate = useNavigate();
 
