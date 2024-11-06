@@ -1,20 +1,20 @@
 .locked-out-users-container {
     /* width: 60%; */
+    display: inline-block; /* Allow the container to adjust to the width of its content */
+    max-width: 90%; /* Ensure the container does not exceed the width of its parent */
     margin: 0 auto; /* Center the container */
     margin-top: 1.25em;
     margin-left: 1.25em; /* Add left margin */
     margin-right: 1.25em; /* Add right margin */
+    border: 1px solid #ddd; /* Add border around the container */
+    border-radius: 0.5em; /* Round off the corners */
+    box-shadow: 0 0.5em 1em rgba(214, 214, 214, 0.2); /* Add a small shadow */
     
 }
 
 table {
     width: 100%; /* Use full width of the container */
     border-collapse: collapse;
-    margin-top: 1.25em;
-    border: 1px solid #ddd; /* Add border around the table */
-    border-radius: 0.5em; /* Round off the corners */
-    box-shadow: 0 0.5em 1em rgba(255, 255, 255, 0.1); /* Add a small shadow */
-    overflow: hidden; /* Ensure rounded corners are visible */
 }
 
 caption {
@@ -26,6 +26,7 @@ caption {
     color: black; /* Black text */
     border-bottom: 1px solid #ddd; /* Add bottom border similar to th */
     padding: 0.5em; /* Add padding for better appearance */
+    border-radius: 0.5em 0.5em 0 0; /* Round off the top corners only */
 }
 
 th, td {
