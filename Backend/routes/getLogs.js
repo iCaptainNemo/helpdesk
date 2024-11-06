@@ -23,7 +23,7 @@ router.post('/', async (req, res) => {
         const result = await serverPowerShellScript(scriptPath, [logFilePath, currentADObjectID]);
         
         // Log the raw result from the PowerShell script
-        logger.info('Raw result from PowerShell script:', result);
+        //logger.info('Raw result from PowerShell script:', result);
 
         // Check if the result contains valid JSON
         let parsedResult;
@@ -35,7 +35,7 @@ router.post('/', async (req, res) => {
         }
         
         // Log the parsed result
-        //logger.info('Logs fetched successfully for:', currentADObjectID);
+        logger.info('Logs fetched successfully for:', currentADObjectID);
         
         // Send the result as JSON
         res.json(parsedResult);
