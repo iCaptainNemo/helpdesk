@@ -6,11 +6,11 @@ const logger = require('../utils/logger');
 router.post('/', async (req, res) => {
     try {
         await updateLockedOutUsers();
-        logger.verbose('Locked out users updated successfully');
-        res.status(200).send('Locked out users updated successfully');
+        logger.verbose('Locked out users table updated');
+        res.status(200).send('Locked out users table updated');
     } catch (error) {
-        logger.error('Failed to update locked out users:', error);
-        res.status(500).send('Failed to update locked out users.');
+        logger.error('Failed to update locked out users table:', error);
+        res.status(500).send('Failed to update locked out users table.');
     }
 });
 

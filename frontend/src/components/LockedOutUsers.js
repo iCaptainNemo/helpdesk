@@ -60,11 +60,11 @@ const LockedOutUsers = () => {
 
     return (
         <div className="locked-out-users-container">
-            <h2>Locked Out Users</h2>
             {lockedOutUsers.length === 0 ? (
                 <p>No locked out users found.</p>
             ) : (
                 <table>
+                    <caption>Locked Out Users</caption>
                     <thead>
                         <tr>
                             <th>UserID</th>

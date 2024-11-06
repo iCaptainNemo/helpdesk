@@ -70,9 +70,9 @@ async function updateLockedOutUsers() {
             });
         });
 
-        logger.info('Locked out users updated successfully.');
+        logger.info('Locked out users table updated.');
     } catch (err) {
-        logger.error('Failed to update locked out users:', err);
+        logger.error('Failed to update locked out users table:', err);
     }
 }
 

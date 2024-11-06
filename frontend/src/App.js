@@ -17,7 +17,6 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false); // Track authentication status
   const [AdminID, setAdminID] = useState(''); // Store AdminID from the server
   const [initialCheck, setInitialCheck] = useState(false); // Track the first authentication check
-  const [permissions, setPermissions] = useState([]); // Store user permissions
 
   // Establish WebSocket connection
   useEffect(() => {
@@ -56,7 +55,6 @@ function App() {
           if (data.AdminID) {
             setIsAuthenticated(true);
             setAdminID(data.AdminID);
-            setPermissions(data.permissions || []); // Set user permissions
           }
           setInitialCheck(true);
         })
@@ -70,10 +68,9 @@ function App() {
   }, []);
 
   // Handle login
-  const handleLogin = (AdminID, token, permissions) => {
+  const handleLogin = (AdminID, token) => {
     setIsAuthenticated(true);
     setAdminID(AdminID);
-    setPermissions(permissions || []); // Set user permissions
     localStorage.setItem('token', token); // Store token in local storage
     console.log(`${AdminID} Logged in successfully`);
   };
@@ -98,7 +95,6 @@ function App() {
         localStorage.removeItem('currentADObjectID'); // Remove current AD object ID from local storage
         setIsAuthenticated(false);
         setAdminID('');
-        setPermissions([]); // Clear user permissions
         console.log('Successfully logged out and session destroyed.');
       } else {
         console.error('Logout failed: Network response was not ok');
