@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '../styles/LockedOutUsers.css'; // Import the CSS file
 import ScriptButton from './ScriptButton'; // Import the ScriptButton component
 
 const LockedOutUsers = () => {
     const [lockedOutUsers, setLockedOutUsers] = useState([]);
+    const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, userID: null });
+    const navigate = useNavigate();
 
     const fetchLockedOutUsers = () => {
         fetch(`${process.env.REACT_APP_BACKEND_URL}/api/get-locked-out-users`)
@@ -58,6 +61,36 @@ const LockedOutUsers = () => {
         return parseInt(lockoutTime, 10) >= fiveMinutesAgo;
     };
 
+    const handleContextMenu = (event, userID) => {
+        event.preventDefault();
+        setContextMenu({
+            visible: true,
+            x: event.clientX,
+            y: event.clientY,
+            userID
+        });
+    };
+
+    const handleCloseContextMenu = (event) => {
+        if (contextMenu.visible && !event.target.closest('.context-menu')) {
+            setContextMenu({ visible: false, x: 0, y: 0, userID: null });
+        }
+    };
+
+    const handleOpen = () => {
+        if (contextMenu.userID) {
+            navigate(`/ad-object/${contextMenu.userID}`);
+        }
+        setContextMenu({ visible: false, x: 0, y: 0, userID: null });
+    };
+
+    useEffect(() => {
+        document.addEventListener('click', handleCloseContextMenu);
+        return () => {
+            document.removeEventListener('click', handleCloseContextMenu);
+        };
+    }, [contextMenu]);
+
     return (
         <div className="locked-out-users-container">
             {lockedOutUsers.length === 0 ? (
@@ -76,7 +109,11 @@ const LockedOutUsers = () => {
                     </thead>
                     <tbody>
                         {sortedUsers.map(user => (
-                            <tr key={user.UserID} className={isRecentLockout(user.AccountLockoutTime) ? 'recent-lockout' : ''}>
+                            <tr
+                                key={user.UserID}
+                                className={isRecentLockout(user.AccountLockoutTime) ? 'recent-lockout' : ''}
+                                onContextMenu={(event) => handleContextMenu(event, user.UserID)}
+                            >
                                 <td>{user.UserID}</td>
                                 <td>{user.name}</td>
                                 <td>{user.department}</td>
@@ -93,6 +130,14 @@ const LockedOutUsers = () => {
                         ))}
                     </tbody>
                 </table>
+            )}
+            {contextMenu.visible && (
+                <div
+                    className="context-menu"
+                    style={{ top: contextMenu.y, left: contextMenu.x }}
+                >
+                    <button onClick={handleOpen}>Open {contextMenu.userID}</button>
+                </div>
             )}
         </div>
     );
