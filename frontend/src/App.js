@@ -166,7 +166,6 @@ function HeaderWrapper({ AdminID, onLogout }) {
 
       const data = await response.text();
       localStorage.setItem('currentADObjectID', adObjectID); // Store the current AD object ID in local storage
-      localStorage.setItem('adObjectData', data); // Store the fetched AD object data in local storage
       navigate(`/ad-object/${adObjectID}`); // Navigate to the AD properties page with adObjectID in the URL
     } catch (error) {
       console.error('Error fetching AD object properties:', error);

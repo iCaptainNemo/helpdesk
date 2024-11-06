@@ -1,57 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import '../styles/Logs.css'; // Import the CSS file
 
-const Logs = ({ adObjectData }) => {
+const Logs = () => {
     const [logs, setLogs] = useState([]);
     const [error, setError] = useState(null);
     const [tooltip, setTooltip] = useState({ visible: false, message: '' });
-    const [data, setData] = useState(adObjectData || localStorage.getItem('adObjectData'));
 
     useEffect(() => {
-        const fetchADObjectData = async (id) => {
-            try {
-                const token = localStorage.getItem('token');
-                if (!token) throw new Error('No token found');
-
-                const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/fetch-adobject`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`,
-                    },
-                    body: JSON.stringify({ adObjectID: id }),
-                });
-
-                if (!response.ok) throw new Error('Network response was not ok');
-
-                const data = await response.text();
-                setData(data);
-                localStorage.setItem('adObjectData', data); // Store the fetched AD object data in local storage
-            } catch (error) {
-                console.error('Error fetching AD object properties:', error);
-                setData(null);
-            }
-        };
-
-        if (!data) {
-            const currentADObjectID = localStorage.getItem('currentADObjectID');
-            if (currentADObjectID) {
-                fetchADObjectData(currentADObjectID);
-            }
-        }
-    }, [data]);
-
-    useEffect(() => {
-        let isMounted = true; // Track if the component is mounted
-
         const fetchLogs = async () => {
             try {
-                if (!data) {
-                    throw new Error('AD Object data is undefined');
-                }
-
-                const adObject = JSON.parse(data);
-                const currentADObjectID = adObject.sAMAccountName;
+                const currentADObjectID = localStorage.getItem('currentADObjectID');
 
                 if (!currentADObjectID) {
                     throw new Error('AD Object ID is undefined');
@@ -73,25 +31,17 @@ const Logs = ({ adObjectData }) => {
                 }
 
                 const logsData = await response.json();
-                if (isMounted) {
-                    setLogs(logsData);
-                }
+                setLogs(logsData);
             } catch (error) {
                 console.error('Error fetching logs:', error);
-                if (isMounted) {
-                    setError(`Error fetching logs: ${error.message}`);
-                }
+                setError(`Error fetching logs: ${error.message}`);
             }
         };
 
-        if (data) {
+        if (localStorage.getItem('currentADObjectID')) {
             fetchLogs();
         }
-
-        return () => {
-            isMounted = false; // Cleanup function to set isMounted to false
-        };
-    }, [data]);
+    }, []);
 
     const copyToClipboard = (value) => {
         navigator.clipboard.writeText(value).then(() => {
