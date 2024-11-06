@@ -7,9 +7,17 @@ const Logs = ({ adObjectData }) => {
     const [tooltip, setTooltip] = useState({ visible: false, message: '' });
 
     useEffect(() => {
+        let isMounted = true; // Track if the component is mounted
+
         const fetchLogs = async () => {
             try {
-                const currentADObjectID = JSON.parse(adObjectData).sAMAccountName;
+                const adObject = JSON.parse(adObjectData);
+                const currentADObjectID = adObject?.sAMAccountName;
+
+                if (!currentADObjectID) {
+                    throw new Error('AD Object ID is undefined');
+                }
+
                 const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/get-logs`, {
                     method: 'POST',
                     headers: {
@@ -17,20 +25,31 @@ const Logs = ({ adObjectData }) => {
                     },
                     body: JSON.stringify({ currentADObjectID }),
                 });
+
                 if (!response.ok) {
-                    throw new Error('Failed to fetch logs');
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to fetch logs');
                 }
+
                 const data = await response.json();
-                setLogs(data);
+                if (isMounted) {
+                    setLogs(data);
+                }
             } catch (error) {
                 console.error('Error fetching logs:', error);
-                setError('Error fetching logs');
+                if (isMounted) {
+                    setError(`Error fetching logs: ${error.message}`);
+                }
             }
         };
 
         if (adObjectData) {
             fetchLogs();
         }
+
+        return () => {
+            isMounted = false; // Cleanup function to set isMounted to false
+        };
     }, [adObjectData]);
 
     const copyToClipboard = (value) => {

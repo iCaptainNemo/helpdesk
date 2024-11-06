@@ -103,6 +103,7 @@ const ADProperties = () => {
   const clearData = () => {
     setData({});
     localStorage.removeItem('adObjectData');
+    localStorage.removeItem('currentADObjectID'); // Remove currentADObjectID from local storage
   };
 
   const stripDistinguishedName = (dn) => {

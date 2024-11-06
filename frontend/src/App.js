@@ -165,7 +165,7 @@ function HeaderWrapper({ AdminID, onLogout }) {
       if (!response.ok) throw new Error('Network response was not ok');
 
       const data = await response.text();
-      console.log('Fetched AD object data:', data); // Add this log
+      // console.log('Fetched AD object data:', data); // Add this log
       localStorage.setItem('currentADObjectID', adObjectID); // Store the current AD object ID in local storage
       navigate(`/ad-object/${adObjectID}`); // Navigate to the AD properties page with adObjectID in the URL
     } catch (error) {
