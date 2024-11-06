@@ -124,16 +124,7 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/ad-object/:adObjectID" element={<ADProperties />} /> {/* Update route */}
               <Route path="/placeholder" element={<Placeholder />} />
-              <Route
-                path="/configure"
-                element={
-                  permissions.includes('access_configure_page') ? (
-                    <Configure />
-                  ) : (
-                    <div>Access Denied</div>
-                  )
-                }
-              />
+              <Route path="/configure" element={<Configure />} />
               <Route path="*" element={<Navigate to="/dashboard" />} />
             </Routes>
           </>
@@ -164,7 +155,6 @@ function HeaderWrapper({ AdminID, onLogout }) {
 
       if (!response.ok) throw new Error('Network response was not ok');
 
-      const data = await response.text();
       localStorage.setItem('currentADObjectID', adObjectID); // Store the current AD object ID in local storage
       navigate(`/ad-object/${adObjectID}`); // Navigate to the AD properties page with adObjectID in the URL
     } catch (error) {
