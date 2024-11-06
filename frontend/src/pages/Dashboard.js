@@ -4,7 +4,6 @@ import LockedOutUsers from '../components/LockedOutUsers';
 const Dashboard = () => {
     return (
         <div>
-            <h2>Dashboard</h2>
             <form id="helloWorldForm" onSubmit={handleHelloWorldButtonClick}>
                 <button type="submit">Test</button>
             </form>
