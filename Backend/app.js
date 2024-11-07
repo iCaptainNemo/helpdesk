@@ -11,6 +11,7 @@ const db = require('./db/init');
 const verifyToken = require('./middleware/verifyToken'); // Ensure JWT middleware is used
 const verifyPermissions = require('./middleware/verifyPermissions'); // Import the permissions middleware
 const { updateLockedOutUsers } = require('./utils/lockedOutUsersUtils'); // Import the module
+const { getServerStatuses } = require('./utils/ServerManageUtil'); // Import the module
 const logger = require('./utils/logger'); // Import the logger
 const sessionStore = require('./utils/sessionStore'); // Import your session store
 
@@ -93,6 +94,7 @@ const getLogsRoute = require('./routes/getLogs'); // Route for fetching logs
 const rolesRoute = require('./routes/roles'); // Route for managing roles
 const permissionsRoute = require('./routes/permissions'); // Route for managing permissions
 const configureRoute = require('./routes/configure'); // Route for the configure page
+const serverStatusRoute = require('./routes/serverStatus');
 
 // Use routes and pass db to them
 app.use('/api/fetch-adobject', fetchADObjectRoute); 
@@ -109,6 +111,7 @@ app.use('/api/get-logs', getLogsRoute); // Route to fetch logs
 app.use('/api/roles', rolesRoute); // Route to manage roles
 app.use('/api/permissions', permissionsRoute); // Route to manage permissions
 app.use('/api/configure', verifyToken, verifyPermissions('access_configure_page'), configureRoute); // Route to access the configure page
+app.use('/api/servers', serverStatusRoute);
 
 // Middleware to handle 403 Forbidden errors
 app.use(forbidden);
@@ -150,17 +153,18 @@ const HOST = '0.0.0.0'; // Listen on all network interfaces
 server.listen(PORT, HOST, () => {
     logger.info(`Server is running on http://${HOST}:${PORT}`);
     updateLockedOutUsers(); // Initial call to populate the table
+    getServerStatuses(); // Initial call to populate the server statuses
 
     // Function to parse interval string and convert to milliseconds
     const parseInterval = (interval) => {
-        if (!interval) return 120000; // Default to 120 seconds
+        if (!interval) return 600000; // Default to 10 minutes
 
         const unit = interval.slice(-1);
         const value = parseInt(interval.slice(0, -1), 10);
 
         if (isNaN(value)) {
             logger.warn(`Invalid interval format: ${interval}`);
-            return 120000; // Default to 120 seconds
+            return 600000; // Default to 10 minutes
         }
 
         switch (unit) {
@@ -176,8 +180,12 @@ server.listen(PORT, HOST, () => {
     };
 
     // Set up the refresh interval for locked out users
-    const refreshInterval = parseInterval(process.env.LOCKED_OUT_USERS_REFRESH_INTERVAL);
-    setInterval(updateLockedOutUsers, refreshInterval);
+    const lockedOutUsersRefreshInterval = parseInterval(process.env.LOCKED_OUT_USERS_REFRESH_INTERVAL);
+    setInterval(updateLockedOutUsers, lockedOutUsersRefreshInterval);
+
+    // Set up the refresh interval for server statuses
+    const serverStatusRefreshInterval = parseInterval(process.env.SERVER_STATUS_REFRESH_INTERVAL);
+    setInterval(getServerStatuses, serverStatusRefreshInterval);
 });
 
 // Graceful shutdown handling

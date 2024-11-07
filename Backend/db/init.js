@@ -40,6 +40,7 @@ const tables = [
             'ServerName TEXT PRIMARY KEY',
             'Description TEXT',
             'Status TEXT',
+            'FileShareService TEXT',
             'Location TEXT',
             'Downtime DATETIME',
             'LastOnline DATETIME',

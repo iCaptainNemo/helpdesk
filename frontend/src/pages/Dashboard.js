@@ -1,5 +1,6 @@
 import React from 'react';
 import LockedOutUsers from '../components/LockedOutUsers';
+import ServerStatus from '../components/ServerStatus';
 
 const Dashboard = () => {
     return (
@@ -9,6 +10,7 @@ const Dashboard = () => {
             </form>
             <div id="helloWorldOutputContainer"></div>
             <LockedOutUsers />
+            <ServerStatus />
         </div>
     );
 };
