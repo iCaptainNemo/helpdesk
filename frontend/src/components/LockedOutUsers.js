@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/LockedOutUsers.css'; // Import the CSS file
 import ScriptButton from './ScriptButton'; // Import the ScriptButton component
@@ -71,11 +71,11 @@ const LockedOutUsers = () => {
         });
     };
 
-    const handleCloseContextMenu = (event) => {
+    const handleCloseContextMenu = useCallback((event) => {
         if (contextMenu.visible && !event.target.closest('.context-menu')) {
             setContextMenu({ visible: false, x: 0, y: 0, userID: null });
         }
-    };
+    }, [contextMenu.visible]);
 
     const handleOpen = () => {
         if (contextMenu.userID) {
@@ -89,7 +89,7 @@ const LockedOutUsers = () => {
         return () => {
             document.removeEventListener('click', handleCloseContextMenu);
         };
-    }, [contextMenu]);
+    }, [handleCloseContextMenu]);
 
     return (
         <div className="locked-out-users-container">
