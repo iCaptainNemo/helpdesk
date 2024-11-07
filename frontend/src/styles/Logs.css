@@ -38,8 +38,8 @@
     position: absolute;
     bottom: -20px;
     left: 0;
-    background-color: black;
-    color: white;
+    background-color: rgb(246, 255, 115);
+    color: rgb(0, 0, 0);
     padding: 2px 5px;
     border-radius: 3px;
     font-size: 12px;

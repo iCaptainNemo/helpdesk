@@ -17,7 +17,7 @@ router.post('/', async (req, res) => {
         const { currentADObjectID } = req.body;
 
         // Log the parameters being sent to the PowerShell script
-        logger.info(`${adminID} is executing PowerShell script with logFilePath: ${logFilePath} With ADObjectID: ${currentADObjectID}`);
+        logger.info(`Executing PowerShell script with logFilePath: ${logFilePath} With ADObjectID: ${currentADObjectID}`);
 
         // Execute the PowerShell script with the log file path and currentADObjectID as arguments
         const result = await serverPowerShellScript(scriptPath, [logFilePath, currentADObjectID]);
