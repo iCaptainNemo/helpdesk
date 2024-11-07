@@ -125,12 +125,28 @@ const ADProperties = () => {
   };
 
   const copyToClipboard = (value) => {
-    navigator.clipboard.writeText(value).then(() => {
-      setTooltip({ visible: true, message: 'Copied!' });
-      setTimeout(() => setTooltip({ visible: false, message: '' }), 2000);
-    }).catch(err => {
-      console.error('Failed to copy: ', err);
-    });
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(value).then(() => {
+        setTooltip({ visible: true, message: 'Copied!' });
+        setTimeout(() => setTooltip({ visible: false, message: '' }), 2000);
+      }).catch(err => {
+        console.error('Failed to copy: ', err);
+      });
+    } else {
+      // Fallback method for copying text
+      const textArea = document.createElement('textarea');
+      textArea.value = value;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        setTooltip({ visible: true, message: 'Copied!' });
+        setTimeout(() => setTooltip({ visible: false, message: '' }), 2000);
+      } catch (err) {
+        console.error('Fallback: Oops, unable to copy', err);
+      }
+      document.body.removeChild(textArea);
+    }
   };
 
   return (
