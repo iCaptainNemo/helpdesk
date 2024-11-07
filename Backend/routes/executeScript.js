@@ -1,9 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { executePowerShellScript } = require('../powershell');
-const createLogger = require('../utils/logger'); 
+const logger = require('../utils/logger'); // Import the logger module
 const verifyToken = require('../middleware/verifyToken');
-
 
 router.post('/', verifyToken, async (req, res) => {
     const { scriptName, params } = req.body;

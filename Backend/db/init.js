@@ -147,13 +147,32 @@ function initializeDatabase() {
     });
 
     // Assign the superadmin role to the first admin user
-    const assignRoleToUserQuery = `
-        INSERT OR IGNORE INTO UserRoles (AdminID, RoleID)
-        SELECT Admin.AdminID, Roles.RoleID
-        FROM Admin, Roles
-        WHERE Admin.AdminID = (SELECT AdminID FROM Admin LIMIT 1) AND Roles.RoleName = 'superadmin';
+    const checkSuperadminQuery = `
+        SELECT AdminID FROM UserRoles
+        JOIN Roles ON UserRoles.RoleID = Roles.RoleID
+        WHERE Roles.RoleName = 'superadmin';
     `;
-    db.run(assignRoleToUserQuery);
+    db.get(checkSuperadminQuery, (err, row) => {
+        if (err) {
+            console.error('Error checking for existing superadmin:', err.message);
+        } else if (!row) {
+            const assignRoleToUserQuery = `
+                INSERT OR IGNORE INTO UserRoles (AdminID, RoleID)
+                SELECT Admin.AdminID, Roles.RoleID
+                FROM Admin, Roles
+                WHERE Admin.AdminID = (SELECT AdminID FROM Admin ORDER BY ROWID LIMIT 1) AND Roles.RoleName = 'superadmin';
+            `;
+            db.run(assignRoleToUserQuery, (err) => {
+                if (err) {
+                    console.error('Error assigning superadmin role to the first admin user:', err.message);
+                } else {
+                    console.log('Superadmin role assigned to the first admin user.');
+                }
+            });
+        } else {
+            console.log('Superadmin role already assigned to an admin user.');
+        }
+    });
 }
 
 function checkAndAddMissingColumns(table) {
