@@ -23,7 +23,7 @@ const ServerStatus = () => {
 
     useEffect(() => {
         fetchServerStatuses();
-        const intervalId = setInterval(fetchServerStatuses, 60000); // Fetch every 1 minutes
+        const intervalId = setInterval(fetchServerStatuses, 60000); // Fetch every 1 minute
 
         return () => clearInterval(intervalId);
     }, []);
@@ -41,15 +41,21 @@ const ServerStatus = () => {
                         <tr>
                             <th>Server Name</th>
                             <th>Status</th>
-                            <th>File Share Service</th>
+                            <th>LanmanServer</th>
+                            <th>Downtime</th>
+                            <th>Last Online</th>
+                            <th>Back Online</th>
                         </tr>
                     </thead>
                     <tbody>
                         {serverStatuses.map((server, index) => (
-                            <tr key={index}>
+                            <tr key={index} title={`Location: ${server.Location || 'N/A'}\nDescription: ${server.Description || 'N/A'}`}>
                                 <td>{server.ServerName}</td>
-                                <td>{server.Status}</td>
-                                <td>{server.FileShareService}</td>
+                                <td className={server.Status === 'Online' ? 'status-online' : 'status-offline'}>{server.Status}</td>
+                                <td className={server.FileShareService === 'Running' ? 'service-running' : 'service-not-running'}>{server.FileShareService}</td>
+                                <td>{server.Downtime ? `${server.Downtime} seconds` : 'N/A'}</td>
+                                <td>{server.LastOnline ? new Date(server.LastOnline).toLocaleString() : 'N/A'}</td>
+                                <td>{server.BackOnline ? new Date(server.BackOnline).toLocaleString() : 'N/A'}</td>
                             </tr>
                         ))}
                     </tbody>

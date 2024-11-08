@@ -24,24 +24,67 @@ async function getServerStatuses() {
             // Update server statuses in the database
             const updateStmt = db.prepare(`
                 UPDATE Servers
-                SET Status = ?, FileShareService = ?
+                SET Status = ?, FileShareService = ?, Downtime = ?, LastOnline = ?, BackOnline = ?
                 WHERE ServerName = ?
             `);
 
-            statusesArray.forEach(server => {
-                updateStmt.run(server.Status, server.FileShareService, server.ServerName);
-            });
+            const currentTime = new Date();
 
-            updateStmt.finalize();
+            const updatePromises = statusesArray.map(async server => {
+                const existingServer = await fetchServer(server.ServerName);
+                let downtime = null;
+                let lastOnline = existingServer.LastOnline;
+                let backOnline = existingServer.BackOnline;
 
-            // Commit the transaction
-            db.run('COMMIT', (err) => {
-                if (err) {
-                    logger.error('Failed to commit transaction:', err);
+                if (server.Status === 'Online') {
+                    if (existingServer.Status !== 'Online') {
+                        backOnline = currentTime;
+                        if (lastOnline) {
+                            downtime = Math.floor((currentTime - new Date(lastOnline)) / 1000); // Downtime in seconds
+                        }
+                    }
                 } else {
-                    logger.info('Server statuses updated in the database.');
+                    if (existingServer.Status === 'Online') {
+                        lastOnline = currentTime;
+                    }
                 }
+
+                return new Promise((resolve, reject) => {
+                    updateStmt.run(
+                        server.Status,
+                        server.FileShareService,
+                        downtime,
+                        lastOnline,
+                        backOnline,
+                        server.ServerName,
+                        (err) => {
+                            if (err) {
+                                reject(err);
+                            } else {
+                                resolve();
+                            }
+                        }
+                    );
+                });
             });
+
+            Promise.all(updatePromises)
+                .then(() => {
+                    updateStmt.finalize();
+
+                    // Commit the transaction
+                    db.run('COMMIT', (err) => {
+                        if (err) {
+                            logger.error('Failed to commit transaction:', err);
+                        } else {
+                            logger.info('Server statuses updated in the database.');
+                        }
+                    });
+                })
+                .catch((err) => {
+                    logger.error('Failed to update server statuses:', err);
+                    db.run('ROLLBACK');
+                });
         });
 
         return statusesArray;

@@ -1,5 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
 .locked-out-users-container {
-    /* width: 60%; */
     display: inline-block; /* Allow the container to adjust to the width of its content */
     max-width: 90%; /* Ensure the container does not exceed the width of its parent */
     margin: 0 auto; /* Center the container */
@@ -9,15 +10,15 @@
     border: 1px solid #ddd; /* Add border around the container */
     border-radius: 0.5em; /* Round off the corners */
     box-shadow: 0 0.5em 1em rgba(214, 214, 214, 0.2); /* Add a small shadow */
-    
+    font-family: 'Roboto', sans-serif; /* Use Roboto font */
 }
 
-table {
+.locked-out-users-container table {
     width: 100%; /* Use full width of the container */
     border-collapse: collapse;
 }
 
-caption {
+.locked-out-users-container caption {
     caption-side: top;
     text-align: center;
     font-size: 1.2em; /* Slightly larger than the other fonts */
@@ -29,34 +30,34 @@ caption {
     border-radius: 0.5em 0.5em 0 0; /* Round off the top corners only */
 }
 
-th, td {
+.locked-out-users-container th, .locked-out-users-container td {
     padding: 0.125em;
     text-align: left;
     border-bottom: 1px solid #ddd;
 }
 
-th {
+.locked-out-users-container th {
     background-color: #f2f2f2;
     cursor: pointer;
     color: black; /* Ensure header text is black */
 }
 
-.recent-lockout {
+.locked-out-users-container .recent-lockout {
     background-color: yellow;
     color: black; /* Ensure text is black for readability */
 }
 
-tr:hover {
+.locked-out-users-container tr:hover {
     background-color: #f5f5f5;
     color: black;
 }
 
-h2 {
+.locked-out-users-container h2 {
     text-align: center; /* Center the heading */
     font-variant: small-caps; /* Make the text small caps */
 }
 
-.context-menu {
+.locked-out-users-container .context-menu {
     position: absolute;
     background-color: white;
     border: 1px solid #ccc;
@@ -64,7 +65,7 @@ h2 {
     z-index: 1000;
 }
 
-.context-menu button {
+.locked-out-users-container .context-menu button {
     display: block;
     width: 100%;
     padding: 8px 16px;
@@ -74,6 +75,6 @@ h2 {
     cursor: pointer;
 }
 
-.context-menu button:hover {
+.locked-out-users-container .context-menu button:hover {
     background-color: #f0f0f0;
 }

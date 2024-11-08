@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
 .server-status-container {
     display: inline-block;
     max-width: 90%;
@@ -8,40 +10,76 @@
     border: 1px solid #ddd;
     border-radius: 0.5em;
     box-shadow: 0 0.5em 1em rgba(214, 214, 214, 0.2);
+    font-family: 'Roboto', sans-serif; /* Use Roboto font */
 }
 
-table {
+.server-status-container table {
     width: 100%;
     border-collapse: collapse;
 }
 
-caption {
+.server-status-container caption {
     caption-side: top;
     text-align: center;
-    font-size: 1.2em;
+    font-size: 1.2em; /* Slightly larger than the other fonts */
     font-weight: bold;
-    background-color: white;
+    background-color: white; /* White background */
+    color: black; /* Black text */
+    border-bottom: 1px solid #ddd; /* Add bottom border similar to th */
+    padding: 0.5em; /* Add padding for better appearance */
+    border-radius: 0.5em 0.5em 0 0; /* Round off the top corners only */
 }
 
-th, td {
+.server-status-container th, .server-status-container td {
     padding: 0.125em;
     text-align: left;
     border-bottom: 1px solid #ddd;
 }
 
-th {
+.server-status-container th {
     background-color: #f2f2f2;
     cursor: pointer;
     color: black;
 }
 
-tr:hover {
+.server-status-container tr:hover {
     background-color: #f5f5f5;
     color: black;
 }
 
-p {
+.server-status-container p {
     text-align: center;
     font-size: 1.2em;
     color: red;
+}
+
+/* Conditional styling for status and service columns */
+.server-status-container .status-online {
+    background-color: green;
+    color: white;
+    text-align: center; /* Center align text */
+}
+
+.server-status-container .status-offline {
+    background-color: red;
+    color: white;
+    text-align: center; /* Center align text */
+}
+
+.server-status-container .service-running {
+    background-color: green;
+    color: white;
+    text-align: center; /* Center align text */
+}
+
+.server-status-container .service-not-running {
+    background-color: red;
+    color: white;
+    text-align: center; /* Center align text */
+}
+
+/* Center align text for Status and File Share Service columns */
+.server-status-container td:nth-child(2), /* Status column */
+.server-status-container td:nth-child(3)  /* File Share Service column */ {
+    text-align: center;
 }
