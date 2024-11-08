@@ -40,12 +40,17 @@ async function getServerStatuses() {
                     if (existingServer.Status !== 'Online') {
                         backOnline = currentTime;
                         if (lastOnline) {
-                            downtime = Math.floor((currentTime - new Date(lastOnline)) / 1000); // Downtime in seconds
+                            downtime = Math.floor((currentTime - new Date(lastOnline)) / 60000); // Downtime in minutes
                         }
                     }
                 } else {
                     if (existingServer.Status === 'Online') {
                         lastOnline = currentTime;
+                    } else if (!lastOnline) {
+                        lastOnline = currentTime;
+                    }
+                    if (lastOnline) {
+                        downtime = Math.floor((currentTime - new Date(lastOnline)) / 60000); // Downtime in minutes
                     }
                 }
 

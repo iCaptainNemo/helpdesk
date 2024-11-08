@@ -1,5 +1,5 @@
 param (
-    [string[]]$Servers  # Array of server names
+    [string]$Servers  # Comma-separated string of server names
 )
 
 # Import ActiveDirectory module
@@ -29,14 +29,12 @@ class ServerManager {
 # Main script logic
 $serverManager = [ServerManager]::new()
 
-# Ensure $Servers is an array
-if (-not ($Servers -is [array])) {
-    $Servers = @($Servers)
-}
+# Split the comma-separated string into an array
+$ServersArray = $Servers -split ','
 
 # Check server statuses
 $serverStatuses = @()
-foreach ($server in $Servers) {
+foreach ($server in $ServersArray) {
     $status = $serverManager.CheckServerStatus($server)
     $fileShareStatus = $serverManager.CheckFileShareService($server)
     $serverStatuses += [PSCustomObject]@{

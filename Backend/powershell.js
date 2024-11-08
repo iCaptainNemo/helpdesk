@@ -7,7 +7,7 @@ const scriptsToSuppressLogging = [
     'getDomainInfo.ps1',
     'Get-ADObject.ps1',
     'logFilePath.ps1',
-    'Get-ServerStatus.ps1',
+    // 'Get-ServerStatus.ps1',
     'Get-Logs.ps1'
 ];
 
@@ -58,13 +58,20 @@ function executePowerShellScript(scriptPath, params = []) {
 }
 
 function serverPowerShellScript(scriptPath, params = []) {
-    const paramString = params
-        .filter(param => param) // Omit empty parameters
-        .map(param => param.replace(/"/g, '\\"')) // Escape double quotes without adding extra quotes
-        .join(' ');
+    let paramString;
+
+    // Special case for Get-ServerStatus.ps1 to handle array of server names
+    if (scriptPath.includes('Get-ServerStatus.ps1')) {
+        const serverNames = params;
+        paramString = `-Servers "${serverNames.join(',')}"`;
+    } else {
+        paramString = params
+            .filter(param => param) // Omit empty parameters
+            .map(param => param.replace(/"/g, '\\"')) // Escape double quotes without adding extra quotes
+            .join(' ');
+    }
 
     const command = `powershell.exe -File ${scriptPath} ${paramString}`;
-
     const shouldSuppressLogging = scriptsToSuppressLogging.some(script => scriptPath.includes(script));
 
     if (!shouldSuppressLogging) {
@@ -100,7 +107,6 @@ function serverPowerShellScript(scriptPath, params = []) {
         });
     });
 }
-
 
 module.exports = {
     executePowerShellScript,
