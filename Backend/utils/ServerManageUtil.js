@@ -32,16 +32,14 @@ async function getServerStatuses() {
 
             const updatePromises = statusesArray.map(async server => {
                 const existingServer = await fetchServer(server.ServerName);
-                let downtime = null;
+                let downtime = 0;
                 let lastOnline = existingServer.LastOnline;
                 let backOnline = existingServer.BackOnline;
 
                 if (server.Status === 'Online') {
                     if (existingServer.Status !== 'Online') {
-                        backOnline = currentTime;
-                        if (lastOnline) {
-                            downtime = Math.floor((currentTime - new Date(lastOnline)) / 60000); // Downtime in minutes
-                        }
+                        backOnline = lastOnline ? currentTime : null;
+                        downtime = 0;
                     }
                 } else {
                     if (existingServer.Status === 'Online') {
@@ -52,6 +50,7 @@ async function getServerStatuses() {
                     if (lastOnline) {
                         downtime = Math.floor((currentTime - new Date(lastOnline)) / 60000); // Downtime in minutes
                     }
+                    backOnline = null;
                 }
 
                 return new Promise((resolve, reject) => {
