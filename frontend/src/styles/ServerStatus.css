@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
-
 .server-status-container {
     display: inline-block;
     max-width: 90%;
@@ -28,6 +26,7 @@
     border-bottom: 1px solid #ddd; /* Add bottom border similar to th */
     padding: 0.5em; /* Add padding for better appearance */
     border-radius: 0.5em 0.5em 0 0; /* Round off the top corners only */
+    position: relative; /* For positioning the toggle switch */
 }
 
 .server-status-container th, .server-status-container td {
@@ -78,8 +77,71 @@
     text-align: center; /* Center align text */
 }
 
+.server-status-container .service-warning {
+    background-color: yellow;
+    color: black;
+    text-align: center; /* Center align text */
+}
+
 /* Center align text for Status and File Share Service columns */
 .server-status-container td:nth-child(2), /* Status column */
 .server-status-container td:nth-child(3)  /* File Share Service column */ {
     text-align: center;
+}
+
+/* Toggle switch styles */
+.toggle-switch {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-block;
+    width: 34px;
+    height: 20px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #2196F3;
+}
+
+input:checked + .slider:before {
+    transform: translateX(14px);
+}
+
+/* Styling for "All Servers Are Online" message */
+.server-status-container .all-servers-online {
+    background-color: green;
+    color: white;
+    text-align: center;
+    font-weight: bold;
 }
