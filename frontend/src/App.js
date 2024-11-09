@@ -6,7 +6,7 @@ import Header from './Header';
 import Navbar from './Navbar';
 import Dashboard from './pages/Dashboard';
 import ADProperties from './pages/ADProperties'; // Update import
-import Placeholder from './pages/Placeholder';
+import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Configure from './pages/Configure'; // Import the Configure page
 
@@ -119,7 +119,7 @@ function App() {
             <Routes>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/ad-object/:adObjectID" element={<ADProperties />} /> {/* Update route */}
-              <Route path="/placeholder" element={<Placeholder />} />
+              <Route path="/Profile" element={<Profile />} />
               <Route path="/configure" element={<Configure />} />
               <Route path="*" element={<Navigate to="/dashboard" />} />
             </Routes>

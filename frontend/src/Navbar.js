@@ -17,7 +17,7 @@ const Navbar = () => {
     <div className="navbar">
       <Link className="button-link" to="/dashboard">Dashboard</Link>
       <button className="button-link" onClick={handleADPropertiesClick}>AD Properties</button>
-      <Link className="button-link" to="/placeholder">Placeholder</Link>
+      <Link className="button-link" to="/Profile">Profile</Link>
       <Link className="button-link" to="/configure">Configure</Link>
     </div>
   );

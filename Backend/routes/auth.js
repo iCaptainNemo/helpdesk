@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { fetchAdminUser, insertOrUpdateAdminUser } = require('../db/queries');
+const { fetchAdminUser, insertOrUpdateAdminUser, fetchRolesForUser, fetchPermissionsForRoles } = require('../db/queries');
 const { body, validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const logger = require('../utils/logger'); // Import the logger
@@ -118,6 +118,42 @@ router.post('/update-password', sanitizeInput, async (req, res) => {
   } catch (error) {
     logger.error('Password update failed:', error);
     res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// Route to update temporary password
+router.post('/update-temp-password', sanitizeInput, async (req, res) => {
+  const { AdminID, tempPassword } = req.body;
+  logger.info('Received temporary password update request for AdminID:', AdminID);
+
+  try {
+    // Update the temporary password in the database
+    await insertOrUpdateAdminUser({ AdminID, temppassword: tempPassword });
+    logger.info(`Temporary password updated for AdminID: ${AdminID}`);
+
+    res.status(200).json({ message: 'Temporary password updated successfully' });
+  } catch (error) {
+    logger.error('Temporary password update failed:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// Profile route
+router.get('/profile', verifyToken, async (req, res) => {
+  try {
+    const adminID = req.AdminID;
+    const adminUser = await fetchAdminUser(adminID);
+    const roles = await fetchRolesForUser(adminID);
+    const permissions = await fetchPermissionsForRoles(roles);
+
+    res.json({
+      profile: adminUser,
+      roles: roles.map(role => role.RoleName),
+      permissions: permissions.map(permission => permission.PermissionName)
+    });
+  } catch (error) {
+    logger.error('Failed to fetch profile:', error);
+    res.status(500).json({ error: 'Failed to fetch profile' });
   }
 });
 
