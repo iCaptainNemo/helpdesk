@@ -5,7 +5,9 @@ const Profile = () => {
     const [roles, setRoles] = useState([]);
     const [permissions, setPermissions] = useState([]);
     const [error, setError] = useState(null);
+    const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
+    const [confirmNewPassword, setConfirmNewPassword] = useState('');
     const [tempPassword, setTempPassword] = useState('');
 
     useEffect(() => {
@@ -28,6 +30,7 @@ const Profile = () => {
                 setProfile(data.profile);
                 setRoles(data.roles || []); // Ensure roles is an array
                 setPermissions(data.permissions || []); // Ensure permissions is an array
+                setTempPassword(data.profile.temppassword || ''); // Set the current temporary password
             } catch (error) {
                 console.error('Error fetching profile:', error);
                 setError('Error fetching profile');
@@ -39,6 +42,10 @@ const Profile = () => {
 
     const handlePasswordUpdate = async (event) => {
         event.preventDefault();
+        if (newPassword !== confirmNewPassword) {
+            alert('New passwords do not match');
+            return;
+        }
         try {
             const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/update-password`, {
                 method: 'POST',
@@ -46,7 +53,7 @@ const Profile = () => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}` // Include token in Authorization header
                 },
-                body: JSON.stringify({ newPassword })
+                body: JSON.stringify({ currentPassword, newPassword })
             });
 
             if (!response.ok) {
@@ -54,7 +61,9 @@ const Profile = () => {
             }
 
             alert('Password updated successfully');
+            setCurrentPassword('');
             setNewPassword('');
+            setConfirmNewPassword('');
         } catch (error) {
             console.error('Error updating password:', error);
             setError('Error updating password');
@@ -98,15 +107,28 @@ const Profile = () => {
                 <form onSubmit={handlePasswordUpdate}>
                     <input
                         type="password"
+                        placeholder="Current Password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                    />
+                    <input
+                        type="password"
                         placeholder="New Password"
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
+                    />
+                    <input
+                        type="password"
+                        placeholder="Confirm New Password"
+                        value={confirmNewPassword}
+                        onChange={(e) => setConfirmNewPassword(e.target.value)}
                     />
                     <button type="submit">Update Password</button>
                 </form>
             </div>
             <div>
-                <h3>Temporary Password</h3>
+                <h3>Temporary Active Directory Reset Password</h3>
+                <p>Current Temporary Password: {tempPassword}</p> {/* Display current temporary password */}
                 <form onSubmit={handleTempPasswordUpdate}>
                     <input
                         type="text"
@@ -114,7 +136,7 @@ const Profile = () => {
                         value={tempPassword}
                         onChange={(e) => setTempPassword(e.target.value)}
                     />
-                    <button type="submit">Update Temporary Password</button>
+                    <button type="submit">Update</button>
                 </form>
             </div>
             <div>
