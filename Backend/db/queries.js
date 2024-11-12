@@ -146,19 +146,26 @@ function assignPermissionToRole(roleID, permissionID) {
     const query = `INSERT INTO RolePermissions (RoleID, PermissionID) VALUES (?, ?);`;
     return executeQuery(query, [roleID, permissionID]);
 }
-
 async function fetchRolesForUser(adminID) {
-    const query = `SELECT RoleID FROM UserRoles WHERE AdminID = ?;`;
+    const query = `
+        SELECT Roles.RoleID, Roles.RoleName 
+        FROM UserRoles 
+        JOIN Roles ON UserRoles.RoleID = Roles.RoleID 
+        WHERE UserRoles.AdminID = ?;
+    `;
     const roles = await executeQuery(query, [adminID]);
-    return roles.map(role => role.RoleID);
+    console.log('Roles for user:', roles); // Add this line
+    return roles; // Return the full roles array with RoleID and RoleName
 }
 
 async function fetchPermissionsForRoles(roleIDs) {
+    if (roleIDs.length === 0) return []; // Add this line to handle empty roleIDs
     const placeholders = roleIDs.map(() => '?').join(',');
     const query = `SELECT PermissionName FROM Permissions
                    JOIN RolePermissions ON Permissions.PermissionID = RolePermissions.PermissionID
                    WHERE RolePermissions.RoleID IN (${placeholders});`;
     const permissions = await executeQuery(query, roleIDs);
+    console.log('Permissions for roles:', permissions); // Add this line
     return permissions.map(permission => permission.PermissionName);
 }
 

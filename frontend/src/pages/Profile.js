@@ -24,9 +24,10 @@ const Profile = () => {
                 }
 
                 const data = await response.json();
+                console.log('Profile data UI:', data); 
                 setProfile(data.profile);
-                setRoles(data.roles);
-                setPermissions(data.permissions);
+                setRoles(data.roles || []); // Ensure roles is an array
+                setPermissions(data.permissions || []); // Ensure permissions is an array
             } catch (error) {
                 console.error('Error fetching profile:', error);
                 setError('Error fetching profile');
@@ -120,7 +121,7 @@ const Profile = () => {
                 <h3>Roles</h3>
                 <ul>
                     {roles.map((role, index) => (
-                        <li key={index}>{role}</li>
+                        <li key={index}>{role.RoleName}</li>
                     ))}
                 </ul>
             </div>

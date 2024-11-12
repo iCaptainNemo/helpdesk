@@ -144,12 +144,12 @@ router.get('/profile', verifyToken, async (req, res) => {
     const adminID = req.AdminID;
     const adminUser = await fetchAdminUser(adminID);
     const roles = await fetchRolesForUser(adminID);
-    const permissions = await fetchPermissionsForRoles(roles);
+    const permissions = await fetchPermissionsForRoles(roles.map(role => role.RoleID));
 
     res.json({
       profile: adminUser,
-      roles: roles.map(role => role.RoleName),
-      permissions: permissions.map(permission => permission.PermissionName)
+      roles: roles, // roles now contains RoleID and RoleName
+      permissions: permissions // permissions already contains PermissionName
     });
   } catch (error) {
     logger.error('Failed to fetch profile:', error);
