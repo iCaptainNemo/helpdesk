@@ -154,7 +154,7 @@ async function fetchRolesForUser(adminID) {
         WHERE UserRoles.AdminID = ?;
     `;
     const roles = await executeQuery(query, [adminID]);
-    console.log('Roles for user:', roles); // Add this line
+    // console.log('Roles for user:', roles); 
     return roles; // Return the full roles array with RoleID and RoleName
 }
 
@@ -165,7 +165,7 @@ async function fetchPermissionsForRoles(roleIDs) {
                    JOIN RolePermissions ON Permissions.PermissionID = RolePermissions.PermissionID
                    WHERE RolePermissions.RoleID IN (${placeholders});`;
     const permissions = await executeQuery(query, roleIDs);
-    console.log('Permissions for roles:', permissions); // Add this line
+    // console.log('Permissions for roles:', permissions); 
     return permissions.map(permission => permission.PermissionName);
 }
 
