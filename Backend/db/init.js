@@ -11,6 +11,7 @@ const tables = [
         name: 'Admin', // IT Staff
         columns: [
             'AdminID TEXT PRIMARY KEY',
+            'temppassword TEXT',
             'AdminComputer TEXT',
             'password TEXT'
         ]

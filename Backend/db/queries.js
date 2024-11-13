@@ -39,29 +39,29 @@ async function insertOrUpdateAdminUser(adminUser) {
 
     if (existingUser.length === 0) {
         const insertQuery = `
-            INSERT INTO Admin (AdminID, temppassword, computername, password)
+            INSERT INTO Admin (AdminID, AdminComputer, password, temppassword)
             VALUES (?, ?, ?, ?);
         `;
         const params = [
-            adminUser.AdminID, adminUser.temppassword, adminUser.computername, adminUser.password
+            adminUser.AdminID, adminUser.AdminComputer, adminUser.password, adminUser.temppassword
         ];
         await executeQuery(insertQuery, params);
     } else {
         const fieldsToUpdate = {};
 
-        // Check if temppassword needs to be updated
-        if (adminUser.temppassword && adminUser.temppassword !== existingUser[0].temppassword) {
-            fieldsToUpdate.temppassword = adminUser.temppassword;
-        }
-
-        // Check if computername needs to be updated
-        if (adminUser.computername && adminUser.computername !== existingUser[0].computername) {
-            fieldsToUpdate.computername = adminUser.computername;
+        // Check if AdminComputer needs to be updated
+        if (adminUser.AdminComputer && adminUser.AdminComputer !== existingUser[0].AdminComputer) {
+            fieldsToUpdate.AdminComputer = adminUser.AdminComputer;
         }
 
         // Check if password needs to be updated
         if (adminUser.password) {
             fieldsToUpdate.password = adminUser.password;
+        }
+
+        // Check if temppassword needs to be updated
+        if (adminUser.temppassword) {
+            fieldsToUpdate.temppassword = adminUser.temppassword;
         }
 
         // If there are fields to update, construct and execute the update query

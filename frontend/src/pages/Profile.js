@@ -79,7 +79,7 @@ const Profile = () => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}` // Include token in Authorization header
                 },
-                body: JSON.stringify({ tempPassword })
+                body: JSON.stringify({ AdminID: profile.AdminID, tempPassword })
             });
 
             if (!response.ok) {
@@ -132,11 +132,11 @@ const Profile = () => {
                 <form onSubmit={handleTempPasswordUpdate}>
                     <input
                         type="text"
-                        placeholder="Temporary Password"
+                        placeholder="New Temporary Password"
                         value={tempPassword}
                         onChange={(e) => setTempPassword(e.target.value)}
                     />
-                    <button type="submit">Update</button>
+                    <button type="submit">Update Temporary Password</button>
                 </form>
             </div>
             <div>
