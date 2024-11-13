@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import '../styles/Profile.css'; // Import the CSS file
 
 const Profile = () => {
     const [profile, setProfile] = useState({});
@@ -95,7 +96,7 @@ const Profile = () => {
     };
 
     return (
-        <div>
+        <div className="profile-container">
             <h2>Profile</h2>
             {error && <p>{error}</p>}
             <div>
@@ -104,7 +105,7 @@ const Profile = () => {
             </div>
             <div>
                 <h3>Update Password</h3>
-                <form onSubmit={handlePasswordUpdate}>
+                <form onSubmit={handlePasswordUpdate} className="form-container">
                     <input
                         type="password"
                         placeholder="Current Password"
@@ -123,20 +124,20 @@ const Profile = () => {
                         value={confirmNewPassword}
                         onChange={(e) => setConfirmNewPassword(e.target.value)}
                     />
-                    <button type="submit">Update Password</button>
+                    <button type="submit" className="simple-button">Update Password</button>
                 </form>
             </div>
             <div>
                 <h3>Temporary Active Directory Reset Password</h3>
                 <p>Current Temporary Password: {tempPassword}</p> {/* Display current temporary password */}
-                <form onSubmit={handleTempPasswordUpdate}>
+                <form onSubmit={handleTempPasswordUpdate} className="form-container">
                     <input
                         type="text"
                         placeholder="New Temporary Password"
                         value={tempPassword}
                         onChange={(e) => setTempPassword(e.target.value)}
                     />
-                    <button type="submit">Update Temporary Password</button>
+                    <button type="submit" className="simple-button">Update Temporary Password</button>
                 </form>
             </div>
             <div>
