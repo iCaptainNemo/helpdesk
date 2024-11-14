@@ -5,6 +5,7 @@ import ScriptButton from './ScriptButton'; // Import the ScriptButton component
 
 const LockedOutUsers = () => {
     const [lockedOutUsers, setLockedOutUsers] = useState([]);
+    const [permissions, setPermissions] = useState([]);
     const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, userID: null });
     const navigate = useNavigate();
 
@@ -13,6 +14,27 @@ const LockedOutUsers = () => {
             .then(response => response.json())
             .then(data => setLockedOutUsers(Array.isArray(data) ? data : [])) // Ensure data is an array
             .catch(error => console.error('Error fetching locked out users:', error));
+    };
+
+    const fetchPermissions = async () => {
+        try {
+            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/profile`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}` // Include token in Authorization header
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch permissions');
+            }
+
+            const data = await response.json();
+            setPermissions(data.permissions || []); // Ensure permissions is an array
+        } catch (error) {
+            console.error('Error fetching permissions:', error);
+        }
     };
 
     const updateLockedOutUsers = () => {
@@ -33,6 +55,7 @@ const LockedOutUsers = () => {
     useEffect(() => {
         // Fetch data initially
         fetchLockedOutUsers();
+        fetchPermissions();
         // Set up interval to fetch data periodically
         const intervalId = setInterval(fetchLockedOutUsers, 60000); // Fetch every 60 seconds
 
@@ -104,7 +127,7 @@ const LockedOutUsers = () => {
                             <th>Name</th>
                             <th>Department</th>
                             <th>Account Lockout Time</th>
-                            <th>Action</th>
+                            {permissions.includes('execute_script') && <th>Action</th>}
                         </tr>
                     </thead>
                     <tbody>
@@ -118,14 +141,16 @@ const LockedOutUsers = () => {
                                 <td>{user.name}</td>
                                 <td>{user.department}</td>
                                 <td>{formatDate(user.AccountLockoutTime)}</td>
-                                <td>
-                                    <ScriptButton
-                                        scriptName="unlocker"
-                                        params={{ userID: user.UserID }}
-                                        buttonText="Unlock"
-                                        onSuccess={(result) => handleUnlockSuccess(result, user.UserID)}
-                                    />
-                                </td>
+                                {permissions.includes('execute_script') && (
+                                    <td>
+                                        <ScriptButton
+                                            scriptName="unlocker"
+                                            params={{ userID: user.UserID }}
+                                            buttonText="Unlock"
+                                            onSuccess={(result) => handleUnlockSuccess(result, user.UserID)}
+                                        />
+                                    </td>
+                                )}
                             </tr>
                         ))}
                     </tbody>
