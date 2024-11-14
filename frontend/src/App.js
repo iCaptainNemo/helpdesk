@@ -16,6 +16,7 @@ const ENDPOINT = process.env.REACT_APP_BACKEND_URL;
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false); // Track authentication status
   const [AdminID, setAdminID] = useState(''); // Store AdminID from the server
+  const [permissions, setPermissions] = useState([]); // Store permissions
   const [initialCheck, setInitialCheck] = useState(false); // Track the first authentication check
 
   // Establish WebSocket connection
@@ -39,7 +40,7 @@ function App() {
     };
   }, []);
 
-  // Verify token and check authentication status
+  // Verify token and fetch permissions
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -55,6 +56,22 @@ function App() {
           if (data.AdminID) {
             setIsAuthenticated(true);
             setAdminID(data.AdminID);
+            // Fetch permissions after verifying the token
+            return fetch(`${ENDPOINT}/api/auth/profile`, {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              }
+            });
+          } else {
+            setInitialCheck(true);
+          }
+        })
+        .then(response => response && response.json())
+        .then(data => {
+          if (data && data.permissions) {
+            setPermissions(data.permissions || []);
           }
           setInitialCheck(true);
         })
@@ -115,12 +132,12 @@ function App() {
         {isAuthenticated ? (
           <>
             <HeaderWrapper AdminID={AdminID} onLogout={handleLogout} />
-            <Navbar />
+            <Navbar permissions={permissions} />
             <Routes>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/ad-object/:adObjectID" element={<ADProperties />} /> {/* Update route */}
-              <Route path="/Profile" element={<Profile />} />
-              <Route path="/configure" element={<Configure />} />
+              <Route path="/Profile" element={<Profile permissions={permissions} />} />
+              <Route path="/configure" element={<Configure permissions={permissions} />} />
               <Route path="*" element={<Navigate to="/dashboard" />} />
             </Routes>
           </>

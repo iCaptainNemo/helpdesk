@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import '../styles/Profile.css'; // Import the CSS file
 
-const Profile = () => {
+const Profile = ({ permissions }) => {
     const [profile, setProfile] = useState({});
     const [roles, setRoles] = useState([]);
-    const [permissions, setPermissions] = useState([]);
     const [error, setError] = useState(null);
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
@@ -30,7 +29,6 @@ const Profile = () => {
                 console.log('Profile data UI:', data); 
                 setProfile(data.profile);
                 setRoles(data.roles || []); // Ensure roles is an array
-                setPermissions(data.permissions || []); // Ensure permissions is an array
                 setTempPassword(data.profile.temppassword || ''); // Set the current temporary password
             } catch (error) {
                 console.error('Error fetching profile:', error);

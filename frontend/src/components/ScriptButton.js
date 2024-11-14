@@ -38,7 +38,9 @@ const ScriptButton = ({ scriptName, params, buttonText, onSuccess }) => {
     return (
         <button className={`script-button ${status}`} onClick={handleClick} disabled={status === 'loading'}>
             {status === 'loading' ? (
-                <span className="spinner"></span>
+                <div className="loading-bar">
+                    <div className="loading-progress"></div>
+                </div>
             ) : (
                 message || buttonText
             )}
