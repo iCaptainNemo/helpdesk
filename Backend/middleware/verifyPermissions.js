@@ -15,11 +15,11 @@ function verifyPermissions(requiredPermission) {
       }
 
       const roles = await fetchRolesForUser(adminID);
-      logger.verbose(`AdminID ${adminID} roles: ${roles}`);
+      logger.verbose(`AdminID ${adminID} roles: ${JSON.stringify(roles)}`);
 
-      const permissions = await fetchPermissionsForRoles(roles);
+      const permissions = await fetchPermissionsForRoles(roles.map(role => role.RoleID));
       logger.verbose(`AdminID ${adminID} required permission: ${requiredPermission}`);
-      logger.verbose(`AdminID ${adminID} permissions: ${permissions}`);
+      logger.verbose(`AdminID ${adminID} permissions: ${JSON.stringify(permissions)}`);
 
       if (permissions.includes(requiredPermission)) {
         next();
@@ -28,6 +28,7 @@ function verifyPermissions(requiredPermission) {
         res.status(403).json({ message: `Access denied: Missing permission ${requiredPermission}` });
       }
     } catch (error) {
+      logger.error('Error verifying permissions:', error);
       next(error);
     }
   };

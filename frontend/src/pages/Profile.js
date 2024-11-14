@@ -26,7 +26,7 @@ const Profile = ({ permissions }) => {
                 }
 
                 const data = await response.json();
-                console.log('Profile data UI:', data); 
+                // console.log('Profile data UI:', data); 
                 setProfile(data.profile);
                 setRoles(data.roles || []); // Ensure roles is an array
                 setTempPassword(data.profile.temppassword || ''); // Set the current temporary password
