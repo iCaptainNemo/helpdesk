@@ -5,10 +5,10 @@ const { log, info, warn, error } = require('./utils/logger');
 const scriptsToSuppressLogging = [
     'LockedOutList.ps1',
     'getDomainInfo.ps1',
-    'Get-ADObject.ps1',
+     'Get-ADObject.ps1',
     'logFilePath.ps1',
     'Get-ServerStatus.ps1',
-    'Get-Logs.ps1'
+    // 'Get-Logs.ps1'
 ];
 
 

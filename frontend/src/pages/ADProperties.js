@@ -1,19 +1,44 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import Modal from 'react-modal';
-import Logs from '../components/Logs'; // Import the Logs component
-import '../styles/ADProperties.css'; // Import CSS for styling
+import Logs from '../components/Logs';
+import '../styles/Tabs.css'; // Import the CSS file for styling the tabs
+import '../styles/ADProperties.css';
 
-// Set the app element for react-modal
 Modal.setAppElement('#root');
 
-// Define the ENDPOINT variable
 const ENDPOINT = process.env.REACT_APP_BACKEND_URL;
+
+const Tabs = ({ tabs, activeTab, onTabClick, onCloseTab }) => {
+  return (
+    <div className="tabs-container">
+      {tabs.map((tab, index) => (
+        <div
+          key={index}
+          className={`tab ${activeTab === index ? 'active' : ''}`}
+          onClick={() => onTabClick(index)}
+        >
+          {tab.name}
+          <button
+            className="close-tab"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCloseTab(index);
+            }}
+          >
+            ×
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const ADProperties = () => {
   const { adObjectID } = useParams(); // Get adObjectID from URL parameters
   const navigate = useNavigate();
-  const defaultProperties = useMemo(() => [
+  const defaultUserProperties = useMemo(() => [
+    'objectClass',
     'sAMAccountName',
     'Name',
     'mail',
@@ -25,54 +50,34 @@ const ADProperties = () => {
     'telephoneNumber',
     'memberOf',
   ], []);
-  const [selectedProperties, setSelectedProperties] = useState([]);
-  const [data, setData] = useState({});
+
+  const defaultComputerProperties = useMemo(() => [
+    'sAMAccountName',
+    'CanonicalName',
+    'operatingSystem',
+    'memberOf',
+  ], []);
+
+  const getDefaultProperties = useCallback((objectClass, allProperties) => {
+    console.log('Object Class:', objectClass); 
+    const normalizedObjectClass = objectClass?.toLowerCase();
+    if (normalizedObjectClass === 'user') {
+      return defaultUserProperties;
+    } else if (normalizedObjectClass === 'computer') {
+      return defaultComputerProperties;
+    }
+    return allProperties;
+  }, [defaultUserProperties, defaultComputerProperties]);
+
+  const [tabs, setTabs] = useState(() => {
+    const savedTabs = sessionStorage.getItem('tabs');
+    return savedTabs ? JSON.parse(savedTabs) : [];
+  });
+  const [activeTab, setActiveTab] = useState(0);
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [tooltip, setTooltip] = useState({ visible: false, message: '' });
   const logsTableRef = useRef(null);
   const adPropertiesTableRef = useRef(null);
-
-  useEffect(() => {
-    // Load selected properties from local storage or set default properties
-    const savedProperties = JSON.parse(localStorage.getItem('selectedProperties')) || defaultProperties;
-    setSelectedProperties(savedProperties);
-  }, [defaultProperties]); // Include defaultProperties in the dependency array
-
-  useEffect(() => {
-    // Fetch AD object data when adObjectID changes
-    const fetchADObjectData = async (id) => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('No token found');
-
-        const response = await fetch(`${ENDPOINT}/api/fetch-adobject`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({ adObjectID: id }),
-        });
-
-        if (!response.ok) throw new Error('Network response was not ok');
-
-        const data = await response.text();
-        setData(JSON.parse(data));
-      } catch (error) {
-        console.error('Error fetching AD object properties:', error);
-        setData({});
-      }
-    };
-
-    if (adObjectID) {
-      fetchADObjectData(adObjectID);
-    } else {
-      const currentADObjectID = localStorage.getItem('currentADObjectID');
-      if (currentADObjectID) {
-        navigate(`/ad-object/${currentADObjectID}`);
-      }
-    }
-  }, [adObjectID, navigate]);
 
   useEffect(() => {
     // Synchronize the heights of the tables
@@ -80,34 +85,102 @@ const ADProperties = () => {
       const adPropertiesTableHeight = adPropertiesTableRef.current.offsetHeight;
       logsTableRef.current.style.maxHeight = `${adPropertiesTableHeight}px`;
     }
-  }, [selectedProperties, data]);
+  }, [tabs, activeTab]);
 
-  const formatDate = (windowsFileTime) => {
-    const windowsEpochStart = new Date('1601-01-01T00:00:00Z').getTime(); // Windows epoch start in milliseconds
-    const windowsFileTimeInMs = parseInt(windowsFileTime, 10) / 10000; // Convert 100-nanosecond intervals to milliseconds
-    const date = new Date(windowsEpochStart + windowsFileTimeInMs);
-    return date.toLocaleString(); // Converts to local date and time string
+  const fetchADObjectData = useCallback(async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No token found');
+
+      const response = await fetch(`${ENDPOINT}/api/fetch-adobject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ adObjectID: id }),
+      });
+
+      if (!response.ok) throw new Error('Network response was not ok');
+
+      const data = await response.json();
+      console.log('Fetched Data:', data); // Debugging statement
+      return data;
+    } catch (error) {
+      console.error('Error fetching AD object properties:', error);
+      return {};
+    }
+  }, []);
+
+  const addTab = useCallback(async (adObjectID) => {
+    // Check if the tab already exists
+    const existingTabIndex = tabs.findIndex(tab => tab.name === adObjectID);
+    if (existingTabIndex !== -1) {
+      setActiveTab(existingTabIndex);
+      navigate(`/ad-object/${adObjectID}`); // Update the URL
+      return;
+    }
+
+    const data = await fetchADObjectData(adObjectID);
+    const allProperties = Object.keys(data); // Get all properties
+    const selectedProperties = getDefaultProperties(data.objectClass, allProperties);
+
+    setTabs((prevTabs) => [
+      ...prevTabs,
+      { name: adObjectID, data, selectedProperties },
+    ]);
+    setActiveTab(tabs.length);
+    navigate(`/ad-object/${adObjectID}`); // Update the URL
+  }, [fetchADObjectData, navigate, tabs, getDefaultProperties]);
+
+  useEffect(() => {
+    if (adObjectID) {
+      addTab(adObjectID);
+    }
+  }, [adObjectID, addTab]);
+
+  useEffect(() => {
+    sessionStorage.setItem('tabs', JSON.stringify(tabs));
+  }, [tabs]);
+
+  const closeTab = (index) => {
+    setTabs((prevTabs) => prevTabs.filter((_, i) => i !== index));
+    if (activeTab >= index && activeTab > 0) {
+      setActiveTab(activeTab - 1);
+      navigate(`/ad-object/${tabs[activeTab - 1].name}`); // Update the URL
+    } else if (tabs.length > 1) {
+      setActiveTab(0);
+      navigate(`/ad-object/${tabs[0].name}`); // Update the URL
+    } else {
+      navigate('/ad-object'); // Clear the URL if no tabs are left
+    }
+  };
+
+  const handleTabClick = (index) => {
+    setActiveTab(index);
+    navigate(`/ad-object/${tabs[index].name}`); // Update the URL
   };
 
   const handlePropertyChange = (event) => {
     const { value, checked } = event.target;
-    setSelectedProperties((prev) => {
+    setTabs((prevTabs) => {
+      const updatedTabs = [...prevTabs];
       const updatedProperties = checked
-        ? [...prev, value]
-        : prev.filter((prop) => prop !== value);
-      localStorage.setItem('selectedProperties', JSON.stringify(updatedProperties));
-      return updatedProperties;
+        ? [...updatedTabs[activeTab].selectedProperties, value]
+        : updatedTabs[activeTab].selectedProperties.filter((prop) => prop !== value);
+      updatedTabs[activeTab].selectedProperties = updatedProperties;
+      return updatedTabs;
     });
   };
 
-  const clearData = () => {
-    setData({});
-    localStorage.removeItem('adObjectData');
-    localStorage.removeItem('currentADObjectID'); // Remove currentADObjectID from local storage
+  const stripDistinguishedName = (dn) => {
+    if (typeof dn !== 'string') return dn;
+    return dn.split(',').filter(part => part.startsWith('CN=')).map(part => part.replace('CN=', '')).join(', ');
   };
 
-  const stripDistinguishedName = (dn) => {
-    return dn.split(',').filter(part => part.startsWith('CN=')).map(part => part.replace('CN=', '')).join(', ');
+  const formatDate = (dateString) => {
+    const date = new Date(parseInt(dateString, 10));
+    return date.toLocaleDateString();
   };
 
   const formatValue = (value) => {
@@ -116,9 +189,9 @@ const ADProperties = () => {
     } else if (typeof value === 'string' && value.match(/^\d+$/)) {
       return formatDate(value);
     } else if (typeof value === 'object' && value !== null) {
-      return JSON.stringify(value, null, 2); // Pretty print JSON objects
+      return JSON.stringify(value, null, 2);
     } else if (value === null) {
-      return 'N/A'; // Placeholder for null values
+      return 'N/A';
     } else {
       return value;
     }
@@ -133,7 +206,6 @@ const ADProperties = () => {
         console.error('Failed to copy: ', err);
       });
     } else {
-      // Fallback method for copying text
       const textArea = document.createElement('textarea');
       textArea.value = value;
       document.body.appendChild(textArea);
@@ -151,19 +223,22 @@ const ADProperties = () => {
 
   return (
     <div className="ad-properties-container">
+      <Tabs
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabClick={handleTabClick}
+        onCloseTab={closeTab}
+      />
       <div className="button-container">
         <button onClick={() => setModalIsOpen(true)} className="settings-button">
           ⚙️
-        </button>
-        <button onClick={clearData} className="clear-button">
-          Clear
         </button>
       </div>
       <div className="table-header">
       </div>
       <div className="tables-container">
         <div className="logs-table-container" ref={logsTableRef}>
-          <Logs adObjectData={JSON.stringify(data)} /> {/* Pass adObjectData to Logs component */}
+          <Logs adObjectID={tabs[activeTab]?.name} />
         </div>
         <div id="adPropertiesContainer" ref={adPropertiesTableRef}>
           <table className="properties-table">
@@ -174,11 +249,11 @@ const ADProperties = () => {
               </tr>
             </thead>
             <tbody>
-              {selectedProperties.map((key) => (
+              {tabs[activeTab]?.selectedProperties.map((key) => (
                 <tr key={key}>
                   <td>{key}</td>
-                  <td onClick={() => copyToClipboard(formatValue(data[key]))} className="clickable-cell">
-                    {formatValue(data[key])}
+                  <td onClick={() => copyToClipboard(formatValue(tabs[activeTab].data[key]))} className="clickable-cell">
+                    {formatValue(tabs[activeTab].data[key])}
                   </td>
                 </tr>
               ))}
@@ -197,17 +272,17 @@ const ADProperties = () => {
         <h3>Select Properties to Display</h3>
         <div className="modal-content">
           <ul>
-            {Object.keys(data).sort().map((key) => (
+            {Object.keys(tabs[activeTab]?.data || {}).sort().map((key) => (
               <li key={key}>
                 <label>
                   <input
                     type="checkbox"
                     value={key}
-                    checked={selectedProperties.includes(key)}
+                    checked={tabs[activeTab]?.selectedProperties.includes(key)}
                     onChange={handlePropertyChange}
-                    disabled={defaultProperties.includes(key)} // Disable default properties
+                    disabled={defaultUserProperties.includes(key) || defaultComputerProperties.includes(key)}
                   />
-                  <span className={defaultProperties.includes(key) ? 'default-property' : ''}>
+                  <span className={defaultUserProperties.includes(key) || defaultComputerProperties.includes(key) ? 'default-property' : ''}>
                     {key}
                   </span>
                 </label>

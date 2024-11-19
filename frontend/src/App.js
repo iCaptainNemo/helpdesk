@@ -109,7 +109,6 @@ function App() {
 
       if (response.ok) {
         localStorage.removeItem('token');
-        localStorage.removeItem('currentADObjectID'); // Remove current AD object ID from local storage
         setIsAuthenticated(false);
         setAdminID('');
         console.log('Successfully logged out and session destroyed.');
@@ -135,7 +134,7 @@ function App() {
             <Navbar permissions={permissions} />
             <Routes>
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/ad-object/:adObjectID" element={<ADProperties />} /> {/* Update route */}
+              <Route path="/ad-object/:adObjectID?" element={<ADProperties />} /> {/* Update route to handle optional adObjectID */}
               <Route path="/Profile" element={<Profile permissions={permissions} />} />
               <Route path="/configure" element={<Configure permissions={permissions} />} />
               <Route path="*" element={<Navigate to="/dashboard" />} />
@@ -168,7 +167,6 @@ function HeaderWrapper({ AdminID, onLogout }) {
 
       if (!response.ok) throw new Error('Network response was not ok');
 
-      localStorage.setItem('currentADObjectID', adObjectID); // Store the current AD object ID in local storage
       navigate(`/ad-object/${adObjectID}`); // Navigate to the AD properties page with adObjectID in the URL
     } catch (error) {
       console.error('Error fetching AD object properties:', error);

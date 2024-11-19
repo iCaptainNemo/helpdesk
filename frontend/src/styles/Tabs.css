@@ -1,0 +1,29 @@
+.tabs-container {
+  display: flex;
+  border-bottom: 1px solid #ddd;
+  margin: 0; /* Remove margin */
+  padding: 0; /* Remove padding */
+  justify-content: flex-start; /* Align tabs to the left */
+}
+
+.tab {
+  padding: 10px 20px;
+  cursor: pointer;
+  border: 1px solid #ddd;
+  border-bottom: none;
+  background-color: #f2f2f2;
+  color: black; /* Set text color to black */
+}
+
+.tab.active {
+  background-color: white;
+  font-weight: bold;
+}
+
+.close-tab {
+  margin-left: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: red;
+}

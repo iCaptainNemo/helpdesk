@@ -165,7 +165,7 @@ async function fetchPermissionsForRoles(roleIDs) {
                    JOIN RolePermissions ON Permissions.PermissionID = RolePermissions.PermissionID
                    WHERE RolePermissions.RoleID IN (${placeholders});`;
     const permissions = await executeQuery(query, roleIDs);
-     console.log('Permissions for roles:', permissions); 
+    //  console.log('Permissions for roles:', permissions); 
     return permissions.map(permission => permission.PermissionName);
 }
 
