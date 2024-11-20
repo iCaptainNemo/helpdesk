@@ -8,7 +8,7 @@ const scriptsToSuppressLogging = [
      'Get-ADObject.ps1',
     'logFilePath.ps1',
     'Get-ServerStatus.ps1',
-    // 'Get-Logs.ps1'
+    'Get-Logs.ps1'
 ];
 
 

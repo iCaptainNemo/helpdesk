@@ -38,7 +38,7 @@ const ADProperties = () => {
   const { adObjectID } = useParams(); // Get adObjectID from URL parameters
   const navigate = useNavigate();
   const defaultUserProperties = useMemo(() => [
-    'ObjectClass',
+    // 'ObjectClass',
     'sAMAccountName',
     'Name',
     'mail',
@@ -52,7 +52,7 @@ const ADProperties = () => {
   ], []);
 
   const defaultComputerProperties = useMemo(() => [
-    'ObjectClass',
+    // 'ObjectClass',
     'sAMAccountName',
     'CanonicalName',
     'operatingSystem',
@@ -60,7 +60,7 @@ const ADProperties = () => {
   ], []);
 
   const getDefaultProperties = useCallback((ObjectClass, allProperties) => {
-    console.log('Object Class:', ObjectClass); 
+    // console.log('Object Class:', ObjectClass); 
 
     if (ObjectClass === 'user') {
       return defaultUserProperties;
@@ -105,7 +105,7 @@ const ADProperties = () => {
       if (!response.ok) throw new Error('Network response was not ok');
 
       const data = await response.json();
-      console.log('Fetched Data:', data); // Debugging statement
+      // console.log('Fetched Data:', data); // Debugging statement
       return data;
     } catch (error) {
       console.error('Error fetching AD object properties:', error);
