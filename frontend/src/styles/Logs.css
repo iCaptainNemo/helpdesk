@@ -1,7 +1,6 @@
 .logs-container {
     max-width: 800px;
     margin: 0 auto;
-    padding: 20px;
     overflow-x: auto;
 }
 
@@ -31,6 +30,7 @@
 
 .clickable-cell:hover {
     background-color: #f0f0f0;
+    color: rgb(0, 0, 0);
 }
 
 .clickable-cell::after {

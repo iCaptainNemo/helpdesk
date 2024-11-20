@@ -121,6 +121,7 @@ function initializeDatabase() {
         'manage_users',
         'manage_tickets',
         'view_reports',
+        'execute_command',
         'execute_script'
     ];
     permissions.forEach(permission => {
@@ -130,7 +131,7 @@ function initializeDatabase() {
 
     // Assign permissions to roles
     const rolePermissions = {
-        superadmin: ['access_configure_page', 'manage_users', 'manage_tickets', 'view_reports', 'execute_script'],
+        superadmin: ['access_configure_page', 'manage_users', 'manage_tickets', 'view_reports', 'execute_command', 'execute_script'],
         admin: ['manage_users', 'manage_tickets', 'view_reports'],
         support_agent: ['manage_tickets', 'view_reports'],
         user: []

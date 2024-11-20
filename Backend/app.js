@@ -95,6 +95,7 @@ const rolesRoute = require('./routes/roles'); // Route for managing roles
 const permissionsRoute = require('./routes/permissions'); // Route for managing permissions
 const configureRoute = require('./routes/configure'); // Route for the configure page
 const serverStatusRoute = require('./routes/serverStatus');
+const executeCommandRoute = require('./routes/executeCommand'); // Import the executeCommand route
 
 // Use routes and pass db to them
 app.use('/api/fetch-adobject', fetchADObjectRoute); 
@@ -112,6 +113,7 @@ app.use('/api/roles', rolesRoute); // Route to manage roles
 app.use('/api/permissions', permissionsRoute); // Route to manage permissions
 app.use('/api/configure', verifyToken, verifyPermissions('access_configure_page'), configureRoute); // Route to access the configure page
 app.use('/api/servers', serverStatusRoute);
+app.use('/api/execute-command', verifyToken, verifyPermissions('execute_command'), executeCommandRoute); // Add this line
 
 // Middleware to handle 403 Forbidden errors
 app.use(forbidden);
