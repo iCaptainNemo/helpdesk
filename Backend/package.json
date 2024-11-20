@@ -2,10 +2,10 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "Backend server for helpdesk GUI",
-  "main": "app.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node app.js",
-    "dev": "nodemon --watch . --ignore 'functions/**/*.ps1' app.js"
+    "start": "node server.js",
+    "dev": "nodemon --watch . --ignore 'functions/**/*.ps1' server.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
