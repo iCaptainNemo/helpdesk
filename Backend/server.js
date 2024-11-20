@@ -78,13 +78,13 @@ app.use(session({
 }));
 
 // Import routes
-const fetchADObjectRoute = require('./routes/fetchADObject');
-const fetchUserRoute = require('./routes/fetchUser');
-const helloWorldRoute = require('./routes/hello-world');
-const helloWorldMiddleware = require('./middleware/helloWorldMiddleware');
-const forbidden = require('./middleware/forbidden');
-const notFound = require('./middleware/notfound');
-const authRoutes = require('./routes/auth');
+const fetchADObjectRoute = require('./routes/fetchADObject'); // Import the fetchADObject route
+const fetchUserRoute = require('./routes/fetchUser'); // Import the fetchUser route
+const helloWorldRoute = require('./routes/hello-world'); // Import the helloWorld route
+const helloWorldMiddleware = require('./middleware/helloWorldMiddleware'); // Import the helloWorld middleware
+const forbidden = require('./middleware/forbidden'); // Import the forbidden middleware
+const notFound = require('./middleware/notfound'); // Import the notFound middleware
+const authRoutes = require('./routes/auth'); // Authentication routes
 const getLockedOutUsersRoute = require('./routes/getLockedOutUsers'); // Route for fetching locked out users
 const executeScriptRoute = require('./routes/executeScript'); // Route for executing PowerShell scripts
 const updateLockedOutUsersRoute = require('./routes/updateLockedOutUsers'); // Route for updating locked out users
@@ -94,8 +94,8 @@ const getLogsRoute = require('./routes/getLogs'); // Route for fetching logs
 const rolesRoute = require('./routes/roles'); // Route for managing roles
 const permissionsRoute = require('./routes/permissions'); // Route for managing permissions
 const configureRoute = require('./routes/configure'); // Route for the configure page
-const serverStatusRoute = require('./routes/serverStatus');
-const executeCommandRoute = require('./routes/executeCommand'); // Import the executeCommand route
+const serverStatusRoute = require('./routes/serverStatus'); // Route for server statuses
+const executeCommandRoute = require('./routes/executeCommand'); // Route for executing commands
 
 // Use routes and pass db to them
 app.use('/api/fetch-adobject', fetchADObjectRoute); 
@@ -112,8 +112,8 @@ app.use('/api/get-logs', getLogsRoute); // Route to fetch logs
 app.use('/api/roles', rolesRoute); // Route to manage roles
 app.use('/api/permissions', permissionsRoute); // Route to manage permissions
 app.use('/api/configure', verifyToken, verifyPermissions('access_configure_page'), configureRoute); // Route to access the configure page
-app.use('/api/servers', serverStatusRoute);
-app.use('/api/execute-command', verifyToken, verifyPermissions('execute_command'), executeCommandRoute); // Add this line
+app.use('/api/servers', serverStatusRoute); // Use the serverStatus route
+app.use('/api/execute-command', verifyToken, verifyPermissions('execute_command'), executeCommandRoute); // Use the executeCommand route
 
 // Middleware to handle 403 Forbidden errors
 app.use(forbidden);
