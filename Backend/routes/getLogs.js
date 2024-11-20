@@ -14,13 +14,13 @@ const logFilePath = '\\\\hssserver037\\login-tracking\\';
 // Route to get logs
 router.post('/', async (req, res) => {
     try {
-        const { currentADObjectID } = req.body;
+        const { adObjectID } = req.body;
 
         // Log the parameters being sent to the PowerShell script
-        logger.info(`Executing PowerShell script with logFilePath: ${logFilePath} With ADObjectID: ${currentADObjectID}`);
+        logger.info(`Executing PowerShell script with logFilePath: ${logFilePath} With ADObjectID: ${adObjectID}`);
 
-        // Execute the PowerShell script with the log file path and currentADObjectID as arguments
-        const result = await serverPowerShellScript(scriptPath, [logFilePath, currentADObjectID]);
+        // Execute the PowerShell script with the log file path and adObjectID as arguments
+        const result = await serverPowerShellScript(scriptPath, [logFilePath, adObjectID]);
         
         // Log the raw result from the PowerShell script
         //logger.info('Raw result from PowerShell script:', result);
@@ -35,7 +35,7 @@ router.post('/', async (req, res) => {
         }
         
         // Log the parsed result
-        logger.info('Logs fetched successfully for:', currentADObjectID);
+        logger.info('Logs fetched successfully for:', adObjectID);
         
         // Send the result as JSON
         res.json(parsedResult);

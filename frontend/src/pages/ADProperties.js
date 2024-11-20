@@ -38,7 +38,7 @@ const ADProperties = () => {
   const { adObjectID } = useParams(); // Get adObjectID from URL parameters
   const navigate = useNavigate();
   const defaultUserProperties = useMemo(() => [
-    'objectClass',
+    'ObjectClass',
     'sAMAccountName',
     'Name',
     'mail',
@@ -52,18 +52,19 @@ const ADProperties = () => {
   ], []);
 
   const defaultComputerProperties = useMemo(() => [
+    'ObjectClass',
     'sAMAccountName',
     'CanonicalName',
     'operatingSystem',
     'memberOf',
   ], []);
 
-  const getDefaultProperties = useCallback((objectClass, allProperties) => {
-    console.log('Object Class:', objectClass); 
-    const normalizedObjectClass = objectClass?.toLowerCase();
-    if (normalizedObjectClass === 'user') {
+  const getDefaultProperties = useCallback((ObjectClass, allProperties) => {
+    console.log('Object Class:', ObjectClass); 
+
+    if (ObjectClass === 'user') {
       return defaultUserProperties;
-    } else if (normalizedObjectClass === 'computer') {
+    } else if (ObjectClass === 'computer') {
       return defaultComputerProperties;
     }
     return allProperties;
@@ -120,11 +121,11 @@ const ADProperties = () => {
       navigate(`/ad-object/${adObjectID}`); // Update the URL
       return;
     }
-
+  
     const data = await fetchADObjectData(adObjectID);
     const allProperties = Object.keys(data); // Get all properties
-    const selectedProperties = getDefaultProperties(data.objectClass, allProperties);
-
+    const selectedProperties = getDefaultProperties(data.ObjectClass, allProperties);
+  
     setTabs((prevTabs) => [
       ...prevTabs,
       { name: adObjectID, data, selectedProperties },
