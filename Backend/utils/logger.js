@@ -1,4 +1,5 @@
 const SENSITIVE_KEYS = ['password', 'secret', 'token', 'apikey'];
+const config = require('./config'); // Import the configuration object
 
 const sanitizeMessage = (message, ...optionalParams) => {
     const regex = new RegExp(`(${SENSITIVE_KEYS.join('|')}):\\s*['"]?([^'"\s]+)`, 'gi');
@@ -40,14 +41,14 @@ const error = (message, ...optionalParams) => {
 };
 
 const verbose = (message, ...optionalParams) => {
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== 'production' && config.logging.verbose) {
         const [sanitizedMessage, ...sanitizedParams] = sanitizeMessage(message, ...optionalParams);
         console.debug(`[verbose] ${sanitizedMessage}`, ...sanitizedParams);
     }
 };
 
 const debug = (message, ...optionalParams) => {
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== 'production' && config.logging.debug) {
         const [sanitizedMessage, ...sanitizedParams] = sanitizeMessage(message, ...optionalParams);
         console.debug(`[debug] ${sanitizedMessage}`, ...sanitizedParams);
     }
