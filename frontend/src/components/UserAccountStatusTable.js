@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import '../styles/UserAccountStatusTable.css';
+import ScriptButton from './ScriptButton'; // Import the ScriptButton component
 
 const UserAccountStatusTable = ({ adObjectID }) => {
   const [userAccountStatus, setUserAccountStatus] = useState({});
@@ -40,10 +41,36 @@ const UserAccountStatusTable = ({ adObjectID }) => {
     fetchUserAccountStatus();
   }, [adObjectID]);
 
+  const handleUnlockSuccess = (result) => {
+    if (result.message.includes('Unlocked')) {
+      setUserAccountStatus((prevStatus) => ({
+        ...prevStatus,
+        LockedOut: false,
+      }));
+    }
+  };
+
   const formatValue = (key, value) => {
     if (typeof value === 'boolean') {
       let backgroundColor;
-      if (key === 'LockedOut' || key === 'PasswordExpired') {
+      if (key === 'LockedOut') {
+        backgroundColor = value ? 'red' : 'green';
+        return (
+          <div className="boolean-value" style={{ backgroundColor }}>
+            {value ? (
+              <ScriptButton
+                scriptName="unlocker"
+                params={{ userID: adObjectID }}
+                buttonText="Locked"
+                onSuccess={handleUnlockSuccess}
+                className="script-button initial"
+              />
+            ) : (
+              'False'
+            )}
+          </div>
+        );
+      } else if (key === 'PasswordExpired') {
         backgroundColor = value ? 'red' : 'green';
       } else {
         backgroundColor = value ? 'green' : 'red';
