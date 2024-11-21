@@ -1,5 +1,5 @@
 const { exec } = require('child_process');
-const { log, info, warn, error, verbose } = require('./utils/logger');
+const { log, info, warn, error, verbose, debug } = require('./utils/logger');
 
 // List of scripts where stdout logging should be suppressed
 const scriptsToSuppressLogging = [
@@ -163,7 +163,7 @@ function executePowerShellCommand(command) {
             }
 
             if (!shouldSuppressLogging) {
-                verbose(`stdout: ${stdout}`);
+                debug(`stdout: ${stdout}`);
             }
 
             try {
