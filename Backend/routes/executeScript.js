@@ -12,7 +12,7 @@ router.post('/', verifyToken, async (req, res) => {
 
     try {
         const result = await executePowerShellScript(scriptPath, [params.userID]);
-        logger.verbose(`Script executed successfully: ${result}`);
+        logger.verbose(`Script executed successfully: ${JSON.stringify(result)}`);
         res.json({ message: result });
     } catch (error) {
         logger.error(`Error executing PowerShell script: ${error}`);

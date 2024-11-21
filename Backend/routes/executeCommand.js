@@ -11,7 +11,7 @@ router.post('/', verifyToken, async (req, res) => {
 
     try {
         const result = await executePowerShellCommand(command);
-        logger.verbose(`Command executed successfully: ${result}`);
+        logger.verbose(`Command executed successfully: ${JSON.stringify(result)}`);
         res.json(result); // Send the result directly
     } catch (error) {
         logger.error(`Error executing PowerShell command: ${error}`);

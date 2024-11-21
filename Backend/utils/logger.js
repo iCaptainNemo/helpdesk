@@ -14,35 +14,35 @@ const sanitizeMessage = (message, ...optionalParams) => {
 const log = (message, ...optionalParams) => {
     if (process.env.NODE_ENV !== 'production') {
         const [sanitizedMessage, ...sanitizedParams] = sanitizeMessage(message, ...optionalParams);
-        console.log(sanitizedMessage, ...sanitizedParams);
+        console.log(`[log] ${sanitizedMessage}`, ...sanitizedParams);
     }
 };
 
 const info = (message, ...optionalParams) => {
     if (process.env.NODE_ENV !== 'production') {
         const [sanitizedMessage, ...sanitizedParams] = sanitizeMessage(message, ...optionalParams);
-        console.info(sanitizedMessage, ...sanitizedParams);
+        console.info(`[info] ${sanitizedMessage}`, ...sanitizedParams);
     }
 };
 
 const warn = (message, ...optionalParams) => {
     if (process.env.NODE_ENV !== 'production') {
         const [sanitizedMessage, ...sanitizedParams] = sanitizeMessage(message, ...optionalParams);
-        console.warn(sanitizedMessage, ...sanitizedParams);
+        console.warn(`[warn] ${sanitizedMessage}`, ...sanitizedParams);
     }
 };
 
 const error = (message, ...optionalParams) => {
     if (process.env.NODE_ENV !== 'production') {
         const [sanitizedMessage, ...sanitizedParams] = sanitizeMessage(message, ...optionalParams);
-        console.error(sanitizedMessage, ...sanitizedParams);
+        console.error(`[error] ${sanitizedMessage}`, ...sanitizedParams);
     }
 };
 
 const verbose = (message, ...optionalParams) => {
     if (process.env.NODE_ENV !== 'production') {
         const [sanitizedMessage, ...sanitizedParams] = sanitizeMessage(message, ...optionalParams);
-        console.debug(sanitizedMessage, ...sanitizedParams);
+        console.debug(`[verbose] ${sanitizedMessage}`, ...sanitizedParams);
     }
 };
 

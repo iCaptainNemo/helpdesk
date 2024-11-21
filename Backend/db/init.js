@@ -1,10 +1,11 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 require('dotenv').config();
+const logger = require('../utils/logger'); // Import the logger module
 
 const dbPath = path.resolve(__dirname, process.env.DB_PATH || 'database.db');
 
-console.log(`Attempting to open database at path: ${dbPath}`);
+logger.info(`Attempting to open database at path: ${dbPath}`);
 
 const tables = [
     {
@@ -86,10 +87,10 @@ const tables = [
 
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
-        console.error('Error opening database:', err.message);
-        console.error('Ensure the database file exists and has the correct permissions.');
+        logger.error('Error opening database:', err.message);
+        logger.error('Ensure the database file exists and has the correct permissions.');
     } else {
-        console.log('Connected to the SQLite database.');
+        logger.info('Connected to the SQLite database.');
         initializeDatabase();
     }
 });
@@ -100,9 +101,9 @@ function initializeDatabase() {
         const createTableQuery = `CREATE TABLE IF NOT EXISTS ${table.name} (${columns});`;
         db.run(createTableQuery, (err) => {
             if (err) {
-                console.error(`Error creating table ${table.name}:`, err.message);
+                logger.error(`Error creating table ${table.name}:`, err.message);
             } else {
-                console.log(`Table ${table.name} created or already exists.`);
+                logger.info(`Table ${table.name} created or already exists.`);
                 checkAndAddMissingColumns(table);
             }
         });
@@ -112,7 +113,13 @@ function initializeDatabase() {
     const roles = ['superadmin', 'admin', 'support_agent', 'user'];
     roles.forEach(role => {
         const insertRoleQuery = `INSERT OR IGNORE INTO Roles (RoleName) VALUES (?);`;
-        db.run(insertRoleQuery, [role]);
+        db.run(insertRoleQuery, [role], (err) => {
+            if (err) {
+                logger.error(`Error inserting role ${role}:`, err.message);
+            } else {
+                logger.verbose(`Role ${role} inserted or already exists.`);
+            }
+        });
     });
 
     // Insert initial permissions
@@ -126,7 +133,13 @@ function initializeDatabase() {
     ];
     permissions.forEach(permission => {
         const insertPermissionQuery = `INSERT OR IGNORE INTO Permissions (PermissionName) VALUES (?);`;
-        db.run(insertPermissionQuery, [permission]);
+        db.run(insertPermissionQuery, [permission], (err) => {
+            if (err) {
+                logger.error(`Error inserting permission ${permission}:`, err.message);
+            } else {
+                logger.verbose(`Permission ${permission} inserted or already exists.`);
+            }
+        });
     });
 
     // Assign permissions to roles
@@ -145,7 +158,13 @@ function initializeDatabase() {
                 FROM Roles, Permissions
                 WHERE Roles.RoleName = ? AND Permissions.PermissionName = ?;
             `;
-            db.run(assignPermissionToRoleQuery, [role, permission]);
+            db.run(assignPermissionToRoleQuery, [role, permission], (err) => {
+                if (err) {
+                    logger.error(`Error assigning permission ${permission} to role ${role}:`, err.message);
+                } else {
+                    logger.verbose(`Permission ${permission} assigned to role ${role}.`);
+                }
+            });
         });
     });
 
@@ -157,7 +176,7 @@ function initializeDatabase() {
     `;
     db.get(checkSuperadminQuery, (err, row) => {
         if (err) {
-            console.error('Error checking for existing superadmin:', err.message);
+            logger.error('Error checking for existing superadmin:', err.message);
         } else if (!row) {
             const assignRoleToUserQuery = `
                 INSERT OR IGNORE INTO UserRoles (AdminID, RoleID)
@@ -167,13 +186,13 @@ function initializeDatabase() {
             `;
             db.run(assignRoleToUserQuery, (err) => {
                 if (err) {
-                    console.error('Error assigning superadmin role to the first admin user:', err.message);
+                    logger.error('Error assigning superadmin role to the first admin user:', err.message);
                 } else {
-                    console.log('Superadmin role assigned to the first admin user.');
+                    logger.info('Superadmin role assigned to the first admin user.');
                 }
             });
         } else {
-            console.log('Superadmin role already assigned to an admin user.');
+            logger.info('Superadmin role already assigned to an admin user.');
         }
     });
 }
@@ -182,7 +201,7 @@ function checkAndAddMissingColumns(table) {
     const existingColumnsQuery = `PRAGMA table_info(${table.name});`;
     db.all(existingColumnsQuery, (err, rows) => {
         if (err) {
-            console.error(`Error fetching columns for table ${table.name}:`, err.message);
+            logger.error(`Error fetching columns for table ${table.name}:`, err.message);
             return;
         }
         const existingColumns = rows.map(row => row.name);
@@ -192,9 +211,9 @@ function checkAndAddMissingColumns(table) {
                 const addColumnQuery = `ALTER TABLE ${table.name} ADD COLUMN ${column};`;
                 db.run(addColumnQuery, (err) => {
                     if (err) {
-                        console.error(`Error adding column ${columnName} to table ${table.name}:`, err.message);
+                        logger.error(`Error adding column ${columnName} to table ${table.name}:`, err.message);
                     } else {
-                        console.log(`Column ${columnName} added to table ${table.name}.`);
+                        logger.info(`Column ${columnName} added to table ${table.name}.`);
                     }
                 });
             }
