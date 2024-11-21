@@ -136,17 +136,20 @@ function serverPowerShellScript(scriptPath, params = []) {
  * @returns {Promise<Object>} - A promise that resolves with the JSON-parsed output of the command.
  */
 function executePowerShellCommand(command) {
+    // Append ConvertTo-Json -Compress to the command
+    const modifiedCommand = `${command} | ConvertTo-Json -Compress`;
+
     // Check if logging should be suppressed for this command
-    const shouldSuppressLogging = scriptsToSuppressLogging.some(script => command.includes(script));
+    const shouldSuppressLogging = scriptsToSuppressLogging.some(script => modifiedCommand.includes(script));
 
     // Log the command if logging is not suppressed
     if (!shouldSuppressLogging) {
-        info(`Executing command: ${command}`);
+        info(`Executing command: ${modifiedCommand}`);
     }
 
     // Return a promise that resolves with the command output
     return new Promise((resolve, reject) => {
-        exec(`powershell.exe -Command "${command}"`, (execError, stdout, stderr) => {
+        exec(`powershell.exe -Command "${modifiedCommand}"`, (execError, stdout, stderr) => {
             if (execError) {
                 error(`Execution error: ${execError}`);
                 return reject(`Execution error: ${execError}\n${stderr}`);

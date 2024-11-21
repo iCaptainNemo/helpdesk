@@ -1,0 +1,32 @@
+.user-account-status-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .user-account-status-table th,
+  .user-account-status-table td {
+    border: 1px solid #ddd;
+  }
+  
+  .user-account-status-table th {
+    background-color: #9b9999;
+    padding: 7px;
+  }
+  
+  .boolean-value {
+    color: white;
+    padding: 2px 5px;
+    border-radius: 3px;
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+  }
+  
+  .user-account-status-table td.property-cell {
+    padding: 5px; /* Add padding to ensure spacing for property cells */
+  }
+  
+  .value-cell {
+    text-align: center; /* Center only the value cells */
+    padding: 0; /* Remove padding to ensure the background color fills the entire cell */
+  }

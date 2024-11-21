@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom';
 import Modal from 'react-modal';
 import Logs from '../components/Logs';
+import UserAccountStatusTable from '../components/UserAccountStatusTable'; // Import the new component
 import '../styles/Tabs.css'; // Import the CSS file for styling the tabs
 import '../styles/ADProperties.css';
 
@@ -260,6 +261,12 @@ const ADProperties = () => {
               ))}
             </tbody>
           </table>
+          {tabs[activeTab]?.data.ObjectClass === 'user' && (
+            <UserAccountStatusTable
+              data={tabs[activeTab]?.data}
+              adObjectID={tabs[activeTab]?.name} // Pass adObjectID to UserAccountStatusTable
+            />
+          )}
         </div>
       </div>
       {tooltip.visible && <div className="tooltip">{tooltip.message}</div>}
