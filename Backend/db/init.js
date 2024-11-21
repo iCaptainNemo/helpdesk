@@ -3,9 +3,16 @@ const path = require('path');
 require('dotenv').config();
 const logger = require('../utils/logger'); // Import the logger module
 
+// Create a wrapper for the logger functions to add the [Database] prefix
+const dbLogger = {
+    info: (message, ...optionalParams) => logger.info(`[Database] ${message}`, ...optionalParams),
+    verbose: (message, ...optionalParams) => logger.verbose(`[Database] ${message}`, ...optionalParams),
+    error: (message, ...optionalParams) => logger.error(`[Database] ${message}`, ...optionalParams),
+};
+
 const dbPath = path.resolve(__dirname, process.env.DB_PATH || 'database.db');
 
-logger.info(`Attempting to open database at path: ${dbPath}`);
+dbLogger.info(`Attempting to open database at path: ${dbPath}`);
 
 const tables = [
     {
@@ -87,10 +94,10 @@ const tables = [
 
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
-        logger.error('Error opening database:', err.message);
-        logger.error('Ensure the database file exists and has the correct permissions.');
+        dbLogger.error('Error opening database:', err.message);
+        dbLogger.error('Ensure the database file exists and has the correct permissions.');
     } else {
-        logger.info('Connected to the SQLite database.');
+        dbLogger.info('Connected to the SQLite database.');
         initializeDatabase();
     }
 });
@@ -101,9 +108,9 @@ function initializeDatabase() {
         const createTableQuery = `CREATE TABLE IF NOT EXISTS ${table.name} (${columns});`;
         db.run(createTableQuery, (err) => {
             if (err) {
-                logger.error(`Error creating table ${table.name}:`, err.message);
+                dbLogger.error(`Error creating table ${table.name}:`, err.message);
             } else {
-                logger.info(`Table ${table.name} created or already exists.`);
+                dbLogger.info(`Table ${table.name} created or already exists.`);
                 checkAndAddMissingColumns(table);
             }
         });
@@ -115,9 +122,9 @@ function initializeDatabase() {
         const insertRoleQuery = `INSERT OR IGNORE INTO Roles (RoleName) VALUES (?);`;
         db.run(insertRoleQuery, [role], (err) => {
             if (err) {
-                logger.error(`Error inserting role ${role}:`, err.message);
+                dbLogger.error(`Error inserting role ${role}:`, err.message);
             } else {
-                logger.verbose(`Role ${role} inserted or already exists.`);
+                dbLogger.verbose(`Role ${role} inserted or already exists.`);
             }
         });
     });
@@ -135,9 +142,9 @@ function initializeDatabase() {
         const insertPermissionQuery = `INSERT OR IGNORE INTO Permissions (PermissionName) VALUES (?);`;
         db.run(insertPermissionQuery, [permission], (err) => {
             if (err) {
-                logger.error(`Error inserting permission ${permission}:`, err.message);
+                dbLogger.error(`Error inserting permission ${permission}:`, err.message);
             } else {
-                logger.verbose(`Permission ${permission} inserted or already exists.`);
+                dbLogger.verbose(`Permission ${permission} inserted or already exists.`);
             }
         });
     });
@@ -160,9 +167,9 @@ function initializeDatabase() {
             `;
             db.run(assignPermissionToRoleQuery, [role, permission], (err) => {
                 if (err) {
-                    logger.error(`Error assigning permission ${permission} to role ${role}:`, err.message);
+                    dbLogger.error(`Error assigning permission ${permission} to role ${role}:`, err.message);
                 } else {
-                    logger.verbose(`Permission ${permission} assigned to role ${role}.`);
+                    dbLogger.verbose(`Permission ${permission} assigned to role ${role}.`);
                 }
             });
         });
@@ -176,7 +183,7 @@ function initializeDatabase() {
     `;
     db.get(checkSuperadminQuery, (err, row) => {
         if (err) {
-            logger.error('Error checking for existing superadmin:', err.message);
+            dbLogger.error('Error checking for existing superadmin:', err.message);
         } else if (!row) {
             const assignRoleToUserQuery = `
                 INSERT OR IGNORE INTO UserRoles (AdminID, RoleID)
@@ -186,13 +193,13 @@ function initializeDatabase() {
             `;
             db.run(assignRoleToUserQuery, (err) => {
                 if (err) {
-                    logger.error('Error assigning superadmin role to the first admin user:', err.message);
+                    dbLogger.error('Error assigning superadmin role to the first admin user:', err.message);
                 } else {
-                    logger.info('Superadmin role assigned to the first admin user.');
+                    dbLogger.info('Superadmin role assigned to the first admin user.');
                 }
             });
         } else {
-            logger.info('Superadmin role already assigned to an admin user.');
+            dbLogger.info('Superadmin role already assigned to an admin user.');
         }
     });
 }
@@ -201,7 +208,7 @@ function checkAndAddMissingColumns(table) {
     const existingColumnsQuery = `PRAGMA table_info(${table.name});`;
     db.all(existingColumnsQuery, (err, rows) => {
         if (err) {
-            logger.error(`Error fetching columns for table ${table.name}:`, err.message);
+            dbLogger.error(`Error fetching columns for table ${table.name}:`, err.message);
             return;
         }
         const existingColumns = rows.map(row => row.name);
@@ -211,9 +218,9 @@ function checkAndAddMissingColumns(table) {
                 const addColumnQuery = `ALTER TABLE ${table.name} ADD COLUMN ${column};`;
                 db.run(addColumnQuery, (err) => {
                     if (err) {
-                        logger.error(`Error adding column ${columnName} to table ${table.name}:`, err.message);
+                        dbLogger.error(`Error adding column ${columnName} to table ${table.name}:`, err.message);
                     } else {
-                        logger.info(`Column ${columnName} added to table ${table.name}.`);
+                        dbLogger.info(`Column ${columnName} added to table ${table.name}.`);
                     }
                 });
             }
