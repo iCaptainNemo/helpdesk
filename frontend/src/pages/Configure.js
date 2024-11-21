@@ -62,14 +62,18 @@ const Configure = ({ permissions }) => {
     };
 
     return (
-        <div>
-            <h2>Logging</h2>
+        <div className="configure-page">
             <table>
+                <thead>
+                    <tr>
+                        <th colSpan="2">Logging</th>
+                    </tr>
+                </thead>
                 <tbody>
                     <tr>
                         <td>Debug Logging</td>
                         <td>
-                            <label className="switch">
+                            <label className="toggle-switch">
                                 <input type="checkbox" checked={debugLogging} onChange={handleDebugToggle} />
                                 <span className="slider round"></span>
                             </label>
@@ -78,7 +82,7 @@ const Configure = ({ permissions }) => {
                     <tr>
                         <td>Verbose Logging</td>
                         <td>
-                            <label className="switch">
+                            <label className="toggle-switch">
                                 <input type="checkbox" checked={verboseLogging} onChange={handleVerboseToggle} />
                                 <span className="slider round"></span>
                             </label>

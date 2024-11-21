@@ -1,18 +1,19 @@
 /* Configure.css */
-.switch {
+.configure-page .toggle-switch {
     position: relative;
     display: inline-block;
-    width: 3.75em; /* 60px */
-    height: 2.125em; /* 34px */
+    width: 2.125em; /* 34px */
+    height: 1.25em; /* 20px */
+    vertical-align: middle; /* Align vertically in the middle */
   }
   
-  .switch input {
+  .configure-page .toggle-switch input {
     opacity: 0;
     width: 0;
     height: 0;
   }
   
-  .slider {
+  .configure-page .slider {
     position: absolute;
     cursor: pointer;
     top: 0;
@@ -24,22 +25,41 @@
     border-radius: 2.125em; /* 34px */
   }
   
-  .slider:before {
+  .configure-page .slider:before {
     position: absolute;
     content: "";
-    height: 1.625em; /* 26px */
-    width: 1.625em; /* 26px */
-    left: 0.25em; /* 4px */
-    bottom: 0.25em; /* 4px */
+    height: 0.875em; /* 14px */
+    width: 0.875em; /* 14px */
+    left: 0.1875em; /* 3px */
+    bottom: 0.1875em; /* 3px */
     background-color: white;
     transition: 0.4s;
     border-radius: 50%;
   }
   
-  input:checked + .slider {
+  .configure-page input:checked + .slider {
     background-color: #2196F3;
   }
   
-  input:checked + .slider:before {
-    transform: translateX(1.625em); /* 26px */
+  .configure-page input:checked + .slider:before {
+    transform: translateX(0.875em); /* 14px */
+  }
+  
+  
+  /* Table styles */
+  .configure-page table {
+    width: auto;
+    border-collapse: collapse;
+    margin-top: 1em;
+  }
+  
+  .configure-page table, .configure-page th, .configure-page td {
+    border: 1px solid #ddd;
+  }
+  
+  .configure-page th, .configure-page td {
+    padding: 1em;
+    text-align: left;
+    width: auto;
+
   }
