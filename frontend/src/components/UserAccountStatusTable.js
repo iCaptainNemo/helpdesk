@@ -103,8 +103,7 @@ const UserAccountStatusTable = ({ adObjectID }) => {
     <table className="user-account-status-table">
       <thead>
         <tr>
-          <th>Property</th>
-          <th>Value</th>
+        <th colSpan="2">Status Table</th>
         </tr>
       </thead>
       <tbody>

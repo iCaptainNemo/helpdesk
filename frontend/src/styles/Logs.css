@@ -1,7 +1,12 @@
 .logs-container {
-    max-width: 800px;
+    max-width: 100%;
     margin: 0 auto;
     overflow-x: auto;
+}
+
+.table-container {
+    max-height: 80%;
+    overflow-y: auto;
 }
 
 .logs-table {
@@ -49,6 +54,7 @@
 .clickable-cell:hover::after {
     display: block;
 }
+
 .tooltip {
     position: fixed;
     bottom: 20px;
@@ -60,4 +66,4 @@
     border-radius: 5px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     z-index: 1000;
-  }
+}

@@ -1,6 +1,6 @@
 .tabs-container {
   display: flex;
-  border-bottom: 1px solid #ddd;
+  /* border-bottom: 1px solid #ddd; */
   margin: 0; /* Remove margin */
   padding: 0; /* Remove padding */
   justify-content: flex-start; /* Align tabs to the left */
@@ -16,7 +16,7 @@
 }
 
 .tab.active {
-  background-color: white;
+  background-color: rgb(128, 227, 252);
   font-weight: bold;
 }
 

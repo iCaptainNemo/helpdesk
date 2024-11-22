@@ -39,7 +39,6 @@ const ADProperties = () => {
   const { adObjectID } = useParams(); // Get adObjectID from URL parameters
   const navigate = useNavigate();
   const defaultUserProperties = useMemo(() => [
-    // 'ObjectClass',
     'sAMAccountName',
     'Name',
     'mail',
@@ -53,16 +52,13 @@ const ADProperties = () => {
   ], []);
 
   const defaultComputerProperties = useMemo(() => [
-    // 'ObjectClass',
-    'sAMAccountName',
+    'CN',
     'CanonicalName',
     'operatingSystem',
     'memberOf',
   ], []);
 
   const getDefaultProperties = useCallback((ObjectClass, allProperties) => {
-    // console.log('Object Class:', ObjectClass); 
-
     if (ObjectClass === 'user') {
       return defaultUserProperties;
     } else if (ObjectClass === 'computer') {
@@ -81,13 +77,13 @@ const ADProperties = () => {
   const logsTableRef = useRef(null);
   const adPropertiesTableRef = useRef(null);
 
-  useEffect(() => {
-    // Synchronize the heights of the tables
-    if (logsTableRef.current && adPropertiesTableRef.current) {
-      const adPropertiesTableHeight = adPropertiesTableRef.current.offsetHeight;
-      logsTableRef.current.style.maxHeight = `${adPropertiesTableHeight}px`;
-    }
-  }, [tabs, activeTab]);
+  // useEffect(() => {
+  //   // Synchronize the heights of the tables
+  //   if (logsTableRef.current && adPropertiesTableRef.current) {
+  //     const adPropertiesTableHeight = adPropertiesTableRef.current.offsetHeight;
+  //     logsTableRef.current.style.maxHeight = `${adPropertiesTableHeight}px`;
+  //   }
+  // }, [tabs, activeTab]);
 
   const fetchADObjectData = useCallback(async (id) => {
     try {
@@ -106,7 +102,6 @@ const ADProperties = () => {
       if (!response.ok) throw new Error('Network response was not ok');
 
       const data = await response.json();
-      // console.log('Fetched Data:', data); // Debugging statement
       return data;
     } catch (error) {
       console.error('Error fetching AD object properties:', error);
@@ -236,8 +231,6 @@ const ADProperties = () => {
           ⚙️
         </button>
       </div>
-      <div className="table-header">
-      </div>
       <div className="tables-container">
         <div className="logs-table-container" ref={logsTableRef}>
           <Logs adObjectID={tabs[activeTab]?.name} />
@@ -246,8 +239,7 @@ const ADProperties = () => {
           <table className="properties-table">
             <thead>
               <tr>
-                <th>Property</th>
-                <th>Value</th>
+                <th colSpan="2">AD Properties</th>
               </tr>
             </thead>
             <tbody>
@@ -261,13 +253,15 @@ const ADProperties = () => {
               ))}
             </tbody>
           </table>
-          {tabs[activeTab]?.data.ObjectClass === 'user' && (
+        </div>
+        {tabs[activeTab]?.data.ObjectClass === 'user' && (
+          <div className="user-account-status-table-container">
             <UserAccountStatusTable
               data={tabs[activeTab]?.data}
               adObjectID={tabs[activeTab]?.name} // Pass adObjectID to UserAccountStatusTable
             />
-          )}
-        </div>
+          </div>
+        )}
       </div>
       {tooltip.visible && <div className="tooltip">{tooltip.message}</div>}
       <Modal

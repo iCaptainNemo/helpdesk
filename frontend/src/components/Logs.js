@@ -29,7 +29,7 @@ const Logs = ({ adObjectID }) => {
         }
 
         const logsData = await response.json();
-        setLogs(logsData);
+        setLogs(logsData.reverse()); // Reverse the logs order
       } catch (error) {
         console.error('Error fetching logs:', error);
         setError(`Error fetching logs: ${error.message}`);
@@ -88,7 +88,7 @@ const Logs = ({ adObjectID }) => {
                 <td colSpan="4">No logs available.</td>
               </tr>
             ) : (
-              logs.map((log, index) => (
+              logs.slice(0, 50).map((log, index) => (
                 <tr key={index}>
                   <td onClick={() => copyToClipboard(log.Computer)} className="clickable-cell">
                     {log.Computer}
