@@ -51,7 +51,7 @@ function executePowerShellScript(scriptPath, params = []) {
             }
 
             if (!shouldSuppressLogging) {
-                info(`stdout: ${stdout}`);
+                debug(`stdout: ${stdout}`);
             }
 
             try {
@@ -114,7 +114,7 @@ function serverPowerShellScript(scriptPath, params = []) {
             }
 
             if (!shouldSuppressLogging) {
-                info(`stdout: ${stdout}`);
+                debug(`stdout: ${stdout}`);
             }
 
             try {

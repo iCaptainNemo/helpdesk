@@ -1,0 +1,12 @@
+/* Dashboard.css */
+.dashboard-page .dashboard-tables-container {
+    display: flex;
+    align-items: flex-start; /* Align items to the start of the container */
+    gap: 20px; /* Add space between the items */
+  }
+  
+  .dashboard-page .dashboard-tables-container > div {
+    flex: 1 1 auto; /* Allow the items to grow and shrink */
+    min-width: 10%; /* Set a minimum width for the items */
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+  }

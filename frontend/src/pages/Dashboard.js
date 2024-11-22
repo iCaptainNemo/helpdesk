@@ -1,16 +1,19 @@
 import React from 'react';
 import LockedOutUsers from '../components/LockedOutUsers';
 import ServerStatus from '../components/ServerStatus';
+import '../styles/Dashboard.css'; // Import the CSS file for styling
 
 const Dashboard = () => {
     return (
-        <div>
+        <div className="dashboard-page">
+            <div className="dashboard-tables-container">
+                <LockedOutUsers />
+                <ServerStatus />
+            </div>
             <form id="helloWorldForm" onSubmit={handleHelloWorldButtonClick}>
                 <button type="submit">Test</button>
             </form>
             <div id="helloWorldOutputContainer"></div>
-            <LockedOutUsers />
-            <ServerStatus />
         </div>
     );
 };
