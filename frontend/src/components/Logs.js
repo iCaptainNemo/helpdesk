@@ -88,7 +88,7 @@ const Logs = ({ adObjectID }) => {
                 <td colSpan="4">No logs available.</td>
               </tr>
             ) : (
-              logs.slice(0, 50).map((log, index) => (
+              logs.slice(0, 30).map((log, index) => (
                 <tr key={index}>
                   <td onClick={() => copyToClipboard(log.Computer)} className="clickable-cell">
                     {log.Computer}

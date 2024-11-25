@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import '../styles/UserAccountStatusTable.css';
+import '../styles/StatusTable.css';
 import ScriptButton from './ScriptButton'; // Import the ScriptButton component
 
-const UserAccountStatusTable = ({ adObjectID }) => {
+const UserAccountStatusTable = ({ adObjectID, permissions }) => {
   const [userAccountStatus, setUserAccountStatus] = useState({});
+  const [autoRefresh, setAutoRefresh] = useState(true); // State to control auto-refresh
   const userAccountStatusProperties = [
     'Enabled',
     'LockedOut',
@@ -39,7 +40,14 @@ const UserAccountStatusTable = ({ adObjectID }) => {
     };
 
     fetchUserAccountStatus();
-  }, [adObjectID]);
+
+    let interval;
+    if (autoRefresh) {
+      interval = setInterval(fetchUserAccountStatus, 2000); // Refresh every second
+    }
+
+    return () => clearInterval(interval); // Cleanup interval on component unmount
+  }, [adObjectID, autoRefresh]);
 
   const handleUnlockSuccess = (result) => {
     if (result.message.includes('Unlocked')) {
@@ -58,13 +66,19 @@ const UserAccountStatusTable = ({ adObjectID }) => {
         return (
           <div className="boolean-value" style={{ backgroundColor }}>
             {value ? (
-              <ScriptButton
-                scriptName="unlocker"
-                params={{ userID: adObjectID }}
-                buttonText="Locked"
-                onSuccess={handleUnlockSuccess}
-                className="script-button initial"
-              />
+              permissions.includes('execute_script') ? (
+                <ScriptButton
+                  scriptName="unlocker"
+                  params={{ userID: adObjectID }}
+                  buttonText="Locked"
+                  onSuccess={handleUnlockSuccess}
+                  className="script-button initial"
+                />
+              ) : (
+                <button className="script-button grey" disabled>
+                  Locked
+                </button>
+              )
             ) : (
               'False'
             )}
@@ -103,7 +117,17 @@ const UserAccountStatusTable = ({ adObjectID }) => {
     <table className="user-account-status-table">
       <thead>
         <tr>
-        <th colSpan="2">Status Table</th>
+          <th colSpan="2">
+            Status Table
+            <label className="toggle-switch">
+              <input
+                type="checkbox"
+                checked={autoRefresh}
+                onChange={() => setAutoRefresh(!autoRefresh)}
+              />
+              <span className="slider round" title="Auto Status Refresh"></span>
+            </label>
+          </th>
         </tr>
       </thead>
       <tbody>

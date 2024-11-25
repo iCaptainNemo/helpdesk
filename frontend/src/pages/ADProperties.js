@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom';
 import Modal from 'react-modal';
 import Logs from '../components/Logs';
-import UserAccountStatusTable from '../components/UserAccountStatusTable'; // Import the new component
+import StatusTable from '../components/StatusTable'; // Import the new component
 import '../styles/Tabs.css'; // Import the CSS file for styling the tabs
 import '../styles/ADProperties.css';
 
@@ -35,7 +35,7 @@ const Tabs = ({ tabs, activeTab, onTabClick, onCloseTab }) => {
   );
 };
 
-const ADProperties = () => {
+const ADProperties = ({ permissions }) => {
   const { adObjectID } = useParams(); // Get adObjectID from URL parameters
   const navigate = useNavigate();
   const defaultUserProperties = useMemo(() => [
@@ -55,6 +55,7 @@ const ADProperties = () => {
     'CN',
     'CanonicalName',
     'operatingSystem',
+    'DistinguishedName',
     'memberOf',
   ], []);
 
@@ -76,14 +77,6 @@ const ADProperties = () => {
   const [tooltip, setTooltip] = useState({ visible: false, message: '' });
   const logsTableRef = useRef(null);
   const adPropertiesTableRef = useRef(null);
-
-  // useEffect(() => {
-  //   // Synchronize the heights of the tables
-  //   if (logsTableRef.current && adPropertiesTableRef.current) {
-  //     const adPropertiesTableHeight = adPropertiesTableRef.current.offsetHeight;
-  //     logsTableRef.current.style.maxHeight = `${adPropertiesTableHeight}px`;
-  //   }
-  // }, [tabs, activeTab]);
 
   const fetchADObjectData = useCallback(async (id) => {
     try {
@@ -254,11 +247,12 @@ const ADProperties = () => {
             </tbody>
           </table>
         </div>
-        {tabs[activeTab]?.data.ObjectClass === 'user' && (
+        {(tabs[activeTab]?.data.ObjectClass === 'user' || tabs[activeTab]?.data.ObjectClass === 'computer') && (
           <div className="user-account-status-table-container">
-            <UserAccountStatusTable
+            <StatusTable
               data={tabs[activeTab]?.data}
-              adObjectID={tabs[activeTab]?.name} // Pass adObjectID to UserAccountStatusTable
+              adObjectID={tabs[activeTab]?.name} // Pass adObjectID to StatusTable
+              permissions={permissions} // Pass permissions to StatusTable
             />
           </div>
         )}

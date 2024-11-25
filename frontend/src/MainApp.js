@@ -134,7 +134,7 @@ function App() {
             <Navbar permissions={permissions} />
             <Routes>
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/ad-object/:adObjectID?" element={<ADProperties />} /> {/* Update route to handle optional adObjectID */}
+              <Route path="/ad-object/:adObjectID?" element={<ADProperties permissions={permissions} />} /> {/* Update route to handle optional adObjectID */}
               <Route path="/Profile" element={<Profile permissions={permissions} />} />
               <Route path="/configure" element={<Configure permissions={permissions} />} />
               <Route path="*" element={<Navigate to="/dashboard" />} />

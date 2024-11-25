@@ -5,19 +5,20 @@
 }
 
 .table-container {
-    max-height: 80%;
+    max-height: 1000px;
     overflow-y: auto;
 }
 
 .logs-table {
     width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
+    table-layout: auto;
+    min-width: 100%; 
 }
 
 .logs-table th, .logs-table td {
     border: 1px solid #ddd;
     padding: 8px;
+    white-space: nowrap; /* Prevent text from wrapping */
 }
 
 .logs-table th {
