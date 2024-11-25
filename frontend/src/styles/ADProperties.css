@@ -17,12 +17,12 @@
   display: flex;
   flex-direction: row; /* Arrange items in a row */
   align-items: flex-start; /* Align items to the start of the container */
-  width: 100%;
+  width: 90%;
 }
 
 .tables-container > div {
   flex: 1 1 auto; /* Allow the items to grow and shrink */
-  min-width: 30%; /* Set a minimum width for the items */
+  /* min-width: 40%; Set a minimum width for the items */
   box-sizing: border-box; /* Include padding and border in the element's total width and height */
 }
 

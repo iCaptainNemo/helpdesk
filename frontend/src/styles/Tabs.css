@@ -4,6 +4,7 @@
   margin: 0; /* Remove margin */
   padding: 0; /* Remove padding */
   justify-content: flex-start; /* Align tabs to the left */
+  align-items: left;
 }
 
 .tab {

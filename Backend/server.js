@@ -114,7 +114,8 @@ app.use('/api/roles', rolesRoute); // Route to manage roles
 app.use('/api/permissions', permissionsRoute); // Route to manage permissions
 app.use('/api/configure', verifyToken, verifyPermissions('access_configure_page'), configureRoute); // Route to access the configure page
 app.use('/api/servers', serverStatusRoute); // Use the serverStatus route
-app.use('/api/execute-command', verifyToken, verifyPermissions('execute_command'), executeCommandRoute); // Use the executeCommand route
+// app.use('/api/execute-command', verifyToken, verifyPermissions('execute_command'), executeCommandRoute); // Use the executeCommand route
+app.use('/api/execute-command', executeCommandRoute); // Use the executeCommand route
 app.use('/api/logging-settings', loggingSettingsRoute); // Use the loggingSettings route
 
 // Middleware to handle 403 Forbidden errors

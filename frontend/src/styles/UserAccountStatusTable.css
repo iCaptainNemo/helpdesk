@@ -29,6 +29,7 @@
   .value-cell {
     text-align: center; /* Center only the value cells */
     padding: 0; /* Remove padding to ensure the background color fills the entire cell */
+    white-space: nowrap; /* Prevent text from wrapping to another line */
   }
   
   .script-button {
