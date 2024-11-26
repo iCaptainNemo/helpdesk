@@ -49,7 +49,7 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
 
     let interval;
     if (autoRefresh) {
-      interval = setInterval(fetchUserAccountStatus, 5000); // Refresh every 3 seconds
+      interval = setInterval(fetchUserAccountStatus, 5000); // Refresh every 5 seconds
     }
 
     return () => {
