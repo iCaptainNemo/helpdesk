@@ -10,7 +10,6 @@ Helpdesk Jarvis is a comprehensive tool designed to assist helpdesk teams with c
 - **Database Integration**: SQLite database for storing user and session data.
 - **Real-Time Updates**: Integration with Socket.IO for real-time updates.
 
-
 ## Installation
 
 ### Prerequisites
@@ -37,7 +36,7 @@ Helpdesk Jarvis is a comprehensive tool designed to assist helpdesk teams with c
     cp .env.example .env
     ```
 
-4. **Configure the [`.env`](command:_github.copilot.openSymbolFromReferences?%5B%22%22%2C%5B%7B%22uri%22%3A%7B%22scheme%22%3A%22file%22%2C%22authority%22%3A%22%22%2C%22path%22%3A%22%2Fh%3A%2Fhelpdesk-GUI%2FBackend%2Fdb%2Finit.js%22%2C%22query%22%3A%22%22%2C%22fragment%22%3A%22%22%7D%2C%22pos%22%3A%7B%22line%22%3A4%2C%22character%22%3A46%7D%7D%5D%2C%22c819a34a-31cc-494a-963c-5d945048c05e%22%5D "Go to definition") file** with your environment variables.
+4. **Configure the [`.env`](command:_github.copilot.openSymbolFromReferences?%5B%22%22%2C%5B%7B%22uri%22%3A%22file%22%2C%22path%22%3A%22%2Fh%3A%2Fhelpdesk-GUI%2FBackend%2Fdb%2Finit.js%22%7D%2C%7B%22start%22%3A%7B%22line%22%3A4%2C%22character%22%3A46%7D%2C%22end%22%3A%7B%22line%22%3A4%2C%22character%22%3A46%7D%7D%5D "Go to definition") file** with your environment variables.
 
 5. **Start the backend server**:
     ```sh
@@ -56,16 +55,28 @@ Helpdesk Jarvis is a comprehensive tool designed to assist helpdesk teams with c
     npm install
     ```
 
-3. **Create a [`.env`](command:_github.copilot.openSymbolFromReferences?%5B%22%22%2C%5B%7B%22uri%22%3A%7B%22scheme%22%3A%22file%22%2C%22authority%22%3A%22%22%2C%22path%22%3A%22%2Fh%3A%2Fhelpdesk-GUI%2FBackend%2Fdb%2Finit.js%22%2C%22query%22%3A%22%22%2C%22fragment%22%3A%22%22%7D%2C%22pos%22%3A%7B%22line%22%3A4%2C%22character%22%3A46%7D%7D%5D%2C%22c819a34a-31cc-494a-963c-5d945048c05e%22%5D "Go to definition") file**:
+3. **Create a [`.env`](command:_github.copilot.openSymbolFromReferences?%5B%22%22%2C%5B%7B%22uri%22%3A%22file%22%2C%22path%22%3A%22%2Fh%3A%2Fhelpdesk-GUI%2FBackend%2Fdb%2Finit.js%22%7D%2C%7B%22start%22%3A%7B%22line%22%3A4%2C%22character%22%3A46%7D%2C%22end%22%3A%7B%22line%22%3A4%2C%22character%22%3A46%7D%7D%5D "Go to definition") file**:
     ```sh
     cp .env.example .env
     ```
 
-4. **Configure the [`.env`](command:_github.copilot.openSymbolFromReferences?%5B%22%22%2C%5B%7B%22uri%22%3A%7B%22scheme%22%3A%22file%22%2C%22authority%22%3A%22%22%2C%22path%22%3A%22%2Fh%3A%2Fhelpdesk-GUI%2FBackend%2Fdb%2Finit.js%22%2C%22query%22%3A%22%22%2C%22fragment%22%3A%22%22%7D%2C%22pos%22%3A%7B%22line%22%3A4%2C%22character%22%3A46%7D%7D%5D%2C%22c819a34a-31cc-494a-963c-5d945048c05e%22%5D "Go to definition") file** with your environment variables.
+4. **Configure the [`.env`](command:_github.copilot.openSymbolFromReferences?%5B%22%22%2C%5B%7B%22uri%22%3A%22file%22%2C%22path%22%3A%22%2Fh%3A%2Fhelpdesk-GUI%2FBackend%2Fdb%2Finit.js%22%7D%2C%7B%22start%22%3A%7B%22line%22%3A4%2C%22character%22%3A46%7D%2C%22end%22%3A%7B%22line%22%3A4%2C%22character%22%3A46%7D%7D%5D "Go to definition") file** with your environment variables.
 
 5. **Start the frontend server**:
     ```sh
     npm start
+    ```
+
+### Client Setup
+
+1. **Run the `Browser_Launcher_registry_Import.bat` script**:
+    ```sh
+    Tools/Browser_Launcher_registry_Import.bat
+    ```
+
+2. **Move the `JarvisLauncher` folder to the `Program Files` directory**:
+    ```sh
+    move Tools/JarvisLauncher "C:\Program Files\JarvisLauncher"
     ```
 
 ### Running the Project

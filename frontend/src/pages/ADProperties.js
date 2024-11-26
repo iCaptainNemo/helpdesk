@@ -217,11 +217,15 @@ const ADProperties = ({ permissions }) => {
   const launchProgram = (program, args) => {
     let url;
     if (program === 'CmRcViewer') {
-      url = `CmRcViewer://${args}`;
+      url = `jarvis:CmRcView${args}`;
     } else if (program === 'msra') {
-      url = `msra://offerRA ${args}`;
+      url = `jarvis:msra${args}`;
+    } else if (program === 'powershell') {
+      url = `jarvis:powershe${args}`;
+    } else if (program === 'cmd') {
+      url = `jarvis:cmd.exe${args}`;
     } else {
-      url = `${program}://${args}`;
+      url = `jarvis:${program}${args}`;
     }
     window.location.href = url;
   };
@@ -236,10 +240,10 @@ const ADProperties = ({ permissions }) => {
       />
       {tabs[activeTab]?.data.ObjectClass === 'computer' && (
         <div className="button-container">
-          <button onClick={() => launchProgram('CmRcViewer', `${adObjectID}`)} className="launch-button">
+          <button onClick={() => launchProgram('CmRcViewer', adObjectID)} className="launch-button">
             Launch CmRcViewer
           </button>
-          <button onClick={() => launchProgram('msra', `/offerRA ${adObjectID}`)} className="launch-button">
+          <button onClick={() => launchProgram('msra', adObjectID)} className="launch-button">
             Launch msra
           </button>
         </div>
