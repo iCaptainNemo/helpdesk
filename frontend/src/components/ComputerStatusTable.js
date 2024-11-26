@@ -11,7 +11,7 @@ const ComputerStatusTable = ({ adObjectID }) => {
         const token = localStorage.getItem('token');
         if (!token) throw new Error('No token found');
 
-        const command = `Test-Connection -ComputerName ${adObjectID} -Count 2 -Quiet -ErrorAction Stop`;
+        const command = `Test-Connection -ComputerName ${adObjectID} -Count 1 -Quiet -ErrorAction Stop`;
         const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
           method: 'POST',
           headers: {
@@ -24,7 +24,7 @@ const ComputerStatusTable = ({ adObjectID }) => {
         if (!response.ok) throw new Error('Network response was not ok');
 
         const data = await response.json();
-        // console.log('Received data:', data); // Debugging information
+ //       console.log('Received data:', data); // Debugging information
         setComputerStatus(data === true ? 'Online' : 'Offline');
       } catch (error) {
         console.error('Error fetching computer status:', error);
@@ -43,31 +43,33 @@ const ComputerStatusTable = ({ adObjectID }) => {
   }, [adObjectID, autoRefresh]);
 
   return (
-    <table className="computer-status-table">
-      <thead>
-        <tr>
-          <th colSpan="2">
-            Computer Status
-            <label className="toggle-switch">
-              <input
-                type="checkbox"
-                checked={autoRefresh}
-                onChange={() => setAutoRefresh(!autoRefresh)}
-              />
-              <span className="slider round" title="Auto Status Refresh"></span>
-            </label>
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td className="property-cell">Status</td>
-          <td className={`value-cell ${computerStatus.toLowerCase()}`}>
-            {computerStatus}
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div className="computer-status-table-container">
+      <table className="computer-status-table">
+        <thead>
+          <tr>
+            <th colSpan="2">
+              Computer Status
+              <label className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={autoRefresh}
+                  onChange={() => setAutoRefresh(!autoRefresh)}
+                />
+                <span className="slider round" title="Auto Status Refresh"></span>
+              </label>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td className="property-cell">Status</td>
+            <td className={`value-cell ${computerStatus.toLowerCase()}`}>
+              {computerStatus}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   );
 };
 

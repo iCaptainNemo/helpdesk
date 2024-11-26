@@ -123,33 +123,35 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
   };
 
   return (
-    <table className="user-account-status-table">
-      <thead>
-        <tr>
-          <th colSpan="2">
-            Status Table
-            <label className="toggle-switch">
-              <input
-                type="checkbox"
-                checked={autoRefresh}
-                onChange={() => setAutoRefresh(!autoRefresh)}
-              />
-              <span className="slider round" title="Auto Status Refresh"></span>
-            </label>
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {userAccountStatusProperties.map((key) => (
-          <tr key={key}>
-            <td className="property-cell">{key}</td>
-            <td className="value-cell">
-              {formatValue(key, userAccountStatus[key])}
-            </td>
+    <div className="user-status-table-container">
+      <table className="user-account-status-table">
+        <thead>
+          <tr>
+            <th colSpan="2">
+              Status Table
+              <label className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={autoRefresh}
+                  onChange={() => setAutoRefresh(!autoRefresh)}
+                />
+                <span className="slider round" title="Auto Status Refresh"></span>
+              </label>
+            </th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {userAccountStatusProperties.map((key) => (
+            <tr key={key}>
+              <td className="property-cell">{key}</td>
+              <td className="value-cell">
+                {formatValue(key, userAccountStatus[key])}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 };
 
