@@ -122,6 +122,16 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
     return date.toLocaleString(); // Use toLocaleString for a readable format
   };
 
+  const calculatePasswordAge = (pwdLastSet) => {
+    if (!pwdLastSet) return 'N/A';
+    const epochDiff = 11644473600000; // Difference between Unix epoch and Windows epoch in milliseconds
+    const lastSetDate = new Date((parseInt(pwdLastSet, 10) / 10000) - epochDiff);
+    const currentDate = new Date();
+    const diffTime = Math.abs(currentDate - lastSetDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return `${diffDays} days`;
+  };
+
   return (
     <div className="user-status-table-container">
       <table className="user-account-status-table">
@@ -149,6 +159,12 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
               </td>
             </tr>
           ))}
+          <tr>
+            <td className="property-cell">Password Age</td>
+            <td className="value-cell">
+              {calculatePasswordAge(userAccountStatus.pwdLastSet)}
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>

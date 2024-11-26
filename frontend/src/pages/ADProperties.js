@@ -214,6 +214,18 @@ const ADProperties = ({ permissions }) => {
     }
   };
 
+  const launchProgram = (program, args) => {
+    let url;
+    if (program === 'CmRcViewer') {
+      url = `CmRcViewer://${args}`;
+    } else if (program === 'msra') {
+      url = `msra://offerRA ${args}`;
+    } else {
+      url = `${program}://${args}`;
+    }
+    window.location.href = url;
+  };
+
   return (
     <div className="ad-properties-container">
       <Tabs
@@ -222,6 +234,16 @@ const ADProperties = ({ permissions }) => {
         onTabClick={handleTabClick}
         onCloseTab={closeTab}
       />
+      {tabs[activeTab]?.data.ObjectClass === 'computer' && (
+        <div className="button-container">
+          <button onClick={() => launchProgram('CmRcViewer', `${adObjectID}`)} className="launch-button">
+            Launch CmRcViewer
+          </button>
+          <button onClick={() => launchProgram('msra', `/offerRA ${adObjectID}`)} className="launch-button">
+            Launch msra
+          </button>
+        </div>
+      )}
       <div className="button-container">
         <button onClick={() => setModalIsOpen(true)} className="settings-button">
           ⚙️
