@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom';
 import Modal from 'react-modal';
 import Logs from '../components/Logs';
-import StatusTable from '../components/StatusTable'; // Import the new component
+import UserStatusTable from '../components/UserStatusTable'; // Import the UserStatusTable component
+import ComputerStatusTable from '../components/ComputerStatusTable'; // Import the ComputerStatusTable component
 import '../styles/Tabs.css'; // Import the CSS file for styling the tabs
 import '../styles/ADProperties.css';
 
@@ -40,6 +41,7 @@ const ADProperties = ({ permissions }) => {
   const navigate = useNavigate();
   const defaultUserProperties = useMemo(() => [
     'sAMAccountName',
+    'ObjectClass',
     'Name',
     'mail',
     'title',
@@ -53,6 +55,7 @@ const ADProperties = ({ permissions }) => {
 
   const defaultComputerProperties = useMemo(() => [
     'CN',
+    'ObjectClass',
     'CanonicalName',
     'operatingSystem',
     'DistinguishedName',
@@ -247,12 +250,18 @@ const ADProperties = ({ permissions }) => {
             </tbody>
           </table>
         </div>
-        {(tabs[activeTab]?.data.ObjectClass === 'user' || tabs[activeTab]?.data.ObjectClass === 'computer') && (
+        {(tabs[activeTab]?.data.ObjectClass === 'user') && (
           <div className="user-account-status-table-container">
-            <StatusTable
-              data={tabs[activeTab]?.data}
-              adObjectID={tabs[activeTab]?.name} // Pass adObjectID to StatusTable
-              permissions={permissions} // Pass permissions to StatusTable
+            <UserStatusTable
+              adObjectID={tabs[activeTab]?.name} // Pass adObjectID to UserStatusTable
+              permissions={permissions} // Pass permissions to UserStatusTable
+            />
+          </div>
+        )}
+        {(tabs[activeTab]?.data.ObjectClass === 'computer') && (
+          <div className="computer-status-table-container">
+            <ComputerStatusTable
+              adObjectID={tabs[activeTab]?.name} // Pass adObjectID to ComputerStatusTable
             />
           </div>
         )}

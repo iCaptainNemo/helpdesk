@@ -1,20 +1,22 @@
-import React, { useEffect, useState } from 'react';
-import '../styles/StatusTable.css';
+import React, { useEffect, useState, useMemo } from 'react';
+import '../styles/UserStatusTable.css';
 import ScriptButton from './ScriptButton'; // Import the ScriptButton component
 
-const UserAccountStatusTable = ({ adObjectID, permissions }) => {
+const UserStatusTable = ({ adObjectID, permissions }) => {
   const [userAccountStatus, setUserAccountStatus] = useState({});
   const [autoRefresh, setAutoRefresh] = useState(true); // State to control auto-refresh
-  const userAccountStatusProperties = [
+  const userAccountStatusProperties = useMemo(() => [
     'Enabled',
     'LockedOut',
     'badPasswordTime',
     'badPwdCount',
     'PasswordExpired',
     'pwdLastSet'
-  ];
+  ], []);
 
   useEffect(() => {
+    let isMounted = true; // Track if the component is mounted
+
     const fetchUserAccountStatus = async () => {
       try {
         const token = localStorage.getItem('token');
@@ -33,9 +35,13 @@ const UserAccountStatusTable = ({ adObjectID, permissions }) => {
         if (!response.ok) throw new Error('Network response was not ok');
 
         const data = await response.json();
-        setUserAccountStatus(data);
+        if (isMounted) {
+          setUserAccountStatus(data);
+        }
       } catch (error) {
-        console.error('Error fetching user account status:', error);
+        if (isMounted) {
+          console.error('Error fetching user account status:', error);
+        }
       }
     };
 
@@ -43,11 +49,14 @@ const UserAccountStatusTable = ({ adObjectID, permissions }) => {
 
     let interval;
     if (autoRefresh) {
-      interval = setInterval(fetchUserAccountStatus, 2000); // Refresh every second
+      interval = setInterval(fetchUserAccountStatus, 5000); // Refresh every 3 seconds
     }
 
-    return () => clearInterval(interval); // Cleanup interval on component unmount
-  }, [adObjectID, autoRefresh]);
+    return () => {
+      isMounted = false; // Cleanup function to set isMounted to false
+      clearInterval(interval); // Cleanup interval on component unmount
+    };
+  }, [adObjectID, autoRefresh, userAccountStatusProperties]);
 
   const handleUnlockSuccess = (result) => {
     if (result.message.includes('Unlocked')) {
@@ -144,4 +153,4 @@ const UserAccountStatusTable = ({ adObjectID, permissions }) => {
   );
 };
 
-export default UserAccountStatusTable;
+export default UserStatusTable;
