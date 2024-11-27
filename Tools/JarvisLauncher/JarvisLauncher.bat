@@ -10,9 +10,9 @@ if "%program%"=="CmRcView" (
 ) else if "%program%"=="msra" (
     "C:\Windows\System32\msra.exe" /offerRA %adObjectID%
 ) else if "%program%"=="powershe" (
-    powershell.exe %adObjectID%
+    powershell.exe -NoExit Enter-PSSession -ComputerName %adObjectID%
 ) else if "%program%"=="cmd.exe" (
-    cmd.exe /c %adObjectID%
+    cmd.exe /k psexec.exe \\%adObjectID% cmd.exe
 ) else (
     echo Unknown program: %program%
 )

@@ -239,15 +239,21 @@ const ADProperties = ({ permissions }) => {
         onCloseTab={closeTab}
       />
       {tabs[activeTab]?.data.ObjectClass === 'computer' && (
-        <div className="button-container">
-          <button onClick={() => launchProgram('CmRcViewer', adObjectID)} className="launch-button">
-            Launch CmRcViewer
-          </button>
-          <button onClick={() => launchProgram('msra', adObjectID)} className="launch-button">
-            Launch msra
-          </button>
-        </div>
-      )}
+      <div className="button-container">
+      <button onClick={() => launchProgram('CmRcViewer', adObjectID)} className="launch-button">
+        CmRcViewer
+      </button>
+      <button onClick={() => launchProgram('msra', adObjectID)} className="launch-button">
+        msra
+      </button>
+      <button onClick={() => launchProgram('powershell', adObjectID)} className="launch-button">
+        PowerShell
+      </button>
+      <button onClick={() => launchProgram('cmd', adObjectID)} className="launch-button">
+        Command Prompt
+      </button>
+    </div>
+  )}
       <div className="button-container">
         <button onClick={() => setModalIsOpen(true)} className="settings-button">
           ⚙️
