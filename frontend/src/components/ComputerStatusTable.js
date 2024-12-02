@@ -4,6 +4,7 @@ import '../styles/ComputerStatusTable.css';
 const ComputerStatusTable = ({ adObjectID }) => {
   const [computerStatus, setComputerStatus] = useState('Checking...');
   const [ipv4Address, setIpv4Address] = useState('Fetching...');
+  const [users, setUsers] = useState('Fetching...');
   const [autoRefresh, setAutoRefresh] = useState(true); // State to control auto-refresh
   const [ipFetched, setIpFetched] = useState(false); // State to track if IP address has been fetched
 
@@ -31,14 +32,17 @@ const ComputerStatusTable = ({ adObjectID }) => {
 
         if (statusData === true && !ipFetched) {
           fetchIpv4Address();
+          fetchLoggedInUsers();
           setIpFetched(true); // Mark IP address as fetched
         } else if (statusData !== true) {
           setIpv4Address('Not Online');
+          setUsers('No logged in users');
         }
       } catch (error) {
         console.error('Error fetching computer status:', error);
         setComputerStatus('Offline');
         setIpv4Address('Not Online');
+        setUsers('No logged in users');
       }
     };
 
@@ -79,6 +83,46 @@ const ComputerStatusTable = ({ adObjectID }) => {
     }
   };
 
+  const fetchLoggedInUsers = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No token found');
+  
+      const usersCommand = `../../../Tools/PsLoggedon.exe -l -x \\\\${adObjectID} | ConvertTo-Json -Compress`;
+  
+      const usersResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ command: usersCommand }),
+      });
+  
+      if (!usersResponse.ok) throw new Error('Network response was not ok');
+  
+      const usersData = await usersResponse.json();
+  
+      // Ensure usersData.value is parsed correctly
+      const parsedData = JSON.parse(usersData);
+  
+      if (!Array.isArray(parsedData)) {
+        throw new Error('Unexpected data format');
+      }
+  
+      const startIndex = parsedData.findIndex(line => line.includes('Users logged on locally:'));
+  
+      const usersList = startIndex !== -1
+        ? parsedData.slice(startIndex + 1).map(line => line.replace('\\t', '').trim()).filter(line => line)
+        : [];
+  
+      setUsers(usersList.length > 0 ? usersList.join(', ') : 'No logged in users');
+    } catch (error) {
+      console.error('Error fetching logged in users:', error);
+      setUsers('No logged in users');
+    }
+  };
+
   return (
     <div className="computer-status-table-container">
       <table className="computer-status-table">
@@ -108,6 +152,12 @@ const ComputerStatusTable = ({ adObjectID }) => {
             <td className="property-cell">IPv4 Address</td>
             <td className="value-cell">
               {ipv4Address}
+            </td>
+          </tr>
+          <tr>
+            <td className="property-cell">Users</td>
+            <td className="value-cell">
+              {users}
             </td>
           </tr>
         </tbody>
