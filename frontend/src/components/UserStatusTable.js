@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import '../styles/UserStatusTable.css';
 import ScriptButton from './ScriptButton'; // Import the ScriptButton component
+import CurrentComputers from './CurrentComputers'; // Import the CurrentComputers component
 
 const UserStatusTable = ({ adObjectID, permissions }) => {
   const [userAccountStatus, setUserAccountStatus] = useState({});
@@ -167,6 +168,7 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
           </tr>
         </tbody>
       </table>
+      <CurrentComputers adObjectID={adObjectID} />
     </div>
   );
 };

@@ -1,0 +1,82 @@
+.current-computers-table-container {
+  margin-top: 20px;
+}
+
+.current-computers-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.current-computers-table th,
+.current-computers-table td {
+  border: 1px solid #ddd;
+}
+
+.current-computers-table th {
+  background-color: #9b9999;
+  padding: 7px;
+  position: relative;
+}
+
+.current-computers-table .property-cell {
+  padding: 5px; /* Add padding to ensure spacing for property cells */
+}
+
+.current-computers-table .value-cell {
+  text-align: center; /* Center only the value cells */
+  padding: 0; /* Remove padding to ensure the background color fills the entire cell */
+}
+
+.current-computers-table .value-cell.logged-in {
+  background-color: green;
+  color: white;
+}
+
+.current-computers-table .value-cell.not-logged-in {
+  background-color: red;
+  color: white;
+}
+
+.current-computers-table .toggle-switch {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-block;
+  width: 34px;
+  height: 20px;
+}
+
+.current-computers-table .toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.current-computers-table .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.4s;
+  border-radius: 34px;
+}
+
+.current-computers-table .slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+.current-computers-table input:checked + .slider {
+  background-color: #2196F3;
+}
