@@ -106,7 +106,7 @@ const CurrentComputersTable = ({ adObjectID }) => {
     };
 
     const checkComputerStatuses = async () => {
-      console.log('Computers to check:', computers);
+      //console.log('Computers to check:', computers);
 
       const statuses = await Promise.all(computers.map(async (computer) => {
        // console.log(`Checking domain status for computer: ${computer}`);
