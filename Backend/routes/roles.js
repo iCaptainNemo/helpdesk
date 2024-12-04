@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { executeQuery } = require('../db/queries');
+const { executeQuery, assignRoleToUser, removeRoleFromUser } = require('../db/queries');
 const logger = require('../utils/logger'); // Import the logger
+const verifyToken = require('../middleware/verifyToken'); // Import the verifyToken middleware
+const checkRoleHierarchy = require('../middleware/checkRoleHierarchy');
 
 // Fetch all roles
 router.get('/', async (req, res) => {
@@ -60,4 +62,41 @@ router.delete('/:roleId', async (req, res) => {
     }
 });
 
+// Assign a role to a user
+router.post('/assign', verifyToken, checkRoleHierarchy, async (req, res) => {
+    const { adminID, roleID } = req.body;
+    if (!adminID || !roleID) {
+        return res.status(400).json({ error: 'AdminID and RoleID are required' });
+    }
+
+    try {
+        await assignRoleToUser(adminID, roleID);
+        logger.info(`Role ${roleID} assigned to user ${adminID}`);
+        logger.verbose(`Role ${roleID} assigned to user ${adminID} by ${req.AdminID}`);
+        logger.debug(`Assign role request body: ${JSON.stringify(req.body)}`);
+        res.json({ message: 'Role assigned successfully' });
+    } catch (error) {
+        logger.error(`Failed to assign role: ${error}`);
+        res.status(500).json({ error: 'Failed to assign role' });
+    }
+});
+
+// Remove a role from a user
+router.post('/remove', verifyToken, checkRoleHierarchy, async (req, res) => {
+    const { adminID, roleID } = req.body;
+    if (!adminID || !roleID) {
+        return res.status(400).json({ error: 'AdminID and RoleID are required' });
+    }
+
+    try {
+        await removeRoleFromUser(adminID, roleID);
+        logger.info(`Role ${roleID} removed from user ${adminID}`);
+        logger.verbose(`Role ${roleID} removed from user ${adminID} by ${req.AdminID}`);
+        logger.debug(`Remove role request body: ${JSON.stringify(req.body)}`);
+        res.json({ message: 'Role removed successfully' });
+    } catch (error) {
+        logger.error(`Failed to remove role: ${error}`);
+        res.status(500).json({ error: 'Failed to remove role' });
+    }
+});
 module.exports = router;

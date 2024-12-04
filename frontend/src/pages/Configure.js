@@ -9,16 +9,27 @@ const Configure = ({ permissions }) => {
     const [users, setUsers] = useState([]);
     const [roles, setRoles] = useState([]);
     const [permissionsList, setPermissionsList] = useState([]);
-    const [newUser, setNewUser] = useState({ AdminID: '', roleID: '', permissionID: '' });
+    const [newUser, setNewUser] = useState({ AdminID: '', roleID: '' });
 
     useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.error('No token found');
+            return;
+        }
+
         // Check if the user has the required permission
         if (!permissions.includes('access_configure_page')) {
             navigate('/dashboard'); // Redirect to dashboard if the user does not have the required permission
         }
 
         // Fetch the current logging settings from the backend
-        fetch('/api/logging-settings')
+        fetch('/api/logging-settings', {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+        })
             .then(response => response.json())
             .then(data => {
                 setDebugLogging(data.debug);
@@ -29,29 +40,51 @@ const Configure = ({ permissions }) => {
             });
 
         // Fetch users, roles, and permissions
-        fetch('/api/users')
+        fetch('/api/users', {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+        })
             .then(response => response.json())
             .then(data => setUsers(data))
             .catch(error => console.error('Error fetching users:', error));
 
-        fetch('/api/roles')
+        fetch('/api/roles', {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+        })
             .then(response => response.json())
             .then(data => setRoles(data))
             .catch(error => console.error('Error fetching roles:', error));
 
-        fetch('/api/permissions')
+        fetch('/api/permissions', {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+        })
             .then(response => response.json())
             .then(data => setPermissionsList(data))
             .catch(error => console.error('Error fetching permissions:', error));
     }, [permissions, navigate]);
 
     const handleDebugToggle = () => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.error('No token found');
+            return;
+        }
+
         const newDebugLogging = !debugLogging;
         setDebugLogging(newDebugLogging);
         fetch('/api/logging-settings', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
             },
             body: JSON.stringify({ debug: newDebugLogging }),
         })
@@ -64,12 +97,19 @@ const Configure = ({ permissions }) => {
     };
 
     const handleVerboseToggle = () => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.error('No token found');
+            return;
+        }
+
         const newVerboseLogging = !verboseLogging;
         setVerboseLogging(newVerboseLogging);
         fetch('/api/logging-settings', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
             },
             body: JSON.stringify({ verbose: newVerboseLogging }),
         })
@@ -82,12 +122,19 @@ const Configure = ({ permissions }) => {
     };
 
     const handleRoleChange = (userId, roleId) => {
-        fetch(`/api/users/${userId}/roles`, {
-            method: 'PUT',
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.error('No token found');
+            return;
+        }
+
+        fetch('/api/roles/assign', {
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
             },
-            body: JSON.stringify({ roleId }),
+            body: JSON.stringify({ adminID: userId, roleID: roleId }),
         })
             .then(() => {
                 setUsers(users.map(user => user.AdminID === userId ? { ...user, roleID: roleId } : user));
@@ -97,55 +144,48 @@ const Configure = ({ permissions }) => {
             });
     };
 
-    const handlePermissionChange = (userId, permissionId) => {
-        fetch(`/api/users/${userId}/permissions`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ permissionId }),
-        })
-            .then(() => {
-                setUsers(users.map(user => user.AdminID === userId ? { ...user, permissionID: permissionId } : user));
-            })
-            .catch(error => {
-                console.error('Error updating user permission:', error);
-            });
-    };
+    const handleRemoveRole = (userId, roleId) => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.error('No token found');
+            return;
+        }
 
-    const handleAddPermission = (userId, permissionId) => {
-        fetch(`/api/users/${userId}/permissions`, {
+        fetch('/api/roles/remove', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
             },
-            body: JSON.stringify({ permissionId }),
+            body: JSON.stringify({ adminID: userId, roleID: roleId }),
         })
             .then(() => {
-                setUsers(users.map(user => {
-                    if (user.AdminID === userId) {
-                        return { ...user, permissions: [...(user.permissions || []), permissionId] };
-                    }
-                    return user;
-                }));
+                setUsers(users.map(user => user.AdminID === userId ? { ...user, roleID: null } : user));
             })
             .catch(error => {
-                console.error('Error adding user permission:', error);
+                console.error('Error removing user role:', error);
             });
     };
 
     const handleAddUser = () => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.error('No token found');
+            return;
+        }
+
         fetch('/api/users', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
             },
             body: JSON.stringify(newUser),
         })
             .then(response => response.json())
             .then(data => {
                 setUsers([...users, data]);
-                setNewUser({ AdminID: '', roleID: '', permissionID: '' });
+                setNewUser({ AdminID: '', roleID: '' });
             })
             .catch(error => {
                 console.error('Error adding new user:', error);
@@ -189,7 +229,6 @@ const Configure = ({ permissions }) => {
                         <th>AdminID</th>
                         <th>Role</th>
                         <th>Permissions</th>
-                        <th>Add Permission</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -203,17 +242,10 @@ const Configure = ({ permissions }) => {
                                         <option key={role.RoleID} value={role.RoleID}>{role.RoleName}</option>
                                     ))}
                                 </select>
+                                <button onClick={() => handleRemoveRole(user.AdminID, user.roles.length > 0 ? user.roles[0].RoleID : '')}>Remove Role</button>
                             </td>
                             <td>
                                 {(user.permissions || []).join(', ')}
-                            </td>
-                            <td>
-                                <select onChange={(e) => handleAddPermission(user.AdminID, e.target.value)}>
-                                    <option value="">Select Permission</option>
-                                    {permissionsList.map(permission => (
-                                        <option key={permission.PermissionID} value={permission.PermissionID}>{permission.PermissionName}</option>
-                                    ))}
-                                </select>
                             </td>
                         </tr>
                     ))}
@@ -232,12 +264,6 @@ const Configure = ({ permissions }) => {
                     <option value="">Select Role</option>
                     {roles.map(role => (
                         <option key={role.RoleID} value={role.RoleID}>{role.RoleName}</option>
-                    ))}
-                </select>
-                <select value={newUser.permissionID} onChange={(e) => setNewUser({ ...newUser, permissionID: e.target.value })}>
-                    <option value="">Select Permission</option>
-                    {permissionsList.map(permission => (
-                        <option key={permission.PermissionID} value={permission.PermissionID}>{permission.PermissionName}</option>
                     ))}
                 </select>
                 <button type="submit">Add User</button>

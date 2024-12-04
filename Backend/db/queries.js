@@ -100,7 +100,6 @@ function fetchAllAdminUsers() {
     });
 }
 
-
 // New functions for managing servers
 function insertServer(server) {
     const query = `
@@ -152,7 +151,27 @@ function fetchPermissions() {
 }
 
 function assignRoleToUser(adminID, roleID) {
-    const query = `INSERT INTO UserRoles (AdminID, RoleID) VALUES (?, ?);`;
+    const checkQuery = `SELECT * FROM UserRoles WHERE AdminID = ? AND RoleID = ?;`;
+    const insertQuery = `INSERT INTO UserRoles (AdminID, RoleID) VALUES (?, ?);`;
+
+    return new Promise((resolve, reject) => {
+        executeQuery(checkQuery, [adminID, roleID])
+            .then(result => {
+                if (result.length > 0) {
+                    // Role already assigned, do nothing
+                    resolve();
+                } else {
+                    // Role not assigned, insert it
+                    return executeQuery(insertQuery, [adminID, roleID]);
+                }
+            })
+            .then(resolve)
+            .catch(reject);
+    });
+}
+
+function removeRoleFromUser(adminID, roleID) {
+    const query = `DELETE FROM UserRoles WHERE AdminID = ? AND RoleID = ?;`;
     return executeQuery(query, [adminID, roleID]);
 }
 
@@ -160,6 +179,7 @@ function assignPermissionToRole(roleID, permissionID) {
     const query = `INSERT INTO RolePermissions (RoleID, PermissionID) VALUES (?, ?);`;
     return executeQuery(query, [roleID, permissionID]);
 }
+
 async function fetchRolesForUser(adminID) {
     const query = `
         SELECT Roles.RoleID, Roles.RoleName 
@@ -168,7 +188,6 @@ async function fetchRolesForUser(adminID) {
         WHERE UserRoles.AdminID = ?;
     `;
     const roles = await executeQuery(query, [adminID]);
-    // console.log('Roles for user:', roles); 
     return roles; // Return the full roles array with RoleID and RoleName
 }
 
@@ -179,7 +198,6 @@ async function fetchPermissionsForRoles(roleIDs) {
                    JOIN RolePermissions ON Permissions.PermissionID = RolePermissions.PermissionID
                    WHERE RolePermissions.RoleID IN (${placeholders});`;
     const permissions = await executeQuery(query, roleIDs);
-    //  console.log('Permissions for roles:', permissions); 
     return permissions.map(permission => permission.PermissionName);
 }
 
@@ -199,6 +217,7 @@ module.exports = {
     fetchRoles,
     fetchPermissions,
     assignRoleToUser,
+    removeRoleFromUser,
     assignPermissionToRole,
     fetchRolesForUser,
     fetchPermissionsForRoles

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { executeQuery } = require('../db/queries');
 const logger = require('../utils/logger'); // Import the logger
+const checkRoleHierarchy = require('../middleware/checkRoleHierarchy');
 
 // Fetch all permissions
 router.get('/', async (req, res) => {
