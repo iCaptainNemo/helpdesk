@@ -87,6 +87,20 @@ function fetchAdminUser(adminID) {
     });
 }
 
+function fetchAllAdminUsers() {
+    const query = `SELECT * FROM Admin;`;
+    return new Promise((resolve, reject) => {
+        db.all(query, [], (err, rows) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(rows);
+            }
+        });
+    });
+}
+
+
 // New functions for managing servers
 function insertServer(server) {
     const query = `
@@ -170,6 +184,8 @@ async function fetchPermissionsForRoles(roleIDs) {
 }
 
 module.exports = {
+    fetchAdminUser,
+    fetchAllAdminUsers,
     executeQuery,
     storeUser,
     fetchUser,
