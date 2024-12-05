@@ -23,8 +23,9 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
         const token = localStorage.getItem('token');
         if (!token) throw new Error('No token found');
 
+        // Fetch Active Directory properties
         const command = `Get-ADUser -Identity ${adObjectID} -Properties ${userAccountStatusProperties.join(',')}`;
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
+        const adResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -33,11 +34,26 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
           body: JSON.stringify({ command }),
         });
 
-        if (!response.ok) throw new Error('Network response was not ok');
+        if (!adResponse.ok) throw new Error('Network response was not ok');
 
-        const data = await response.json();
+        const adData = await adResponse.json();
+
+        // Fetch additional fields from the database
+        const dbResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/fetch-user`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ userID: adObjectID }),
+        });
+
+        if (!dbResponse.ok) throw new Error('Network response was not ok');
+
+        const dbData = await dbResponse.json();
+
         if (isMounted) {
-          setUserAccountStatus(data);
+          setUserAccountStatus({ ...adData, ...dbData });
         }
       } catch (error) {
         if (isMounted) {
@@ -152,7 +168,7 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
           </tr>
         </thead>
         <tbody>
-          {userAccountStatusProperties.map((key) => (
+          {userAccountStatusProperties.concat(['LastHelped', 'TimesUnlocked', 'PasswordResets']).map((key) => (
             <tr key={key}>
               <td className="property-cell">{key}</td>
               <td className="value-cell">
