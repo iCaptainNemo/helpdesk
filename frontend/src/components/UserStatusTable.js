@@ -6,7 +6,7 @@ import CurrentComputers from './CurrentComputers'; // Import the CurrentComputer
 const UserStatusTable = ({ adObjectID, permissions }) => {
   const [userAccountStatus, setUserAccountStatus] = useState({});
   const [additionalFields, setAdditionalFields] = useState({});
-  const [autoRefresh, setAutoRefresh] = useState(true); // State to control auto-refresh
+  const [autoRefresh, setAutoRefresh] = useState(false); // State to control auto-refresh
   const userAccountStatusProperties = useMemo(() => [
     'Enabled',
     'LockedOut',
@@ -201,6 +201,7 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
           </tr>
         </tbody>
       </table>
+      <br />
       <table className="user-account-status-table">
         <thead>
           <tr>
