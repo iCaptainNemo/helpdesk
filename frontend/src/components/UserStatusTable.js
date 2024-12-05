@@ -5,6 +5,7 @@ import CurrentComputers from './CurrentComputers'; // Import the CurrentComputer
 
 const UserStatusTable = ({ adObjectID, permissions }) => {
   const [userAccountStatus, setUserAccountStatus] = useState({});
+  const [additionalFields, setAdditionalFields] = useState({});
   const [autoRefresh, setAutoRefresh] = useState(true); // State to control auto-refresh
   const userAccountStatusProperties = useMemo(() => [
     'Enabled',
@@ -38,6 +39,21 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
 
         const adData = await adResponse.json();
 
+        if (isMounted) {
+          setUserAccountStatus(adData);
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('Error fetching user account status:', error);
+        }
+      }
+    };
+
+    const fetchAdditionalFields = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('No token found');
+
         // Fetch additional fields from the database
         const dbResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/fetch-user`, {
           method: 'POST',
@@ -53,16 +69,17 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
         const dbData = await dbResponse.json();
 
         if (isMounted) {
-          setUserAccountStatus({ ...adData, ...dbData });
+          setAdditionalFields(dbData);
         }
       } catch (error) {
         if (isMounted) {
-          console.error('Error fetching user account status:', error);
+          console.error('Error fetching additional fields:', error);
         }
       }
     };
 
     fetchUserAccountStatus();
+    fetchAdditionalFields();
 
     let interval;
     if (autoRefresh) {
@@ -168,7 +185,7 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
           </tr>
         </thead>
         <tbody>
-          {userAccountStatusProperties.concat(['LastHelped', 'TimesUnlocked', 'PasswordResets']).map((key) => (
+          {userAccountStatusProperties.map((key) => (
             <tr key={key}>
               <td className="property-cell">{key}</td>
               <td className="value-cell">
@@ -182,6 +199,23 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
               {calculatePasswordAge(userAccountStatus.pwdLastSet)}
             </td>
           </tr>
+        </tbody>
+      </table>
+      <table className="user-account-status-table">
+        <thead>
+          <tr>
+            <th colSpan="2">User Stats</th>
+          </tr>
+        </thead>
+        <tbody>
+          {['LastHelped', 'TimesUnlocked', 'PasswordResets'].map((key) => (
+            <tr key={key}>
+              <td className="property-cell">{key}</td>
+              <td className="value-cell">
+                {formatValue(key, additionalFields[key])}
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
       <CurrentComputers adObjectID={adObjectID} />
