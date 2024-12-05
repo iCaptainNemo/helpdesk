@@ -27,7 +27,7 @@ const CurrentComputersTable = ({ adObjectID }) => {
 
         const logsData = await response.json();
         const uniqueComputers = [...new Set(logsData.map(log => log.Computer))];
-        setComputers(uniqueComputers.reverse()); // Reverse the order of the computers
+        setComputers([...uniqueComputers].reverse()); // Reverse the order of the computers
       } catch (error) {
         console.error('Error fetching computers:', error);
       }
@@ -196,7 +196,7 @@ const CurrentComputersTable = ({ adObjectID }) => {
               <td className="property-cell clickable-cell" onClick={() => copyToClipboard(computer)}>
                 {computer}
               </td>
-              <td className="value-cell">
+              <td className={`value-cell ${computerStatuses[computer] === 'Logged In' ? 'logged-in' : ''}`}>
                 {computerStatuses[computer] || 'Checking...'}
               </td>
             </tr>

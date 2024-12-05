@@ -28,8 +28,7 @@
 }
 
 .current-computers-table .value-cell.logged-in {
-  background-color: green;
-  color: white;
+  color: rgb(4, 211, 4); /* Green text for logged-in status */
 }
 
 .current-computers-table .value-cell.not-logged-in {
