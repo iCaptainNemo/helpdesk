@@ -1,10 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '../styles/CurrentComputers.css';
 
 const CurrentComputersTable = ({ adObjectID }) => {
   const [computers, setComputers] = useState([]);
   const [computerStatuses, setComputerStatuses] = useState({});
   const [tooltip, setTooltip] = useState({ visible: false, message: '' });
+  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, computer: null });
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchComputers = async () => {
@@ -24,7 +27,7 @@ const CurrentComputersTable = ({ adObjectID }) => {
 
         const logsData = await response.json();
         const uniqueComputers = [...new Set(logsData.map(log => log.Computer))];
-        setComputers(uniqueComputers);
+        setComputers(uniqueComputers.reverse()); // Reverse the order of the computers
       } catch (error) {
         console.error('Error fetching computers:', error);
       }
@@ -121,7 +124,7 @@ const CurrentComputersTable = ({ adObjectID }) => {
     if (computers.length > 0) {
       checkComputerStatuses();
     }
-  }, [computers]);
+  }, [computers, adObjectID]);
 
   const copyToClipboard = (value) => {
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -147,6 +150,36 @@ const CurrentComputersTable = ({ adObjectID }) => {
     }
   };
 
+  const handleContextMenu = (event, computer) => {
+    event.preventDefault();
+    setContextMenu({
+      visible: true,
+      x: event.clientX,
+      y: event.clientY,
+      computer
+    });
+  };
+
+  const handleCloseContextMenu = useCallback((event) => {
+    if (contextMenu.visible && !event.target.closest('.context-menu')) {
+      setContextMenu({ visible: false, x: 0, y: 0, computer: null });
+    }
+  }, [contextMenu.visible]);
+
+  const handleOpen = () => {
+    if (contextMenu.computer) {
+      navigate(`/ad-object/${contextMenu.computer}`);
+    }
+    setContextMenu({ visible: false, x: 0, y: 0, computer: null });
+  };
+
+  useEffect(() => {
+    document.addEventListener('click', handleCloseContextMenu);
+    return () => {
+      document.removeEventListener('click', handleCloseContextMenu);
+    };
+  }, [handleCloseContextMenu]);
+
   return (
     <div className="current-computers-table-container">
       <table className="current-computers-table">
@@ -159,7 +192,7 @@ const CurrentComputersTable = ({ adObjectID }) => {
         </thead>
         <tbody>
           {computers.map((computer) => (
-            <tr key={computer}>
+            <tr key={computer} onContextMenu={(event) => handleContextMenu(event, computer)}>
               <td className="property-cell clickable-cell" onClick={() => copyToClipboard(computer)}>
                 {computer}
               </td>
@@ -171,6 +204,14 @@ const CurrentComputersTable = ({ adObjectID }) => {
         </tbody>
       </table>
       {tooltip.visible && <div className="tooltip">{tooltip.message}</div>}
+      {contextMenu.visible && (
+        <div
+          className="context-menu"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+        >
+          <button onClick={handleOpen}>Open {contextMenu.computer}</button>
+        </div>
+      )}
     </div>
   );
 };
