@@ -5,7 +5,12 @@ import CurrentComputers from './CurrentComputers'; // Import the CurrentComputer
 
 const UserStatusTable = ({ adObjectID, permissions }) => {
   const [userAccountStatus, setUserAccountStatus] = useState({});
-  const [additionalFields, setAdditionalFields] = useState({});
+  const [additionalFields, setAdditionalFields] = useState({
+    LastHelped: null,
+    TimesUnlocked: null,
+    PasswordResets: null,
+    TimesHelped: null
+  });
   const [autoRefresh, setAutoRefresh] = useState(false); // State to control auto-refresh
   const userAccountStatusProperties = useMemo(() => [
     'Enabled',
@@ -53,23 +58,31 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
       try {
         const token = localStorage.getItem('token');
         if (!token) throw new Error('No token found');
-
+    
+        if (!adObjectID) throw new Error('adObjectID is not defined');
+    
+        const backendUrl = process.env.REACT_APP_BACKEND_URL;
+        if (!backendUrl) throw new Error('Backend URL is not defined');
+    
         // Fetch additional fields from the database
-        const dbResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/fetch-user`, {
+        const dbResponse = await fetch(`${backendUrl}/api/fetch-user`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
           },
-          body: JSON.stringify({ userID: adObjectID }),
+          body: JSON.stringify({ adObjectID }),
         });
-
+    
         if (!dbResponse.ok) throw new Error('Network response was not ok');
-
+    
         const dbData = await dbResponse.json();
-
+    
         if (isMounted) {
-          setAdditionalFields(dbData);
+          setAdditionalFields((prevFields) => ({
+            ...prevFields,
+            ...dbData[0] // Assuming dbData is an array and you need the first element
+          }));
         }
       } catch (error) {
         if (isMounted) {
@@ -209,7 +222,7 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
           </tr>
         </thead>
         <tbody>
-          {['LastHelped', 'TimesUnlocked', 'PasswordResets'].map((key) => (
+          {['LastHelped', 'TimesUnlocked', 'PasswordResets', 'TimesHelped'].map((key) => (
             <tr key={key}>
               <td className="property-cell">{key}</td>
               <td className="value-cell">

@@ -100,8 +100,8 @@ const loggingSettingsRoute = require('./routes/loggingSettings'); // Import the 
 const usersRoute = require('./routes/users'); // Import the new users route
 
 // Use routes and pass db to them
-app.use('/api/fetch-adobject', fetchADObjectRoute); 
-app.use('/api/fetch-user', fetchUserRoute); 
+app.use('/api/fetch-adobject', fetchADObjectRoute);
+app.use('/api/fetch-user', fetchUserRoute); // Register the fetchUser route
 app.use('/api/hello-world', helloWorldRoute);
 app.use('/api', helloWorldMiddleware);
 app.use('/api/auth', authRoutes); // Authentication routes
