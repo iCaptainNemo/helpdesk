@@ -15,6 +15,7 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
   const userAccountStatusProperties = useMemo(() => [
     'Enabled',
     'LockedOut',
+    'lockoutTime',
     'badPasswordTime',
     'badPwdCount',
     'PasswordExpired',
