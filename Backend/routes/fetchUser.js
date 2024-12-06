@@ -9,7 +9,7 @@ router.post('/', async (req, res) => { // Ensure the path is '/'
     logger.debug('Received request to fetch user with ID:', adObjectID);
     try {
         let user = await fetchUser(adObjectID); // Updated to use adObjectID
-        if (!user) {
+        if (!user || user.length === 0) { // Check if user is null or an empty array
             logger.info(`User with ID ${adObjectID} not found. Creating new user.`);
             // If user does not exist, create the user
             const newUser = {
