@@ -172,14 +172,30 @@ const ADProperties = ({ permissions }) => {
     return dn.split(',').filter(part => part.startsWith('CN=')).map(part => part.replace('CN=', '')).join(', ');
   };
 
-  const formatDate = (dateString) => {
-    const date = new Date(parseInt(dateString, 10));
-    return date.toLocaleDateString();
+  const formatDate = (unixTime) => {
+    const date = new Date(parseInt(unixTime, 10));
+    return date.toLocaleString(); // Converts to local date and time string
   };
 
-  const formatValue = (value) => {
+  const isWithin14Days = (date) => {
+    const currentDate = new Date();
+    const diffTime = Math.abs(currentDate - date);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 14;
+  };
+
+  const formatValue = (key, value) => {
     if (Array.isArray(value)) {
       return value.map(stripDistinguishedName).join(', ');
+    } else if (key === 'Created') {
+      const formattedDate = formatDate(value);
+      const date = new Date(parseInt(value, 10));
+      const isRecent = isWithin14Days(date);
+      return (
+        <span style={{ color: isRecent ? '#90ee90' : 'inherit' }}>
+          {formattedDate}
+        </span>
+      );
     } else if (typeof value === 'string' && value.match(/^\d+$/)) {
       return formatDate(value);
     } else if (typeof value === 'object' && value !== null) {
@@ -275,8 +291,8 @@ const ADProperties = ({ permissions }) => {
               {tabs[activeTab]?.selectedProperties.map((key) => (
                 <tr key={key}>
                   <td>{key}</td>
-                  <td onClick={() => copyToClipboard(formatValue(tabs[activeTab].data[key]))} className="clickable-cell">
-                    {formatValue(tabs[activeTab].data[key])}
+                  <td onClick={() => copyToClipboard(formatValue(key, tabs[activeTab].data[key]))} className="clickable-cell">
+                    {formatValue(key, tabs[activeTab].data[key])}
                   </td>
                 </tr>
               ))}

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { storeUser, fetchUser, updateUser } = require('../db/queries'); // Import the functions
+const { storeUser, fetchUser } = require('../db/queries'); // Import the functions
 const logger = require('../utils/logger'); // Import the logger module
 
 // Route to fetch a user by adObjectID
@@ -41,7 +41,7 @@ router.put('/update', async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
         // Update the user with new values
-        await updateUser(adObjectID, updates);
+        await storeUser({ UserID: adObjectID, ...updates });
         logger.info(`User with ID ${adObjectID} updated.`);
         user = await fetchUser(adObjectID); // Fetch the updated user
         logger.debug('Updated user:', user);
