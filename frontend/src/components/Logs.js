@@ -13,7 +13,7 @@ const Logs = ({ adObjectID }) => {
           throw new Error('AD Object ID is undefined');
         }
 
-        console.log('Fetching logs for AD Object ID:', adObjectID); // Add this log
+       // console.log('Fetching logs for AD Object ID:', adObjectID); // Add this log
 
         const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/get-logs`, {
           method: 'POST',
@@ -29,7 +29,15 @@ const Logs = ({ adObjectID }) => {
         }
 
         const logsData = await response.json();
-        setLogs(logsData.reverse()); // Reverse the logs order
+       // console.log('Fetched logs data:', logsData); // Add this log
+
+        if (Array.isArray(logsData)) {
+          setLogs(logsData.reverse()); // Reverse the logs order if it's an array
+        } else if (typeof logsData === 'object' && logsData !== null) {
+          setLogs([logsData]); // Wrap the single log entry in an array
+        } else {
+          throw new Error('Logs data is not an array or an object');
+        }
       } catch (error) {
         console.error('Error fetching logs:', error);
         setError(`Error fetching logs: ${error.message}`);

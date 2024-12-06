@@ -45,6 +45,7 @@ const ADProperties = ({ permissions }) => {
     'Name',
     'mail',
     'title',
+    'Created',
     'department',
     'homeDirectory',
     'streetAddress',
