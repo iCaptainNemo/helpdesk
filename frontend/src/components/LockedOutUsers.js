@@ -7,6 +7,7 @@ const LockedOutUsers = () => {
     const [lockedOutUsers, setLockedOutUsers] = useState([]);
     const [permissions, setPermissions] = useState([]);
     const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, userID: null });
+    const [additionalFields, setAdditionalFields] = useState({});
     const navigate = useNavigate();
 
     const fetchLockedOutUsers = () => {
@@ -63,9 +64,43 @@ const LockedOutUsers = () => {
         return () => clearInterval(intervalId);
     }, []);
 
-    const handleUnlockSuccess = (result, userID) => {
+    const handleUnlockSuccess = async (result, userID) => {
         if (result.message.includes('Unlocked')) {
             setLockedOutUsers(prevUsers => prevUsers.filter(user => user.UserID !== userID));
+
+            // Update user stats
+            const updates = {
+                LastHelped: new Date().toISOString(),
+                TimesHelped: (additionalFields.TimesHelped || 0) + 1,
+                TimesUnlocked: (additionalFields.TimesUnlocked || 0) + 1
+            };
+
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) throw new Error('No token found');
+
+                const backendUrl = process.env.REACT_APP_BACKEND_URL;
+                if (!backendUrl) throw new Error('Backend URL is not defined');
+
+                const response = await fetch(`${backendUrl}/api/fetch-user/update`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ adObjectID: userID, updates }),
+                });
+
+                if (!response.ok) throw new Error('Network response was not ok');
+
+                const updatedUser = await response.json();
+                setAdditionalFields((prevFields) => ({
+                    ...prevFields,
+                    ...updatedUser
+                }));
+            } catch (error) {
+                console.error('Error updating user stats:', error);
+            }
         }
         updateLockedOutUsers()
             .then(() => fetchLockedOutUsers()) // Fetch the updated list after updating
