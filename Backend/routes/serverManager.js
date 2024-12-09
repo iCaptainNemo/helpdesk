@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { insertServer, updateServer, deleteServer, fetchServer, fetchAllServers } = require('../db/queries');
 const logger = require('../utils/logger'); // Import the logger module
-const sanitizeInput = require('../middleware/sanitizeInput'); // Import the sanitizeInput middleware
 
 // Route to fetch all servers
 router.get('/', async (req, res) => {
