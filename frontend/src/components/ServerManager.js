@@ -74,7 +74,7 @@ const ServerManager = () => {
                 throw new Error('Failed to add server');
             }
             fetchServers(); // Refresh the server list
-            setIsModalOpen(false); // Close the modal
+            setSearchResults(prevResults => prevResults.filter(result => result.CN !== server.CN)); // Remove added server from search results
         } catch (error) {
             console.error('Error adding server:', error);
             setError(`Error adding server: ${error.message}`);
@@ -245,7 +245,7 @@ const ServerManager = () => {
                                     />
                                 </td>
                                 <td>
-                                    <button onClick={() => handleAddServer(result)}>+</button>
+                                    <button onClick={() => handleAddServer(result)}>Add</button>
                                 </td>
                             </tr>
                         ))}
