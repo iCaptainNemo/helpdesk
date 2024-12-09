@@ -46,8 +46,12 @@ const ServerManager = () => {
                 throw new Error('Failed to search servers');
             }
             const data = await response.json();
+            console.log('Search response data:', data); // Log the response data
+    
+            // Handle both single object and array of objects
+            const results = Array.isArray(data) ? data : [data];
             const existingServerNames = servers.map(server => server.ServerName.toLowerCase());
-            const filteredResults = data[0].result.filter(result => !existingServerNames.includes(result.CN.toLowerCase()));
+            const filteredResults = results.filter(result => !existingServerNames.includes(result.CN.toLowerCase()));
             setSearchResults(filteredResults); // Set the filtered search results
             setIsModalOpen(true); // Open the modal with search results
         } catch (error) {
