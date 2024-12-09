@@ -98,6 +98,8 @@ const serverStatusRoute = require('./routes/serverStatus'); // Route for server 
 const executeCommandRoute = require('./routes/executeCommand'); // Route for executing commands
 const loggingSettingsRoute = require('./routes/loggingSettings'); // Import the loggingSettings route
 const usersRoute = require('./routes/users'); // Import the new users route
+const multiFetchRoute = require('./routes/multiFetch'); // Import the multiFetch route
+const serverManagerRoute = require('./routes/serverManager'); // Import the serverManager route
 
 // Use routes and pass db to them
 app.use('/api/fetch-adobject', fetchADObjectRoute);
@@ -119,6 +121,8 @@ app.use('/api/users', usersRoute); // Register the new users route
 // app.use('/api/execute-command', verifyToken, verifyPermissions('execute_command'), executeCommandRoute); // Use the executeCommand route
 app.use('/api/execute-command', executeCommandRoute); // Use the executeCommand route
 app.use('/api/logging-settings', loggingSettingsRoute); // Use the loggingSettings route
+app.use('/api/multi-fetch', multiFetchRoute);
+app.use('/api/server-manager', serverManagerRoute);
 
 // Middleware to handle 403 Forbidden errors
 app.use(forbidden);
