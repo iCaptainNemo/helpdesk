@@ -1,0 +1,45 @@
+.server-manager-container {
+    padding: 20px;
+}
+
+.search-bar {
+    display: flex;
+    margin-bottom: 20px;
+}
+
+.search-bar input {
+    flex: 1;
+    padding: 10px;
+    margin-right: 10px;
+}
+
+.search-bar button {
+    padding: 10px;
+}
+
+.server-table,
+.search-results-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+.server-table th,
+.server-table td,
+.search-results-table th,
+.search-results-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.server-table th,
+.search-results-table th {
+    background-color: #f2f2f2;
+    color: black;
+}
+
+.error {
+    color: red;
+    margin-bottom: 20px;
+}

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/Configure.css'; // Import the CSS file for the toggle switch
+import ServerManager from '../components/ServerManager'; // Import the ServerManager component
 
 const Configure = ({ permissions }) => {
     const navigate = useNavigate();
@@ -268,6 +269,8 @@ const Configure = ({ permissions }) => {
                 </select>
                 <button type="submit">Add User</button>
             </form>
+
+            <ServerManager /> {/* Add the ServerManager component */}
         </div>
     );
 };

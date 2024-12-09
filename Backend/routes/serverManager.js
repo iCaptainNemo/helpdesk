@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { insertServer, updateServer, deleteServer, fetchServer, fetchAllServers } = require('../db/queries');
 const logger = require('../utils/logger'); // Import the logger module
+const sanitizeInput = require('../middleware/sanitizeInput'); // Import the sanitizeInput middleware
 
 // Route to fetch all servers
 router.get('/', async (req, res) => {
@@ -31,7 +32,14 @@ router.get('/:serverName', async (req, res) => {
 
 // Route to insert a new server
 router.post('/', async (req, res) => {
-    const server = req.body;
+    const { ServerName, Description = '', Location = '' } = req.body;
+
+    if (!ServerName) {
+        return res.status(400).json({ error: 'ServerName is required' });
+    }
+
+    const server = { ServerName, Description, Location };
+
     try {
         await insertServer(server);
         res.status(201).json({ message: 'Server inserted successfully' });
