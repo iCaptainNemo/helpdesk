@@ -185,7 +185,7 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
           {value ? 'True' : 'False'}
         </div>
       );
-    } else if (key === 'badPasswordTime' || key === 'pwdLastSet') {
+    } else if (key === 'badPasswordTime' || key === 'pwdLastSet' || (key === 'lockoutTime' && value !== '0')) {
       return formatDate(value);
     } else if (Array.isArray(value)) {
       return value.join(', ');

@@ -4,6 +4,7 @@ import Modal from 'react-modal';
 import Logs from '../components/Logs';
 import UserStatusTable from '../components/UserStatusTable'; // Import the UserStatusTable component
 import ComputerStatusTable from '../components/ComputerStatusTable'; // Import the ComputerStatusTable component
+import { executePowerShellScript } from '../utils/apiUtils';
 import '../styles/Tabs.css'; // Import the CSS file for styling the tabs
 import '../styles/ADProperties.css';
 
@@ -78,6 +79,8 @@ const ADProperties = ({ permissions }) => {
   });
   const [activeTab, setActiveTab] = useState(0);
   const [modalIsOpen, setModalIsOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState(process.env.TEMP_PASSWORD || 'Fall2024');
+  const [forceChangePassword, setForceChangePassword] = useState(true);
   const [tooltip, setTooltip] = useState({ visible: false, message: '' });
   const logsTableRef = useRef(null);
   const adPropertiesTableRef = useRef(null);
@@ -247,6 +250,21 @@ const ADProperties = ({ permissions }) => {
     window.location.href = url;
   };
 
+  const handleResetPassword = async () => {
+    const command = `
+      Set-ADAccountPassword -Identity ${adObjectID} -Reset -NewPassword (ConvertTo-SecureString -AsPlainText ${newPassword} -Force) -ErrorAction Stop;
+      Set-ADUser -Identity ${adObjectID} -ChangePasswordAtLogon ${forceChangePassword} -ErrorAction Stop;
+    `;
+    try {
+      await executePowerShellScript(command);
+      alert('Password reset successfully');
+      setModalIsOpen(false);
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      alert('Failed to reset password');
+    }
+  };
+
   return (
     <div className="ad-properties-container">
       <Tabs
@@ -256,21 +274,28 @@ const ADProperties = ({ permissions }) => {
         onCloseTab={closeTab}
       />
       {tabs[activeTab]?.data.ObjectClass === 'computer' && (
-      <div className="button-container">
-      <button onClick={() => launchProgram('CmRcViewer', adObjectID)} className="launch-button">
-        CmRcViewer
-      </button>
-      <button onClick={() => launchProgram('msra', adObjectID)} className="launch-button">
-        msra
-      </button>
-      <button onClick={() => launchProgram('powershell', adObjectID)} className="launch-button">
-        PowerShell
-      </button>
-      <button onClick={() => launchProgram('cmd', adObjectID)} className="launch-button">
-        Command Prompt
-      </button>
-    </div>
-  )}
+        <div className="button-container">
+          <button onClick={() => launchProgram('CmRcViewer', adObjectID)} className="launch-button">
+            CmRcViewer
+          </button>
+          <button onClick={() => launchProgram('msra', adObjectID)} className="launch-button">
+            msra
+          </button>
+          <button onClick={() => launchProgram('powershell', adObjectID)} className="launch-button">
+            PowerShell
+          </button>
+          <button onClick={() => launchProgram('cmd', adObjectID)} className="launch-button">
+            Command Prompt
+          </button>
+        </div>
+      )}
+      {tabs[activeTab]?.data.ObjectClass === 'user' && (
+        <div className="button-container">
+          <button onClick={() => setModalIsOpen(true)} className="launch-button">
+            Reset Password
+          </button>
+        </div>
+      )}
       <div className="button-container">
         <button onClick={() => setModalIsOpen(true)} className="settings-button">
           ⚙️
@@ -319,32 +344,41 @@ const ADProperties = ({ permissions }) => {
       <Modal
         isOpen={modalIsOpen}
         onRequestClose={() => setModalIsOpen(false)}
-        contentLabel="Select Properties"
+        contentLabel="Reset Password"
         className="modal"
         overlayClassName="overlay"
       >
-        <h3>Select Properties to Display</h3>
-        <div className="modal-content">
-          <ul>
-            {Object.keys(tabs[activeTab]?.data || {}).sort().map((key) => (
-              <li key={key}>
-                <label>
-                  <input
-                    type="checkbox"
-                    value={key}
-                    checked={tabs[activeTab]?.selectedProperties.includes(key)}
-                    onChange={handlePropertyChange}
-                    disabled={defaultUserProperties.includes(key) || defaultComputerProperties.includes(key)}
-                  />
-                  <span className={defaultUserProperties.includes(key) || defaultComputerProperties.includes(key) ? 'default-property' : ''}>
-                    {key}
-                  </span>
-                </label>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <button onClick={() => setModalIsOpen(false)}>Close</button>
+        <h2>Reset Password</h2>
+        <form>
+          <label>
+            New Password:
+            <input
+              type="text"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+          </label><br />
+          <label>
+            Change Password at Next Logon:
+            <div className="toggle-switch">
+              <input
+                type="checkbox"
+                checked={forceChangePassword}
+                onChange={(e) => setForceChangePassword(e.target.checked)}
+              />
+              <span className="slider"></span>
+              {/* <span className="tooltip">Force change on next logon</span> */}
+            </div>
+          </label>
+          <div className="button-container">
+            <button type="button" onClick={handleResetPassword}>
+              Save
+            </button>
+            <button type="button" onClick={() => setModalIsOpen(false)}>
+              Cancel
+            </button>
+          </div>
+        </form>
       </Modal>
     </div>
   );
