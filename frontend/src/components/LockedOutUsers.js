@@ -67,22 +67,60 @@ const LockedOutUsers = () => {
     const handleUnlockSuccess = async (result, userID) => {
         if (result.message.includes('Unlocked')) {
             setLockedOutUsers(prevUsers => prevUsers.filter(user => user.UserID !== userID));
-
+    
             // Update user stats
             const updates = {
                 LastHelped: new Date().toISOString(),
                 TimesHelped: (additionalFields.TimesHelped || 0) + 1,
                 TimesUnlocked: (additionalFields.TimesUnlocked || 0) + 1
             };
-
+    
             try {
                 const token = localStorage.getItem('token');
                 if (!token) throw new Error('No token found');
-
+    
                 const backendUrl = process.env.REACT_APP_BACKEND_URL;
                 if (!backendUrl) throw new Error('Backend URL is not defined');
-
-                const response = await fetch(`${backendUrl}/api/fetch-user/update`, {
+    
+                // Check if the user exists
+                let response = await fetch(`${backendUrl}/api/fetch-user`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ adObjectID: userID }),
+                });
+    
+                if (!response.ok) throw new Error('Network response was not ok');
+    
+                let user = await response.json();
+    
+                // If user does not exist, create the user
+                if (!user || user.length === 0) {
+                    const newUser = {
+                        UserID: userID,
+                        LastHelped: null,
+                        TimesUnlocked: 0,
+                        PasswordResets: 0
+                    };
+    
+                    response = await fetch(`${backendUrl}/api/fetch-user`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`,
+                        },
+                        body: JSON.stringify(newUser),
+                    });
+    
+                    if (!response.ok) throw new Error('Failed to create new user');
+    
+                    user = await response.json();
+                }
+    
+                // Update the user with the new stats
+                response = await fetch(`${backendUrl}/api/fetch-user/update`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -90,9 +128,9 @@ const LockedOutUsers = () => {
                     },
                     body: JSON.stringify({ adObjectID: userID, updates }),
                 });
-
+    
                 if (!response.ok) throw new Error('Network response was not ok');
-
+    
                 const updatedUser = await response.json();
                 setAdditionalFields((prevFields) => ({
                     ...prevFields,
