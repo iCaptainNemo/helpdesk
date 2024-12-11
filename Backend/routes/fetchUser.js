@@ -16,7 +16,8 @@ router.post('/', async (req, res) => { // Ensure the path is '/'
                 UserID: adObjectID, // Updated to use adObjectID
                 LastHelped: null,
                 TimesUnlocked: 0,
-                PasswordResets: 0
+                PasswordResets: 0,
+                TimesHelped: 0 // Add TimesHelped field
             };
             await storeUser(newUser);
             logger.info(`New user with ID ${adObjectID} created.`);

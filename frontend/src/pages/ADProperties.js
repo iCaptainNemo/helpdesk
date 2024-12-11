@@ -246,7 +246,7 @@ const ADProperties = ({ permissions }) => {
   const handleResetPassword = async () => {
     try {
       // First command to reset the password
-      const resetPasswordCommand = `Set-ADAccountPassword -Identity ${adObjectID} -Reset -NewPassword (ConvertTo-SecureString -AsPlainText ${newPassword} -Force) -ErrorAction Stop;`;
+      const resetPasswordCommand = `Set-ADAccountPassword -Identity ${adObjectID} -Reset -NewPassword (ConvertTo-SecureString -AsPlainText "${newPassword}" -Force) -ErrorAction Stop;`;
       const resetPasswordResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
         method: 'POST',
         headers: {

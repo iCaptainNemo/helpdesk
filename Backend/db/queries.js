@@ -15,15 +15,16 @@ function executeQuery(query, params = []) {
 
 function storeUser(user) {
     const query = `
-        INSERT INTO Users (UserID, LastHelped, TimesUnlocked, PasswordResets)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO Users (UserID, LastHelped, TimesUnlocked, PasswordResets, TimesHelped)
+        VALUES (?, ?, ?, ?, ?)
         ON CONFLICT(UserID) DO UPDATE SET
             LastHelped = excluded.LastHelped,
             TimesUnlocked = excluded.TimesUnlocked,
-            PasswordResets = excluded.PasswordResets
+            PasswordResets = excluded.PasswordResets,
+            TimesHelped = excluded.TimesHelped
     `;
     const params = [
-        user.UserID, user.LastHelped, user.TimesUnlocked, user.PasswordResets
+        user.UserID, user.LastHelped, user.TimesUnlocked, user.PasswordResets, user.TimesHelped
     ];
     return executeQuery(query, params);
 }
