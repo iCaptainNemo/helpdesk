@@ -115,7 +115,15 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
 
       // Update user stats
       const updates = {
-        LastHelped: new Date().toISOString(),
+        LastHelped: new Date().toLocaleString('en-US', {
+          month: '2-digit',
+          day: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true,
+        }),
         TimesHelped: (additionalFields.TimesHelped || 0) + 1,
         TimesUnlocked: (additionalFields.TimesUnlocked || 0) + 1
       };
@@ -185,7 +193,10 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
           {value ? 'True' : 'False'}
         </div>
       );
-    } else if (key === 'badPasswordTime' || key === 'pwdLastSet' || (key === 'lockoutTime' && value !== '0')) {
+    } else if (key === 'badPasswordTime' || key === 'pwdLastSet' || key === 'lockoutTime') {
+      if (value === '0') {
+        return 'N/A';
+      }
       return formatDate(value);
     } else if (Array.isArray(value)) {
       return value.join(', ');

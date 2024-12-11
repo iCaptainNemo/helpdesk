@@ -4,7 +4,6 @@ import Modal from 'react-modal';
 import Logs from '../components/Logs';
 import UserStatusTable from '../components/UserStatusTable'; // Import the UserStatusTable component
 import ComputerStatusTable from '../components/ComputerStatusTable'; // Import the ComputerStatusTable component
-import { executePowerShellScript } from '../utils/apiUtils';
 import '../styles/Tabs.css'; // Import the CSS file for styling the tabs
 import '../styles/ADProperties.css';
 
@@ -82,6 +81,12 @@ const ADProperties = ({ permissions }) => {
   const [newPassword, setNewPassword] = useState(process.env.TEMP_PASSWORD || 'Fall2024');
   const [forceChangePassword, setForceChangePassword] = useState(true);
   const [tooltip, setTooltip] = useState({ visible: false, message: '' });
+  const [additionalFields, setAdditionalFields] = useState({
+    LastHelped: null,
+    TimesUnlocked: null,
+    PasswordResets: null,
+    TimesHelped: null
+  });
   const logsTableRef = useRef(null);
   const adPropertiesTableRef = useRef(null);
 
@@ -156,18 +161,6 @@ const ADProperties = ({ permissions }) => {
   const handleTabClick = (index) => {
     setActiveTab(index);
     navigate(`/ad-object/${tabs[index].name}`); // Update the URL
-  };
-
-  const handlePropertyChange = (event) => {
-    const { value, checked } = event.target;
-    setTabs((prevTabs) => {
-      const updatedTabs = [...prevTabs];
-      const updatedProperties = checked
-        ? [...updatedTabs[activeTab].selectedProperties, value]
-        : updatedTabs[activeTab].selectedProperties.filter((prop) => prop !== value);
-      updatedTabs[activeTab].selectedProperties = updatedProperties;
-      return updatedTabs;
-    });
   };
 
   const stripDistinguishedName = (dn) => {
@@ -251,12 +244,83 @@ const ADProperties = ({ permissions }) => {
   };
 
   const handleResetPassword = async () => {
-    const command = `
-      Set-ADAccountPassword -Identity ${adObjectID} -Reset -NewPassword (ConvertTo-SecureString -AsPlainText ${newPassword} -Force) -ErrorAction Stop;
-      Set-ADUser -Identity ${adObjectID} -ChangePasswordAtLogon ${forceChangePassword} -ErrorAction Stop;
-    `;
     try {
-      await executePowerShellScript(command);
+      // First command to reset the password
+      const resetPasswordCommand = `Set-ADAccountPassword -Identity ${adObjectID} -Reset -NewPassword (ConvertTo-SecureString -AsPlainText ${newPassword} -Force) -ErrorAction Stop;`;
+      const resetPasswordResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({ command: resetPasswordCommand }),
+      });
+  
+      if (!resetPasswordResponse.ok) {
+        throw new Error('Failed to reset password');
+      }
+  
+      // If the toggle switch is enabled, run the second command
+      if (forceChangePassword) {
+        const changePasswordAtLogonCommand = `
+          Set-ADUser -Identity ${adObjectID} -ChangePasswordAtLogon $true -ErrorAction Stop;
+        `;
+        const changePasswordAtLogonResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+          body: JSON.stringify({ command: changePasswordAtLogonCommand }),
+        });
+  
+        if (!changePasswordAtLogonResponse.ok) {
+          throw new Error('Failed to set change password at logon');
+        }
+      }
+  
+      // Update user stats
+      const updates = {
+        LastHelped: new Date().toLocaleString('en-US', {
+          month: '2-digit',
+          day: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true,
+        }),
+        TimesHelped: (additionalFields.TimesHelped || 0) + 1,
+        PasswordResets: (additionalFields.PasswordResets || 0) + 1
+      };
+  
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('No token found');
+  
+        const backendUrl = process.env.REACT_APP_BACKEND_URL;
+        if (!backendUrl) throw new Error('Backend URL is not defined');
+  
+        const response = await fetch(`${backendUrl}/api/fetch-user/update`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ adObjectID, updates }),
+        });
+  
+        if (!response.ok) throw new Error('Network response was not ok');
+  
+        const updatedUser = await response.json();
+        setAdditionalFields((prevFields) => ({
+          ...prevFields,
+          ...updatedUser
+        }));
+      } catch (error) {
+        console.error('Error updating user stats:', error);
+      }
+  
       alert('Password reset successfully');
       setModalIsOpen(false);
     } catch (error) {
