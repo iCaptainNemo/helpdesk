@@ -4,7 +4,7 @@ const sanitizeInput = [
   body('adObjectID')
     .trim()
     .isLength({ min: 1 }).withMessage('AD Object ID is required')
-    .isAlphanumeric().withMessage('AD Object ID must be alphanumeric')
+    .matches(/^[a-zA-Z0-9-]+$/).withMessage('AD Object ID must be alphanumeric and can include hyphens')
     .escape(),
 
   // Middleware to handle validation errors
