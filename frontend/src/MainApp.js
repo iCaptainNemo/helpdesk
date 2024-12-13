@@ -9,6 +9,7 @@ import ADProperties from './pages/ADProperties'; // Update import
 import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Configure from './pages/Configure'; // Import the Configure page
+import Setup from './pages/Setup'; // Import the Setup page
 
 // Always use the backend server IP address
 const ENDPOINT = process.env.REACT_APP_BACKEND_URL;
@@ -137,6 +138,7 @@ function App() {
               <Route path="/ad-object/:adObjectID?" element={<ADProperties permissions={permissions} />} /> {/* Update route to handle optional adObjectID */}
               <Route path="/Profile" element={<Profile permissions={permissions} />} />
               <Route path="/configure" element={<Configure permissions={permissions} />} />
+              <Route path="/setup" element={<Setup />} /> {/* Add the setup route */}
               <Route path="*" element={<Navigate to="/dashboard" />} />
             </Routes>
           </>

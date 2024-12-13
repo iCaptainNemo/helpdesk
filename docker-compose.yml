@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./Backend/.env:/app/backend/.env
+      - ./Backend/db:/app/db
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    volumes:
+      - ./frontend/.env:/app/frontend/.env
+
+  db:
+    image: sqlite3
+    volumes:
+      - ./Backend/db:/data

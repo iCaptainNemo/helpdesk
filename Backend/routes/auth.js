@@ -69,11 +69,11 @@ router.post('/login', sanitizeInput, async (req, res) => {
       return res.status(403).json({ error: 'Password needs to be updated' });
     }
 
-    // Check if adminComputer is present in the adminUser object
-    if (!adminUser.AdminComputer) {
-      logger.warn(`AdminComputer not found for AdminID: ${AdminID}`);
-      return res.status(404).json({ error: 'AdminComputer not found' });
-    }
+    // // Check if adminComputer is present in the adminUser object
+    // if (!adminUser.AdminComputer) {
+    //   logger.warn(`AdminComputer not found for AdminID: ${AdminID}`);
+    //   return res.status(404).json({ error: 'AdminComputer not found' });
+    // }
 
     // Verify password
     const isPasswordValid = await verifyPassword(password, adminUser.password);

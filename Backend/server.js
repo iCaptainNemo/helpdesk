@@ -100,6 +100,7 @@ const loggingSettingsRoute = require('./routes/loggingSettings'); // Import the 
 const usersRoute = require('./routes/users'); // Import the new users route
 const multiFetchRoute = require('./routes/multiFetch'); // Import the multiFetch route
 const serverManagerRoute = require('./routes/serverManager'); // Import the serverManager route
+const setupRoute = require('./routes/setup'); // Import the setup route
 
 // Use routes and pass db to them
 app.use('/api/fetch-adobject', fetchADObjectRoute);
@@ -123,6 +124,7 @@ app.use('/api/execute-command', executeCommandRoute); // Use the executeCommand 
 app.use('/api/logging-settings', loggingSettingsRoute); // Use the loggingSettings route
 app.use('/api/multi-fetch', multiFetchRoute);
 app.use('/api/server-manager', serverManagerRoute);
+app.use('/api/setup', setupRoute); // Register the setup route
 
 // Middleware to handle 403 Forbidden errors
 app.use(forbidden);
