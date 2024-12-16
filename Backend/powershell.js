@@ -137,7 +137,8 @@ function serverPowerShellScript(scriptPath, params = []) {
  */
 function executePowerShellCommand(command) {
     // Append ConvertTo-Json -Compress to the command
-    const modifiedCommand = `${command} | ConvertTo-Json -Compress`;
+    // const modifiedCommand = `${command} | ConvertTo-Json -Compress`;
+    const modifiedCommand = `${command}`;
 
     // Check if logging should be suppressed for this command
     const shouldSuppressLogging = scriptsToSuppressLogging.some(script => modifiedCommand.includes(script));

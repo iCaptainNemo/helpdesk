@@ -37,7 +37,7 @@ const CurrentComputersTable = ({ adObjectID }) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No token found');
-
+  
       const command = `Get-ADComputer -Filter {Name -eq '${computer}'} -ErrorAction SilentlyContinue | ConvertTo-Json -Compress`;
       const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
         method: 'POST',
@@ -47,55 +47,68 @@ const CurrentComputersTable = ({ adObjectID }) => {
         },
         body: JSON.stringify({ command }),
       });
-
+  
       if (!response.ok) throw new Error('Network response was not ok');
-
+  
       const data = await response.json();
-      return data.length > 0;
+  
+      // Check if the response contains the expected properties
+      if (data && data.DNSHostName) {
+        return true;
+      } else {
+        return false;
+      }
     } catch (error) {
       console.error(`Error checking domain status for computer ${computer}:`, error);
       return false;
     }
   };
-
-  const fetchLoggedInUsers = async (computer) => {
+  const fetchLoggedInUsers = async (computer, adObjectID) => {
+    console.log(`Checking logged in users for computer: ${computer}, adObjectID: ${adObjectID}`);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No token found');
+        const token = localStorage.getItem('token');
+        if (!token) {
+            throw new Error('No token found');
+        }
 
-      const command = `../../../Tools/PsLoggedon.exe -l -x \\\\${computer} | ConvertTo-Json -Compress`;
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ command }),
-      });
+        const command = `../../../Tools/PsLoggedon.exe -l -x \\\\${computer} | ConvertTo-Json -Compress`;
 
-      if (!response.ok) throw new Error('Network response was not ok');
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ command }),
+        });
 
-      const data = await response.json();
-      const parsedData = JSON.parse(data);
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
 
-      if (!Array.isArray(parsedData)) {
-        throw new Error('Unexpected data format');
-      }
+        const data = await response.json();
 
-      const startIndex = parsedData.findIndex(line => line.includes('Users logged on locally:'));
-      const usersList = startIndex !== -1
-        ? parsedData.slice(startIndex + 1).map(line => line.replace('\\t', '').trim()).filter(line => line)
-        : [];
+        if (!Array.isArray(data)) {
+            throw new Error('Unexpected data format');
+        }
 
-      const username = adObjectID.split('\\').pop().toLowerCase().trim(); // Extract and normalize the username from adObjectID
+        const startIndex = data.findIndex(line => line.includes('Users logged on locally:'));
 
-      const isLoggedIn = usersList.some(user => user.toLowerCase().includes(username));
-      return isLoggedIn;
+        const usersList = startIndex !== -1
+            ? data.slice(startIndex + 1).map(line => line.replace(/\t/g, '').trim()).filter(line => line)
+            : [];
+
+        const isLoggedIn = usersList.some(user => {
+            const userId = user.split('\\').pop().trim().toLowerCase(); // Extract the user ID without the domain and convert to lowercase
+            return userId === adObjectID.toLowerCase(); // Convert adObjectID to lowercase for comparison
+        });
+
+        return isLoggedIn;
     } catch (error) {
-      console.error(`Error fetching logged in users for computer ${computer}:`, error);
-      return false;
+        console.error(`Error fetching logged in users for computer ${computer}:`, error);
+        return false;
     }
-  };
+};
 
   const checkComputerStatuses = async () => {
     const statuses = await Promise.all(computers.map(async (computer) => {
@@ -105,7 +118,7 @@ const CurrentComputersTable = ({ adObjectID }) => {
         return { computer, status: 'Not on Domain' };
       }
 
-      const isLoggedIn = await fetchLoggedInUsers(computer);
+      const isLoggedIn = await fetchLoggedInUsers(computer, adObjectID);
       return { computer, status: isLoggedIn ? 'Logged In' : '------' };
     }));
 

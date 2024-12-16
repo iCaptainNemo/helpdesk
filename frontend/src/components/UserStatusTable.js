@@ -31,7 +31,7 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
         if (!token) throw new Error('No token found');
 
         // Fetch Active Directory properties
-        const command = `Get-ADUser -Identity ${adObjectID} -Properties ${userAccountStatusProperties.join(',')}`;
+        const command = `Get-ADUser -Identity ${adObjectID} -Properties ${userAccountStatusProperties.join(',')} | ConvertTo-Json -Compress`;
         const adResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
           method: 'POST',
           headers: {

@@ -14,7 +14,7 @@ const ComputerStatusTable = ({ adObjectID }) => {
         const token = localStorage.getItem('token');
         if (!token) throw new Error('No token found');
 
-        const statusCommand = `Test-Connection -ComputerName ${adObjectID} -Count 1 -Quiet -ErrorAction Stop`;
+        const statusCommand = `Test-Connection -ComputerName ${adObjectID} -Count 1 -Quiet -ErrorAction Stop | ConvertTo-Json -Compress`;
 
         const statusResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
           method: 'POST',
@@ -61,7 +61,7 @@ const ComputerStatusTable = ({ adObjectID }) => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No token found');
 
-      const ipCommand = `Invoke-Command -ComputerName ${adObjectID} -ScriptBlock { Get-WmiObject -Class Win32_NetworkAdapterConfiguration | Where-Object { $_.IPEnabled -eq $true } | Select-Object -ExpandProperty IPAddress | Where-Object { $_ -match '^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$' } }`;
+      const ipCommand = `Invoke-Command -ComputerName ${adObjectID} -ScriptBlock { Get-WmiObject -Class Win32_NetworkAdapterConfiguration | Where-Object { $_.IPEnabled -eq $true } | Select-Object -ExpandProperty IPAddress | Where-Object { $_ -match '^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$' } } | ConvertTo-Json -Compress`;
 
       const ipResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
         method: 'POST',
@@ -85,43 +85,51 @@ const ComputerStatusTable = ({ adObjectID }) => {
 
   const fetchLoggedInUsers = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No token found');
-  
-      const usersCommand = `../../../Tools/PsLoggedon.exe -l -x \\\\${adObjectID} | ConvertTo-Json -Compress`;
-  
-      const usersResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ command: usersCommand }),
-      });
-  
-      if (!usersResponse.ok) throw new Error('Network response was not ok');
-  
-      const usersData = await usersResponse.json();
-  
-      // Ensure usersData.value is parsed correctly
-      const parsedData = JSON.parse(usersData);
-  
-      if (!Array.isArray(parsedData)) {
-        throw new Error('Unexpected data format');
-      }
-  
-      const startIndex = parsedData.findIndex(line => line.includes('Users logged on locally:'));
-  
-      const usersList = startIndex !== -1
-        ? parsedData.slice(startIndex + 1).map(line => line.replace('\\t', '').trim()).filter(line => line)
-        : [];
-  
-      setUsers(usersList.length > 0 ? usersList.join(', ') : 'No logged in users');
+      //  console.log(`Fetching logged in users for adObjectID: ${adObjectID}`);
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('No token found');
+      //  console.log('Token retrieved successfully');
+
+        const usersCommand = `../../../Tools/PsLoggedon.exe -l -x \\\\${adObjectID} | ConvertTo-Json -Compress`;
+      //  console.log(`Command to be executed: ${usersCommand}`);
+
+        const usersResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ command: usersCommand }),
+        });
+
+        if (!usersResponse.ok) throw new Error('Network response was not ok');
+      //  console.log('Command executed successfully');
+
+        const usersData = await usersResponse.json();
+      //  console.log('Response data:', usersData);
+
+        // The response is already JSON, no need to parse it again
+        const parsedData = usersData;
+      //  console.log('Parsed output:', parsedData);
+
+        if (!Array.isArray(parsedData)) {
+            throw new Error('Unexpected data format');
+        }
+
+        const startIndex = parsedData.findIndex(line => line.includes('Users logged on locally:'));
+      //  console.log('Start index of users list:', startIndex);
+
+        const usersList = startIndex !== -1
+            ? parsedData.slice(startIndex + 1).map(line => line.replace(/\t/g, '').trim()).filter(line => line)
+            : [];
+      // console.log('Users list:', usersList);
+
+        setUsers(usersList.length > 0 ? usersList.join(', ') : 'No logged in users');
     } catch (error) {
-      console.error('Error fetching logged in users:', error);
-      setUsers('No logged in users');
+      //  console.error('Error fetching logged in users:', error);
+        setUsers('No logged in users');
     }
-  };
+};
 
   return (
     <div className="computer-status-table-container">
