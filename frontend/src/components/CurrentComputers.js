@@ -63,6 +63,7 @@ const CurrentComputersTable = ({ adObjectID }) => {
       return false;
     }
   };
+
   const fetchLoggedInUsers = async (computer, adObjectID) => {
     console.log(`Checking logged in users for computer: ${computer}, adObjectID: ${adObjectID}`);
     try {
@@ -111,23 +112,23 @@ const CurrentComputersTable = ({ adObjectID }) => {
 };
 
   const checkComputerStatuses = async () => {
-    const statuses = await Promise.all(computers.map(async (computer) => {
-      const isOnDomain = await checkComputerDomainStatus(computer);
+    const statusMap = { ...computerStatuses }; // Copy the current statuses
 
-      if (!isOnDomain) {
-        return { computer, status: 'Not on Domain' };
-      }
+    // Reverse the computers array to process the most recent computers first
+    const reversedComputers = [...computers].reverse();
 
-      const isLoggedIn = await fetchLoggedInUsers(computer, adObjectID);
-      return { computer, status: isLoggedIn ? 'Logged In' : '------' };
-    }));
+    for (const computer of reversedComputers) {
+        const isOnDomain = await checkComputerDomainStatus(computer);
 
-    const statusMap = statuses.reduce((acc, { computer, status }) => {
-      acc[computer] = status;
-      return acc;
-    }, {});
+        if (!isOnDomain) {
+            statusMap[computer] = 'Not on Domain';
+        } else {
+            const isLoggedIn = await fetchLoggedInUsers(computer, adObjectID);
+            statusMap[computer] = isLoggedIn ? 'Logged In' : '------';
+        }
 
-    setComputerStatuses(statusMap);
+        setComputerStatuses({ ...statusMap }); // Update the state with the new status
+    }
   };
 
   const handleFetchComputers = async () => {
@@ -211,7 +212,7 @@ const CurrentComputersTable = ({ adObjectID }) => {
             </tr>
           </thead>
           <tbody>
-            {computers.map((computer) => (
+            {[...computers].reverse().map((computer) => ( // Reverse the order of the computers for display
               <tr key={computer} onContextMenu={(event) => handleContextMenu(event, computer)}>
                 <td className="property-cell clickable-cell" onClick={() => copyToClipboard(computer)}>
                   {computer}
