@@ -27,7 +27,7 @@ const CurrentComputersTable = ({ adObjectID }) => {
 
       const logsData = await response.json();
       const uniqueComputers = [...new Set(logsData.map(log => log.Computer))];
-      setComputers([...uniqueComputers].reverse()); // Reverse the order of the computers
+      setComputers(uniqueComputers); // Remove the reverse call here
     } catch (error) {
       console.error('Error fetching computers:', error);
     }
@@ -109,15 +109,12 @@ const CurrentComputersTable = ({ adObjectID }) => {
         console.error(`Error fetching logged in users for computer ${computer}:`, error);
         return false;
     }
-};
+  };
 
   const checkComputerStatuses = async () => {
     const statusMap = { ...computerStatuses }; // Copy the current statuses
 
-    // Reverse the computers array to process the most recent computers first
-    const reversedComputers = [...computers].reverse();
-
-    for (const computer of reversedComputers) {
+    for (const computer of computers) { // Remove the reverse call here
         const isOnDomain = await checkComputerDomainStatus(computer);
 
         if (!isOnDomain) {
@@ -212,7 +209,7 @@ const CurrentComputersTable = ({ adObjectID }) => {
             </tr>
           </thead>
           <tbody>
-            {[...computers].reverse().map((computer) => ( // Reverse the order of the computers for display
+            {computers.map((computer) => ( // Remove the reverse call here
               <tr key={computer} onContextMenu={(event) => handleContextMenu(event, computer)}>
                 <td className="property-cell clickable-cell" onClick={() => copyToClipboard(computer)}>
                   {computer}
