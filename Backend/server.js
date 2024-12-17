@@ -12,6 +12,7 @@ const verifyToken = require('./middleware/verifyToken'); // Ensure JWT middlewar
 const verifyPermissions = require('./middleware/verifyPermissions'); // Import the permissions middleware
 const { updateLockedOutUsers } = require('./utils/lockedOutUsersUtils'); // Import the module
 const { getServerStatuses } = require('./utils/ServerManageUtil'); // Import the module
+const { updateDomainControllers } = require('./utils/domainManager'); // Import the updateDomainControllers function
 const logger = require('./utils/logger'); // Import the logger
 const sessionStore = require('./utils/sessionStore'); // Import your session store
 
@@ -101,6 +102,7 @@ const usersRoute = require('./routes/users'); // Import the new users route
 const multiFetchRoute = require('./routes/multiFetch'); // Import the multiFetch route
 const serverManagerRoute = require('./routes/serverManager'); // Import the serverManager route
 const setupRoute = require('./routes/setup'); // Import the setup route
+const domainControllersRouter = require('./routes/domainControllers'); // Import the domainControllers route
 
 // Use routes and pass db to them
 app.use('/api/fetch-adobject', fetchADObjectRoute);
@@ -125,6 +127,7 @@ app.use('/api/logging-settings', loggingSettingsRoute); // Use the loggingSettin
 app.use('/api/multi-fetch', multiFetchRoute);
 app.use('/api/server-manager', serverManagerRoute);
 app.use('/api/setup', setupRoute); // Register the setup route
+app.use('/api/domain-controllers', domainControllersRouter); // Use the domainControllers route
 
 // Middleware to handle 403 Forbidden errors
 app.use(forbidden);
@@ -167,6 +170,7 @@ server.listen(PORT, HOST, () => {
     logger.info(`Server is running on http://${HOST}:${PORT}`);
     updateLockedOutUsers(); // Initial call to populate the table
     getServerStatuses(); // Initial call to populate the server statuses
+    updateDomainControllers(); // Initial call to update domain controllers
 
     // Function to parse interval string and convert to milliseconds
     const parseInterval = (interval) => {

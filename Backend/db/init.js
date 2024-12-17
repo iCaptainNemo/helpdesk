@@ -89,6 +89,24 @@ const tables = [
             'FOREIGN KEY (RoleID) REFERENCES Roles(RoleID)',
             'PRIMARY KEY (AdminID, RoleID)'
         ]
+    },    
+    {
+        name: 'DomainControllers',
+        columns: [
+            'ControllerName TEXT PRIMARY KEY',
+            'Details TEXT',
+            'Role TEXT' // PDC or DDC
+        ]
+    },
+    {
+        name: 'CurrentDomain',
+        columns: [
+            'DomainName TEXT PRIMARY KEY',
+            'PDC TEXT',
+            'DDC TEXT',
+            'FOREIGN KEY (PDC) REFERENCES DomainControllers(ControllerName)',
+            'FOREIGN KEY (DDC) REFERENCES DomainControllers(ControllerName)'
+        ]
     }
 ];
 

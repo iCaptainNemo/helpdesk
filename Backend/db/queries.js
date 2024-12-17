@@ -202,7 +202,40 @@ async function fetchPermissionsForRoles(roleIDs) {
     return permissions.map(permission => permission.PermissionName);
 }
 
+function insertDomainController(controllerName, details, role, callback) {
+    const query = `INSERT INTO DomainControllers (ControllerName, Details, Role) VALUES (?, ?, ?)`;
+    db.run(query, [controllerName, details, role], callback);
+}
+
+function insertCurrentDomain(domainName, PDC, DDC, callback) {
+    const query = `INSERT INTO CurrentDomain (DomainName, PDC, DDC) VALUES (?, ?, ?)`;
+    db.run(query, [domainName, PDC, DDC], callback);
+}
+
+function fetchDomainControllers(callback) {
+    const query = `
+        SELECT dc.ControllerName, dc.Details, dc.Role, cd.PDC, cd.DDC
+        FROM DomainControllers dc
+        LEFT JOIN CurrentDomain cd ON dc.ControllerName = cd.PDC OR dc.ControllerName = cd.DDC
+    `;
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            callback(err, null);
+        } else {
+            const result = {
+                domainControllers: rows,
+                PDC: rows.find(row => row.Role === 'PDC'),
+                DDC: rows.find(row => row.Role === 'DDC')
+            };
+            callback(null, result);
+        }
+    });
+}
+
 module.exports = {
+    insertDomainController,
+    insertCurrentDomain,
+    fetchDomainControllers,
     fetchAdminUser,
     fetchAllAdminUsers,
     executeQuery,

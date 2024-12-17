@@ -1,6 +1,7 @@
 import React from 'react';
 import LockedOutUsers from '../components/LockedOutUsers';
 import ServerStatus from '../components/ServerStatus';
+import DomainControllers from '../components/DomainControllers'; // Import the new component
 import '../styles/Dashboard.css'; // Import the CSS file for styling
 
 const Dashboard = () => {
@@ -9,6 +10,7 @@ const Dashboard = () => {
             <div className="dashboard-tables-container">
                 <LockedOutUsers />
                 <ServerStatus />
+                <DomainControllers /> {/* Add the new component */}
             </div>
             <form id="helloWorldForm" onSubmit={handleHelloWorldButtonClick}>
                 <button type="submit">Test</button>
