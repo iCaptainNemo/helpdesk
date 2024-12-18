@@ -5,15 +5,15 @@
     margin-top: 1.25em;
     margin-left: 1.25em;
     margin-right: 1.25em;
-    border: 1px solid #ddd;
-    border-radius: 0.5em;
-    box-shadow: 0 0.5em 1em rgba(214, 214, 214, 0.2);
     font-family: 'Roboto', sans-serif; /* Use Roboto font */
 }
 
 .server-status-container table {
     width: 100%;
     border-collapse: collapse;
+    border: 1px solid #ddd;
+    border-radius: 0.5em;
+    box-shadow: 0 0.5em 1em rgba(214, 214, 214, 0.2);
 }
 
 .server-status-container caption {

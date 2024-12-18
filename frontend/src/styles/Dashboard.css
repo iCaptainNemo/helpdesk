@@ -1,12 +1,29 @@
 /* Dashboard.css */
+.dashboard-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+
 .dashboard-page .dashboard-tables-container {
-    display: flex;
-    align-items: flex-start; /* Align items to the start of the container */
-    gap: 20px; /* Add space between the items */
-  }
-  
-  .dashboard-page .dashboard-tables-container > div {
-    flex: 1 1 auto; /* Allow the items to grow and shrink */
-    min-width: 10%; /* Set a minimum width for the items */
-    box-sizing: border-box; /* Include padding and border in the element's total width and height */
-  }
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px; /* Add space between the items */
+  width: 100%;
+}
+
+.dashboard-page .dashboard-tables-container > div {
+  flex: 0 1 auto; /* Flex-grow: 0, Flex-shrink: 1, Flex-basis: auto */
+  min-width: 300px; /* Set a minimum width for the items */
+  max-width: 100%;
+}
+
+#helloWorldForm {
+  margin-top: 20px;
+}
+
+#helloWorldOutputContainer {
+  margin-top: 20px;
+}

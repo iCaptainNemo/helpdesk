@@ -7,15 +7,15 @@
     margin-top: 1.25em;
     margin-left: 1.25em; /* Add left margin */
     margin-right: 1.25em; /* Add right margin */
-    border: 1px solid #ddd; /* Add border around the container */
-    border-radius: 0.5em; /* Round off the corners */
-    box-shadow: 0 0.5em 1em rgba(214, 214, 214, 0.2); /* Add a small shadow */
     font-family: 'Roboto', sans-serif; /* Use Roboto font */
 }
 
 .locked-out-users-container table {
     width: 100%; /* Use full width of the container */
     border-collapse: collapse;
+    border: 1px solid #ddd; /* Add border around the container */
+    border-radius: 0.5em; /* Round off the corners */
+    box-shadow: 0 0.5em 1em rgba(214, 214, 214, 0.2); /* Add a small shadow */
 }
 
 .locked-out-users-container caption {
