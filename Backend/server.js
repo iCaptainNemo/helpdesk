@@ -81,8 +81,6 @@ app.use(session({
 // Import routes
 const fetchADObjectRoute = require('./routes/fetchADObject'); // Import the fetchADObject route
 const fetchUserRoute = require('./routes/fetchUser'); // Import the fetchUser route
-const helloWorldRoute = require('./routes/hello-world'); // Import the helloWorld route
-const helloWorldMiddleware = require('./middleware/helloWorldMiddleware'); // Import the helloWorld middleware
 const forbidden = require('./middleware/forbidden'); // Import the forbidden middleware
 const notFound = require('./middleware/notfound'); // Import the notFound middleware
 const authRoutes = require('./routes/auth'); // Authentication routes
@@ -107,8 +105,6 @@ const domainControllersRouter = require('./routes/domainControllers'); // Import
 // Use routes and pass db to them
 app.use('/api/fetch-adobject', fetchADObjectRoute);
 app.use('/api/fetch-user', fetchUserRoute); // Register the fetchUser route
-app.use('/api/hello-world', helloWorldRoute);
-app.use('/api', helloWorldMiddleware);
 app.use('/api/auth', authRoutes); // Authentication routes
 app.use('/api/get-locked-out-users', getLockedOutUsersRoute); // Route to fetch locked out users
 app.use('/api/execute-script', verifyToken, verifyPermissions('execute_script'), executeScriptRoute); // Route to execute PowerShell scripts with permissions
