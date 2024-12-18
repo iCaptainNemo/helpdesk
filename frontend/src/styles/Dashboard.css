@@ -2,15 +2,15 @@
 .dashboard-page {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 20px;
+  align-items: flex-start; /* Align items to the start (left) */
+  padding: 10px;
 }
 
 .dashboard-page .dashboard-tables-container {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 20px; /* Add space between the items */
+  justify-content: flex-start; /* Align items to the start (left) */
+  gap: 10px; /* Add space between the items */
   width: 100%;
 }
 
@@ -18,12 +18,4 @@
   flex: 0 1 auto; /* Flex-grow: 0, Flex-shrink: 1, Flex-basis: auto */
   min-width: 300px; /* Set a minimum width for the items */
   max-width: 100%;
-}
-
-#helloWorldForm {
-  margin-top: 20px;
-}
-
-#helloWorldOutputContainer {
-  margin-top: 20px;
 }
