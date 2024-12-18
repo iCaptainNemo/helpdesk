@@ -7,14 +7,13 @@ const CurrentComputersTable = ({ adObjectID }) => {
   const [computerStatuses, setComputerStatuses] = useState({});
   const [tooltip, setTooltip] = useState({ visible: false, message: '' });
   const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, computer: null });
-  const [isFetching, setIsFetching] = useState(false); // State to control fetching
+  const [isFetching, setIsFetching] = useState(false);
   const navigate = useNavigate();
 
   const fetchComputers = async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No token found');
-
       const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/get-logs`, {
         method: 'POST',
         headers: {
@@ -22,12 +21,11 @@ const CurrentComputersTable = ({ adObjectID }) => {
         },
         body: JSON.stringify({ adObjectID }),
       });
-
       if (!response.ok) throw new Error('Network response was not ok');
 
       const logsData = await response.json();
       const uniqueComputers = [...new Set(logsData.map(log => log.Computer))];
-      setComputers(uniqueComputers); // Remove the reverse call here
+      setComputers(uniqueComputers);
     } catch (error) {
       console.error('Error fetching computers:', error);
     }
@@ -37,7 +35,7 @@ const CurrentComputersTable = ({ adObjectID }) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No token found');
-  
+
       const command = `Get-ADComputer -Filter {Name -eq '${computer}'} -ErrorAction SilentlyContinue | ConvertTo-Json -Compress`;
       const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
         method: 'POST',
@@ -47,12 +45,11 @@ const CurrentComputersTable = ({ adObjectID }) => {
         },
         body: JSON.stringify({ command }),
       });
-  
+
       if (!response.ok) throw new Error('Network response was not ok');
-  
+
       const data = await response.json();
-  
-      // Check if the response contains the expected properties
+
       if (data && data.DNSHostName) {
         return true;
       } else {
@@ -67,66 +64,60 @@ const CurrentComputersTable = ({ adObjectID }) => {
   const fetchLoggedInUsers = async (computer, adObjectID) => {
     console.log(`Checking logged in users for computer: ${computer}, adObjectID: ${adObjectID}`);
     try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            throw new Error('No token found');
-        }
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No token found');
 
-        const command = `../../../Tools/PsLoggedon.exe -l -x \\\\${computer} | ConvertTo-Json -Compress`;
+      const command = `../../../Tools/PsLoggedon.exe -l -x \\\\${computer} | ConvertTo-Json -Compress`;
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ command }),
+      });
 
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify({ command }),
-        });
+      if (!response.ok) throw new Error('Network response was not ok');
 
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
+      const data = await response.json();
 
-        const data = await response.json();
+      if (!Array.isArray(data)) {
+        throw new Error('Unexpected data format');
+      }
 
-        if (!Array.isArray(data)) {
-            throw new Error('Unexpected data format');
-        }
+      const startIndex = data.findIndex(line => line.includes('Users logged on locally:'));
+      const usersList = startIndex !== -1
+        ? data.slice(startIndex + 1).map(line => line.replace(/\t/g, '').trim()).filter(line => line)
+        : [];
 
-        const startIndex = data.findIndex(line => line.includes('Users logged on locally:'));
+      const isLoggedIn = usersList.some(user => {
+        const userId = user.split('\\').pop().trim().toLowerCase();
+        return userId === adObjectID.toLowerCase();
+      });
 
-        const usersList = startIndex !== -1
-            ? data.slice(startIndex + 1).map(line => line.replace(/\t/g, '').trim()).filter(line => line)
-            : [];
-
-        const isLoggedIn = usersList.some(user => {
-            const userId = user.split('\\').pop().trim().toLowerCase(); // Extract the user ID without the domain and convert to lowercase
-            return userId === adObjectID.toLowerCase(); // Convert adObjectID to lowercase for comparison
-        });
-
-        return isLoggedIn;
+      return isLoggedIn;
     } catch (error) {
-        console.error(`Error fetching logged in users for computer ${computer}:`, error);
-        return false;
+      console.error(`Error fetching logged in users for computer ${computer}:`, error);
+      return false;
     }
   };
 
-  const checkComputerStatuses = useCallback(async () => {
-    const statusMap = { ...computerStatuses }; // Copy the current statuses
+  const checkComputerStatuses = async () => {
+    const statusMap = { ...computerStatuses };
 
-    for (const computer of computers) { // Remove the reverse call here
-        const isOnDomain = await checkComputerDomainStatus(computer);
+    for (const computer of computers) {
+      const isOnDomain = await checkComputerDomainStatus(computer);
 
-        if (!isOnDomain) {
-            statusMap[computer] = 'Not on Domain';
-        } else {
-            const isLoggedIn = await fetchLoggedInUsers(computer, adObjectID);
-            statusMap[computer] = isLoggedIn ? 'Logged In' : '------';
-        }
+      if (!isOnDomain) {
+        statusMap[computer] = 'Not on Domain';
+      } else {
+        const isLoggedIn = await fetchLoggedInUsers(computer, adObjectID);
+        statusMap[computer] = isLoggedIn ? 'Logged In' : '------';
+      }
 
-        setComputerStatuses({ ...statusMap }); // Update the state with the new status
+      setComputerStatuses({ ...statusMap });
     }
-  }, [computers, computerStatuses, adObjectID]);
+  };
 
   const handleFetchComputers = async () => {
     setIsFetching(true);
@@ -138,7 +129,7 @@ const CurrentComputersTable = ({ adObjectID }) => {
     if (computers.length > 0) {
       checkComputerStatuses();
     }
-  }, [computers, checkComputerStatuses]);
+  }, [computers]);
 
   const copyToClipboard = (value) => {
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -196,7 +187,7 @@ const CurrentComputersTable = ({ adObjectID }) => {
 
   return (
     <div className="current-computers-table-container">
-      <button className="fetch-computers-button"  onClick={handleFetchComputers} disabled={isFetching}>
+      <button className="fetch-computers-button" onClick={handleFetchComputers} disabled={isFetching}>
         {isFetching ? 'Searching...' : 'Search Current Computers'}
       </button>
       {computers.length > 0 && (
@@ -209,7 +200,7 @@ const CurrentComputersTable = ({ adObjectID }) => {
             </tr>
           </thead>
           <tbody>
-            {computers.map((computer) => ( // Remove the reverse call here
+            {computers.map((computer) => (
               <tr key={computer} onContextMenu={(event) => handleContextMenu(event, computer)}>
                 <td className="property-cell clickable-cell" onClick={() => copyToClipboard(computer)}>
                   {computer}
