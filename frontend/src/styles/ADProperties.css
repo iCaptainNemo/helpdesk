@@ -60,7 +60,7 @@
   flex-direction: column;
 }
 
-.logs-table-container {
+/* .logs-table-container {
   overflow-y: auto;
   max-height: 100%;
 }
@@ -69,7 +69,7 @@
 .logs-table {
   width: 100%;
   border-collapse: collapse;
-}
+} */
 
 .properties-table th,
 .properties-table td,

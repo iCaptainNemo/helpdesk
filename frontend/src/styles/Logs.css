@@ -1,12 +1,11 @@
 .logs-container {
-    max-width: 100%;
     margin: 0 auto;
-    overflow-x: auto;
+    overflow-y: auto; /* Only allow vertical scrolling */
 }
 
 .table-container {
     max-height: 1000px;
-    /* overflow-y: auto; */
+    overflow-y: auto; /* Ensure vertical scrolling within the table container */
 }
 
 .logs-table {
