@@ -95,7 +95,8 @@ const tables = [
         columns: [
             'ControllerName TEXT PRIMARY KEY',
             'Details TEXT',
-            'Role TEXT' // PDC or DDC
+            'Role TEXT', // PDC or DDC
+            'Status TEXT' // New column for status
         ]
     },
     {

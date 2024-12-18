@@ -212,9 +212,14 @@ function insertCurrentDomain(domainName, PDC, DDC, callback) {
     db.run(query, [domainName, PDC, DDC], callback);
 }
 
+function updateDomainControllerStatus(controllerName, status, callback) {
+    const query = `UPDATE DomainControllers SET Status = ? WHERE ControllerName = ?`;
+    db.run(query, [status, controllerName], callback);
+}
+
 function fetchDomainControllers(callback) {
     const query = `
-        SELECT dc.ControllerName, dc.Details, dc.Role, cd.PDC, cd.DDC
+        SELECT dc.ControllerName, dc.Details, dc.Role, dc.Status, cd.PDC, cd.DDC
         FROM DomainControllers dc
         LEFT JOIN CurrentDomain cd ON dc.ControllerName = cd.PDC OR dc.ControllerName = cd.DDC
     `;
@@ -235,6 +240,7 @@ function fetchDomainControllers(callback) {
 module.exports = {
     insertDomainController,
     insertCurrentDomain,
+    updateDomainControllerStatus,
     fetchDomainControllers,
     fetchAdminUser,
     fetchAllAdminUsers,

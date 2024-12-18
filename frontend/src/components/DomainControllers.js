@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import '../styles/ServerStatus.css'; // Reuse the CSS file for styling
+import '../styles/DomainControllers.css'; // Import the new CSS file
 
 const DomainControllers = () => {
     const [domainControllers, setDomainControllers] = useState([]);
@@ -26,7 +26,7 @@ const DomainControllers = () => {
     }, []);
 
     return (
-        <div className="server-status-container">
+        <div className="domain-controllers-container">
             {error ? (
                 <p>{error}</p>
             ) : domainControllers.length === 0 ? (
@@ -38,6 +38,7 @@ const DomainControllers = () => {
                         <tr>
                             <th>Controller Name</th>
                             <th>Role</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -45,6 +46,9 @@ const DomainControllers = () => {
                             <tr key={index}>
                                 <td>{controller.ControllerName}</td>
                                 <td>{controller.Role}</td>
+                                <td className={controller.Status === 'Online' ? 'status-online' : 'status-offline'}>
+                                    {controller.Status}
+                                </td>
                             </tr>
                         ))}
                     </tbody>

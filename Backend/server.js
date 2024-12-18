@@ -12,7 +12,7 @@ const verifyToken = require('./middleware/verifyToken'); // Ensure JWT middlewar
 const verifyPermissions = require('./middleware/verifyPermissions'); // Import the permissions middleware
 const { updateLockedOutUsers } = require('./utils/lockedOutUsersUtils'); // Import the module
 const { getServerStatuses } = require('./utils/ServerManageUtil'); // Import the module
-const { updateDomainControllers } = require('./utils/domainManager'); // Import the updateDomainControllers function
+const { updateDomainControllers, DomainControllerStatus  } = require('./utils/domainManager'); // Import the updateDomainControllers function
 const logger = require('./utils/logger'); // Import the logger
 const sessionStore = require('./utils/sessionStore'); // Import your session store
 
@@ -171,6 +171,7 @@ server.listen(PORT, HOST, () => {
     updateLockedOutUsers(); // Initial call to populate the table
     getServerStatuses(); // Initial call to populate the server statuses
     updateDomainControllers(); // Initial call to update domain controllers
+    DomainControllerStatus(); // Initial call to update domain controller statuses
 
     // Function to parse interval string and convert to milliseconds
     const parseInterval = (interval) => {
@@ -203,6 +204,10 @@ server.listen(PORT, HOST, () => {
     // Set up the refresh interval for server statuses
     const serverStatusRefreshInterval = parseInterval(process.env.SERVER_STATUS_REFRESH_INTERVAL);
     setInterval(getServerStatuses, serverStatusRefreshInterval);
+
+    // Set up the refresh interval for domain controller statuses
+    const domainControllerStatusRefreshInterval = 600000; // Default to 10 minutes
+    setInterval(DomainControllerStatus, domainControllerStatusRefreshInterval);
 });
 
 // Graceful shutdown handling
