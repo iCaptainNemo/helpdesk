@@ -217,6 +217,11 @@ function updateDomainControllerStatus(controllerName, status, callback) {
     db.run(query, [status, controllerName], callback);
 }
 
+const fetchPDC = (callback) => {
+    const query = 'SELECT PDC FROM CurrentDomain LIMIT 1'; // Adjust the query as necessary
+    db.get(query, [], callback);
+  };
+
 function fetchDomainControllers(callback) {
     const query = `
         SELECT dc.ControllerName, dc.Details, dc.Role, dc.Status, cd.PDC, cd.DDC
@@ -242,6 +247,7 @@ module.exports = {
     insertCurrentDomain,
     updateDomainControllerStatus,
     fetchDomainControllers,
+    fetchPDC,
     fetchAdminUser,
     fetchAllAdminUsers,
     executeQuery,

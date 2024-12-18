@@ -12,6 +12,7 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
     TimesHelped: null
   });
   const [autoRefresh, setAutoRefresh] = useState(false); // State to control auto-refresh
+  const [PDC, setPDC] = useState(''); // State to store the PDC
   const userAccountStatusProperties = useMemo(() => [
     'Enabled',
     'LockedOut',
@@ -23,6 +24,23 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
   ], []);
 
   useEffect(() => {
+    const fetchPDC = async () => {
+      try {
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/domain-controllers/pdc`);
+        if (!response.ok) throw new Error('Network response was not ok');
+        const data = await response.text(); // Fetch as plain text
+        setPDC(data);
+      } catch (error) {
+        console.error('Error fetching PDC:', error);
+      }
+    };
+
+    fetchPDC();
+  }, []);
+
+  useEffect(() => {
+    if (!PDC) return; // Wait until PDC is fetched
+
     let isMounted = true; // Track if the component is mounted
 
     const fetchUserAccountStatus = async () => {
@@ -31,7 +49,7 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
         if (!token) throw new Error('No token found');
 
         // Fetch Active Directory properties
-        const command = `Get-ADUser -Identity ${adObjectID} -Properties ${userAccountStatusProperties.join(',')} | ConvertTo-Json -Compress`;
+        const command = `Get-ADUser -Identity ${adObjectID} -Server ${PDC} -Properties ${userAccountStatusProperties.join(',')} | ConvertTo-Json -Compress`;
         const adResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
           method: 'POST',
           headers: {
@@ -104,7 +122,7 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
       isMounted = false; // Cleanup function to set isMounted to false
       clearInterval(interval); // Cleanup interval on component unmount
     };
-  }, [adObjectID, autoRefresh, userAccountStatusProperties]);
+  }, [adObjectID, autoRefresh, userAccountStatusProperties, PDC]);
 
   const handleUnlockSuccess = async (result) => {
     if (result.message.includes('Unlocked')) {
