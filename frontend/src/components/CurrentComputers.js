@@ -111,7 +111,7 @@ const CurrentComputersTable = ({ adObjectID }) => {
     }
   };
 
-  const checkComputerStatuses = async () => {
+  const checkComputerStatuses = useCallback(async () => {
     const statusMap = { ...computerStatuses }; // Copy the current statuses
 
     for (const computer of computers) { // Remove the reverse call here
@@ -126,7 +126,7 @@ const CurrentComputersTable = ({ adObjectID }) => {
 
         setComputerStatuses({ ...statusMap }); // Update the state with the new status
     }
-  };
+  }, [computers, computerStatuses, adObjectID]);
 
   const handleFetchComputers = async () => {
     setIsFetching(true);
@@ -138,7 +138,7 @@ const CurrentComputersTable = ({ adObjectID }) => {
     if (computers.length > 0) {
       checkComputerStatuses();
     }
-  }, [computers]);
+  }, [computers, checkComputerStatuses]);
 
   const copyToClipboard = (value) => {
     if (navigator.clipboard && navigator.clipboard.writeText) {

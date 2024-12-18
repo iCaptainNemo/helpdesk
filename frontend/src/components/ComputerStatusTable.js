@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import '../styles/ComputerStatusTable.css';
 
 const ComputerStatusTable = ({ adObjectID }) => {
@@ -7,6 +7,70 @@ const ComputerStatusTable = ({ adObjectID }) => {
   const [users, setUsers] = useState('Fetching...');
   const [autoRefresh, setAutoRefresh] = useState(true); // State to control auto-refresh
   const [ipFetched, setIpFetched] = useState(false); // State to track if IP address has been fetched
+
+  const fetchIpv4Address = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No token found');
+
+      const ipCommand = `Invoke-Command -ComputerName ${adObjectID} -ScriptBlock { Get-WmiObject -Class Win32_NetworkAdapterConfiguration | Where-Object { $_.IPEnabled -eq $true } | Select-Object -ExpandProperty IPAddress | Where-Object { $_ -match '^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$' } } | ConvertTo-Json -Compress`;
+
+      const ipResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ command: ipCommand }),
+      });
+
+      if (!ipResponse.ok) throw new Error('Network response was not ok');
+
+      const ipData = await ipResponse.json();
+      const ipAddress = ipData.value; // Extract the IP address value
+      setIpv4Address(ipAddress);
+    } catch (error) {
+      console.error('Error fetching IP address:', error);
+      setIpv4Address('Unavailable');
+    }
+  }, [adObjectID]);
+
+  const fetchLoggedInUsers = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No token found');
+
+      const usersCommand = `../../../Tools/PsLoggedon.exe -l -x \\\\${adObjectID} | ConvertTo-Json -Compress`;
+
+      const usersResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ command: usersCommand }),
+      });
+
+      if (!usersResponse.ok) throw new Error('Network response was not ok');
+
+      const usersData = await usersResponse.json();
+
+      if (!Array.isArray(usersData)) {
+        throw new Error('Unexpected data format');
+      }
+
+      const startIndex = usersData.findIndex(line => line.includes('Users logged on locally:'));
+
+      const usersList = startIndex !== -1
+        ? usersData.slice(startIndex + 1).map(line => line.replace(/\t/g, '').trim()).filter(line => line)
+        : [];
+
+      setUsers(usersList.length > 0 ? usersList.join(', ') : 'No logged in users');
+    } catch (error) {
+      console.error('Error fetching logged in users:', error);
+      setUsers('No logged in users');
+    }
+  }, [adObjectID]);
 
   useEffect(() => {
     const fetchComputerStatus = async () => {
@@ -54,82 +118,7 @@ const ComputerStatusTable = ({ adObjectID }) => {
     }
 
     return () => clearInterval(interval); // Cleanup interval on component unmount
-  }, [adObjectID, autoRefresh, ipFetched]);
-
-  const fetchIpv4Address = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No token found');
-
-      const ipCommand = `Invoke-Command -ComputerName ${adObjectID} -ScriptBlock { Get-WmiObject -Class Win32_NetworkAdapterConfiguration | Where-Object { $_.IPEnabled -eq $true } | Select-Object -ExpandProperty IPAddress | Where-Object { $_ -match '^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$' } } | ConvertTo-Json -Compress`;
-
-      const ipResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ command: ipCommand }),
-      });
-
-      if (!ipResponse.ok) throw new Error('Network response was not ok');
-
-      const ipData = await ipResponse.json();
-      const ipAddress = ipData.value; // Extract the IP address value
-      setIpv4Address(ipAddress);
-    } catch (error) {
-      console.error('Error fetching IP address:', error);
-      setIpv4Address('Unavailable');
-    }
-  };
-
-  const fetchLoggedInUsers = async () => {
-    try {
-      //  console.log(`Fetching logged in users for adObjectID: ${adObjectID}`);
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('No token found');
-      //  console.log('Token retrieved successfully');
-
-        const usersCommand = `../../../Tools/PsLoggedon.exe -l -x \\\\${adObjectID} | ConvertTo-Json -Compress`;
-      //  console.log(`Command to be executed: ${usersCommand}`);
-
-        const usersResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify({ command: usersCommand }),
-        });
-
-        if (!usersResponse.ok) throw new Error('Network response was not ok');
-      //  console.log('Command executed successfully');
-
-        const usersData = await usersResponse.json();
-      //  console.log('Response data:', usersData);
-
-        // The response is already JSON, no need to parse it again
-        const parsedData = usersData;
-      //  console.log('Parsed output:', parsedData);
-
-        if (!Array.isArray(parsedData)) {
-            throw new Error('Unexpected data format');
-        }
-
-        const startIndex = parsedData.findIndex(line => line.includes('Users logged on locally:'));
-      //  console.log('Start index of users list:', startIndex);
-
-        const usersList = startIndex !== -1
-            ? parsedData.slice(startIndex + 1).map(line => line.replace(/\t/g, '').trim()).filter(line => line)
-            : [];
-      // console.log('Users list:', usersList);
-
-        setUsers(usersList.length > 0 ? usersList.join(', ') : 'No logged in users');
-    } catch (error) {
-      //  console.error('Error fetching logged in users:', error);
-        setUsers('No logged in users');
-    }
-};
+  }, [adObjectID, autoRefresh, ipFetched, fetchIpv4Address, fetchLoggedInUsers]);
 
   return (
     <div className="computer-status-table-container">
