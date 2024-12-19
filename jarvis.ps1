@@ -79,7 +79,6 @@ try {
     $AdminUser = New-Object PSObject -Property @{
         SamAccountName = 404
         Name = "Unknown"
-        Name = "Unknown"
     }
 }
 

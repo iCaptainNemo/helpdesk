@@ -1,12 +1,3 @@
-
-param (
-    [string]$UserID,
-    [switch]$StopLoop,
-    [switch]$debug = $false
-)
-
-
-
 param (
     [string]$UserID,
     [switch]$StopLoop,
@@ -15,73 +6,6 @@ param (
 
 
 $Host.UI.RawUI.WindowTitle = Split-Path -Path $MyInvocation.MyCommand.Definition -Leaf
-
-if ($debug) {
-    # Ask user if they want to see debugging lines (Continue) or debug (Inquire)
-    $debugPreferenceChoice = Read-Host "See debug lines (Continue) or debug (Inquire)? Default is Continue. (C/I)"
-
-    if ($debugPreferenceChoice -eq 'I' -or $debugPreferenceChoice -eq 'i') {
-        $DebugPreference = 'Inquire'
-        Write-Host "Debugging is enabled with Inquire preference" -ForegroundColor Green
-    } else {
-        $DebugPreference = 'Continue'
-        Write-Host "Debugging is enabled with Continue preference" -ForegroundColor Green
-    }
-}
-
-# DEBUG: Print the UserID and StopLoop values from external call
-Write-Debug "UserID: $UserID"
-Write-Debug "Stop Loop Switch: $stoploop"
-
-
-function Get-DomainRoot {
-    try {
-        $currentDomain = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain()
-        $rootDSE = New-Object System.DirectoryServices.DirectoryEntry("LDAP://$($currentDomain.Name)/RootDSE")
-        $domainRoot = $rootDSE.defaultNamingContext
-        $ldapPath = "LDAP://OU=Domain Controllers,$($currentDomain.distinguishedName)"
-
-        Write-Debug "LDAP path: $ldapPath"
-        Write-Debug "Domain root: $domainRoot"
-
-        return @{
-            DomainRoot = $domainRoot
-            LdapPath = $ldapPath
-        }
-    } catch {
-        Write-Host "Error: $_"
-    }
-}
-
-# Call the function and store the result in a variable
-$domainRoot = Get-DomainRoot
-function Get-DomainControllers {
-    $dcList = @{}
-    try {
-        $currentDomain = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain()
-        Write-Debug "Current Domain: $($currentDomain)"
-
-        $currentDomain.DomainControllers | ForEach-Object {
-            $dcList[$_.Name] = $_
-        }
-
-        # Retrieve the primary domain controller (PDC) emulator role owner DN
-        $PDC = $currentDomain.PdcRoleOwner
-        Write-Debug "Primary DC: $($PDC)"
-
-        # Retrieve the distinguished name of the DDC
-        $DDC = $currentDomain.RidRoleOwner
-        Write-Debug "Distributed DC: $($DDC)"
-        Write-Debug "Number of domain controllers found: $($dcList.Count)"
-
-        return @{
-            DcList = $dcList
-            PDC = $PDC
-            DDC = $DDC
-        }
-    } catch {
-        Write-Host "Error: $_"
-    }
 
 if ($debug) {
     # Ask user if they want to see debugging lines (Continue) or debug (Inquire)
@@ -244,68 +168,7 @@ function Check-LockedOut {
     try {
         $searcher = New-Object System.DirectoryServices.DirectorySearcher
         $searcher.Filter = "(sAMAccountName=$userId)"
-        
-        # Check if targetDC is not null before setting the SearchRoot
-        if ($targetDC -ne 0) {
-            $searcher.SearchRoot = "LDAP://$targetDC/$domainRoot"
-        } else {
-            Write-Debug "Skipping check for user on null Domain Controller"
-            return
-        }
 
-        $user = $searcher.FindOne()
-        Write-Debug "Check-LockedOut: User search result - $user"
-
-        if ($user -ne $null) {
-            $userEntry = $user.GetDirectoryEntry()
-            $isLockedOut = $userEntry.InvokeGet("IsAccountLocked")
-            if ($isLockedOut) {
-                Write-Host "Locked Out: True" -ForegroundColor Red
-            } else {
-                Write-Host "Locked Out: False" -ForegroundColor Green
-            }
-        } else {
-            Write-Host "User not found on the target Domain Controller" -ForegroundColor Yellow
-        }
-    } catch {
-        Write-Host "Error: $_"
-    try {
-        $searcher = New-Object System.DirectoryServices.DirectorySearcher
-        $searcher.Filter = "(sAMAccountName=$userId)"
-        $user = $searcher.FindOne()
-        Write-Debug "Get-OU: User search result - $user"
-
-        if ($user) {
-            $userEntry = $user.GetDirectoryEntry()
-            $distinguishedName = $userEntry.distinguishedName
-
-            # The distinguishedName is in the format: CN=<username>,OU=<ou>,DC=<domain>,DC=<com>
-            # Split the distinguishedName by the comma character to get the individual parts
-            $parts = $distinguishedName.Split(',')
-
-            # The first OU will be the second part of the distinguishedName
-            $firstOU = $parts[1].Replace('OU=', '')
-
-            if ($debug) { Write-Host "OU: $firstOU" }
-            return $firstOU  # Return the OU
-        } else {
-            Write-Host "User does not exist, check ID and try again."
-        }
-    } catch {
-        Write-Host "Error: $_"
-    }
-}
-function Check-LockedOut {
-    param (
-        [string]$userId,
-        [string]$targetDC,
-        [string]$domainRoot
-    )
-
-    try {
-        $searcher = New-Object System.DirectoryServices.DirectorySearcher
-        $searcher.Filter = "(sAMAccountName=$userId)"
-        
         # Check if targetDC is not null before setting the SearchRoot
         if ($targetDC -ne 0) {
             $searcher.SearchRoot = "LDAP://$targetDC/$domainRoot"
@@ -333,7 +196,6 @@ function Check-LockedOut {
     }
 }
 
-function Match-OUtoDC {
 function Match-OUtoDC {
     param (
         [string]$OU,
@@ -413,8 +275,6 @@ function Unlock-User {
                     Write-Output "Error unlocking account on $targetDC User not found"
                 }
             } catch {
-                Write-Output "Error unlocking account on $targetDC $_"
-            }
                 Write-Output "Error unlocking account on $targetDC $_"
             }
         } else {
