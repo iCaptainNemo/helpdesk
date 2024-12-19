@@ -244,89 +244,96 @@ const ADProperties = ({ permissions }) => {
   };
 
   const handleResetPassword = async () => {
-    try {
-      // First command to reset the password
-      const resetPasswordCommand = `Set-ADAccountPassword -Identity ${adObjectID} -Reset -NewPassword (ConvertTo-SecureString -AsPlainText "${newPassword}" -Force) -ErrorAction Stop;`;
-      const resetPasswordResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ command: resetPasswordCommand }),
-      });
-  
-      if (!resetPasswordResponse.ok) {
-        throw new Error('Failed to reset password');
-      }
-  
-      // If the toggle switch is enabled, run the second command
-      if (forceChangePassword) {
-        const changePasswordAtLogonCommand = `Set-ADUser -Identity ${adObjectID} -ChangePasswordAtLogon $true -ErrorAction Stop;`;
-        const changePasswordAtLogonResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
-          body: JSON.stringify({ command: changePasswordAtLogonCommand }),
-        });
-  
-        if (!changePasswordAtLogonResponse.ok) {
-          throw new Error('Failed to set change password at logon');
-        }
-      }
-  
-      // Update user stats
-      const updates = {
-        LastHelped: new Date().toLocaleString('en-US', {
-          month: '2-digit',
-          day: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: true,
-        }),
-        TimesHelped: (additionalFields.TimesHelped || 0) + 1,
-        PasswordResets: (additionalFields.PasswordResets || 0) + 1
-      };
-  
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('No token found');
-  
-        const backendUrl = process.env.REACT_APP_BACKEND_URL;
-        if (!backendUrl) throw new Error('Backend URL is not defined');
-  
-        const response = await fetch(`${backendUrl}/api/fetch-user/update`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({ adObjectID, updates }),
-        });
-  
-        if (!response.ok) throw new Error('Network response was not ok');
-  
-        const updatedUser = await response.json();
-        setAdditionalFields((prevFields) => ({
-          ...prevFields,
-          ...updatedUser
-        }));
-      } catch (error) {
-        console.error('Error updating user stats:', error);
-      }
-  
-      alert('Password reset successfully');
-      setModalIsOpen(false);
-    } catch (error) {
-      console.error('Error resetting password:', error);
-      alert('Failed to reset password');
-    }
-  };
+    let resetPasswordSuccess = false;
+    let changePasswordAtLogonSuccess = true; // Default to true in case it's not needed
 
+    try {
+        // First command to reset the password
+        const resetPasswordCommand = `Set-ADAccountPassword -Identity ${adObjectID} -Reset -NewPassword (ConvertTo-SecureString -AsPlainText "${newPassword}" -Force) -ErrorAction Stop;`;
+        const resetPasswordResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            },
+            body: JSON.stringify({ command: resetPasswordCommand }),
+        });
+
+        if (!resetPasswordResponse.ok) {
+            throw new Error('Failed to reset password');
+        }
+        resetPasswordSuccess = true;
+
+        // If the toggle switch is enabled, run the second command
+        if (forceChangePassword) {
+            const changePasswordAtLogonCommand = `Set-ADUser -Identity ${adObjectID} -ChangePasswordAtLogon $true -ErrorAction Stop;`;
+            const changePasswordAtLogonResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                },
+                body: JSON.stringify({ command: changePasswordAtLogonCommand }),
+            });
+
+            if (!changePasswordAtLogonResponse.ok) {
+                throw new Error('Failed to set change password at logon');
+            }
+            changePasswordAtLogonSuccess = true;
+        }
+
+        // Update user stats
+        const updates = {
+            LastHelped: new Date().toLocaleString('en-US', {
+                month: '2-digit',
+                day: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true,
+            }),
+            TimesHelped: (additionalFields.TimesHelped || 0) + 1,
+            PasswordResets: (additionalFields.PasswordResets || 0) + 1
+        };
+
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) throw new Error('No token found');
+
+            const backendUrl = process.env.REACT_APP_BACKEND_URL;
+            if (!backendUrl) throw new Error('Backend URL is not defined');
+
+            const response = await fetch(`${backendUrl}/api/fetch-user/update`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({ adObjectID, updates }),
+            });
+
+            if (!response.ok) throw new Error('Network response was not ok');
+
+            const updatedUser = await response.json();
+            setAdditionalFields((prevFields) => ({
+                ...prevFields,
+                ...updatedUser
+            }));
+        } catch (error) {
+            console.error('Error updating user stats:', error);
+        }
+
+        // If both commands were successful, show success message
+        if (resetPasswordSuccess && changePasswordAtLogonSuccess) {
+            alert('Password reset successfully');
+            setModalIsOpen(false);
+        }
+    } catch (error) {
+        console.error('Error resetting password:', error);
+        alert('Failed to reset password');
+    }
+};
   return (
     <div className="ad-properties-container">
       <Tabs

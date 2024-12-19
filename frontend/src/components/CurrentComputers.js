@@ -12,24 +12,41 @@ const CurrentComputersTable = ({ adObjectID }) => {
 
   const fetchComputers = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No token found');
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/get-logs`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ adObjectID }),
-      });
-      if (!response.ok) throw new Error('Network response was not ok');
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('No token found');
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/get-logs`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ adObjectID }),
+        });
+        if (!response.ok) throw new Error('Network response was not ok');
 
-      const logsData = await response.json();
-      const uniqueComputers = [...new Set(logsData.map(log => log.Computer))];
-      setComputers(uniqueComputers);
+        const logsData = await response.json();
+
+        // Sort logs by date and time
+        logsData.sort((a, b) => {
+            const dateA = new Date(`${a.Date} ${a.Time || '00:00:00'}`);
+            const dateB = new Date(`${b.Date} ${b.Time || '00:00:00'}`);
+            return dateB - dateA;
+        });
+
+        // Extract unique computers while maintaining order
+        const uniqueComputers = [];
+        const seenComputers = new Set();
+        for (const log of logsData) {
+            if (!seenComputers.has(log.Computer)) {
+                uniqueComputers.push(log.Computer);
+                seenComputers.add(log.Computer);
+            }
+        }
+
+        setComputers(uniqueComputers);
     } catch (error) {
-      console.error('Error fetching computers:', error);
+        console.error('Error fetching computers:', error);
     }
-  };
+};
 
   const checkComputerDomainStatus = async (computer) => {
     try {
