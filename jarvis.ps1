@@ -20,6 +20,7 @@ $Host.UI.RawUI.WindowTitle = Split-Path -Path $MyInvocation.MyCommand.Definition
 Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope CurrentUser
 
 # Import ActiveDirectory module
+# Import ActiveDirectory module
 Import-Module ActiveDirectory
 
 # Install the powershell-yaml module if it is not already installed
@@ -71,16 +72,21 @@ if ($wmi) {
 try {
     # Assign the USERNAME environment variable to $AdminUser
     $AdminUser = $env:USERNAME
+    # Assign the USERNAME environment variable to $AdminUser
+    $AdminUser = $env:USERNAME
 } catch {
     Write-Host "Error getting user. Setting default AdminUserID to 404."
     $AdminUser = New-Object PSObject -Property @{
         SamAccountName = 404
         Name = "Unknown"
+        Name = "Unknown"
     }
 }
 
 # Initialize variables hashtable
+# Initialize variables hashtable
 $envVars = @{}
+$UserVars = @{}
 $UserVars = @{}
 
 # Import functions from functions directory
@@ -97,6 +103,7 @@ $UserVars = @{}
 . .\functions\Unlock-ADAccountOnAllDomainControllers.ps1
 . .\functions\Clear-Browsers.ps1
 
+# Create env.ps1 file if missing and test domain controllers
 # Create env.ps1 file if missing and test domain controllers
 if (-not (Test-Path ".\.env\.env_$currentDomain.ps1")) {
     Test-DomainControllers
@@ -137,7 +144,9 @@ class YamlHandler {
 
 # Check if the .env_$AdminConfig.ps1 file exists
 $AdminConfig = ".\.env\.env_$env:USERNAME.ps1"
+$AdminConfig = ".\.env\.env_$env:USERNAME.ps1"
 if (Test-Path $AdminConfig) {
+    Write-Host "Admin User config:" -NoNewline; Write-Host "Imported." -ForegroundColor Green
     Write-Host "Admin User config:" -NoNewline; Write-Host "Imported." -ForegroundColor Green
     . $AdminConfig
 
@@ -204,6 +213,7 @@ Pause
 # Main loop
 while ($true) {
     # Get User ID before entering the main menu
+    Clear-Host
     Clear-Host
     $envVars['UserID'] = Get-UserId
 
