@@ -145,26 +145,26 @@ function executePowerShellCommand(command) {
 
     // Log the command if logging is not suppressed
     if (!shouldSuppressLogging) {
-        logger.verbose(`Executing command: ${modifiedCommand}`);
+        verbose(`Executing command: ${modifiedCommand}`);
     }
 
     // Return a promise that resolves with the command output
     return new Promise((resolve, reject) => {
         exec(`powershell.exe -Command "${modifiedCommand}"`, (execError, stdout, stderr) => {
             if (execError) {
-                logger.error(`Execution error: ${execError}`);
+                error(`Execution error: ${execError}`);
                 return reject(`Execution error: ${execError}\n${stderr}`);
             }
             if (stderr) {
-                logger.error(`stderr: ${stderr}`);
+                error(`stderr: ${stderr}`);
             }
             if (!stdout) {
-                logger.error('No output from PowerShell command');
+                error('No output from PowerShell command');
                 return resolve({ message: 'Command executed successfully, but no output was produced.' });
             }
 
             if (!shouldSuppressLogging) {
-                logger.debug(`stdout: ${stdout}`);
+                debug(`stdout: ${stdout}`);
             }
 
             try {
@@ -173,12 +173,11 @@ function executePowerShellCommand(command) {
                 const jsonOutput = JSON.parse(cleanedOutput);
                 resolve(jsonOutput);
             } catch (parseError) {
-                logger.error(`JSON parse error: ${parseError}`);
+                error(`JSON parse error: ${parseError}`);
                 resolve({ message: 'Command executed successfully, but output could not be parsed as JSON.' });
             }
         });
-    });
-}
+    
 
 module.exports = {
     executePowerShellScript,
