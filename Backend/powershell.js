@@ -177,7 +177,8 @@ function executePowerShellCommand(command) {
                 resolve({ message: 'Command executed successfully, but output could not be parsed as JSON.' });
             }
         });
-    
+    });
+}
 
 module.exports = {
     executePowerShellScript,
