@@ -8,10 +8,6 @@ function Asset-Control {
     # Check $powershell boolean
     if ($powershell -eq $true) {
 
-
-    # Check $powershell boolean
-    if ($powershell -eq $true) {
-
     # Add a line break or additional Write-Host statements for space
     Write-Host "`n"  # This adds a line break
 
@@ -23,39 +19,18 @@ function Asset-Control {
 
     # Display possible computers as a numbered list
     if ($powershell -eq $true) { Write-Host "Possible Computers:" }
-    if ($powershell -eq $true) { Write-Host "Possible Computers:" }
     $psLoggedOnPath = ".\Tools\PsLoggedon.exe"
     $computerStatus = @{}
 
     # Cast Into Array
     $possibleComputers = [array]$possibleComputers
 
-    # Cast Into Array
-    $possibleComputers = [array]$possibleComputers
-
-        for ($i = 0; $i -lt $possibleComputers.Count; $i++) {
-            $computerName = $possibleComputers[$i]
         for ($i = 0; $i -lt $possibleComputers.Count; $i++) {
             $computerName = $possibleComputers[$i]
 
             # Check if the computer is part of the domain
             $computerInDomain = Get-ADComputer -Filter {Name -eq $computerName} -ErrorAction SilentlyContinue
-            # Check if the computer is part of the domain
-            $computerInDomain = Get-ADComputer -Filter {Name -eq $computerName} -ErrorAction SilentlyContinue
 
-            if ($null -eq $computerInDomain) {
-                Write-Host "$($i + 1). $computerName - Not part of domain" -ForegroundColor DarkGray
-                continue
-            }
-            # If the computer has already been checked, use the stored status
-            if ($computerStatus.ContainsKey($computerName)) {
-                $isUserLoggedIn = $computerStatus[$computerName]
-            } else {
-                # Check if the user is logged on to the computer
-                try {
-                    $output = & $psLoggedOnPath -l -x \\$computerName | Out-String
-                    # Write-Host "Output of PsLoggedOn for ${computerName}: $output"  # Debugging line
-                    $isUserLoggedIn = $output -match $userID
             if ($null -eq $computerInDomain) {
                 Write-Host "$($i + 1). $computerName - Not part of domain" -ForegroundColor DarkGray
                 continue
@@ -77,19 +52,7 @@ function Asset-Control {
                     continue
                 }
             }
-                    # Store the status for this computer
-                    $computerStatus[$computerName] = $isUserLoggedIn
-                } catch {
-                    Write-Host ("Error running PsLoggedOn for " + $computerName + ": " + $_.Exception.Message) -ForegroundColor Red
-                    continue
-                }
-            }
 
-            if ($isUserLoggedIn) {
-                Write-Host "$($i + 1). $computerName" -ForegroundColor Green
-            } else {
-                Write-Host "$($i + 1). $computerName"
-            }
             if ($isUserLoggedIn) {
                 Write-Host "$($i + 1). $computerName" -ForegroundColor Green
             } else {
@@ -101,26 +64,16 @@ function Asset-Control {
     # Prompt for Computer Name or number
     $input = Read-Host "Enter Computer Name or number (1-10, C to cancel):"
 
-    $input = Read-Host "Enter Computer Name or number (1-10, C to cancel):"
-
 
     # Check if the input is 'C' or 'c' to cancel
     if ($input -eq 'C' -or $input -eq 'c') {
-    # Check if the input is 'C' or 'c' to cancel
-    if ($input -eq 'C' -or $input -eq 'c') {
 
-        Write-Host "Selection cancelled."
-        break
-    } elseif ($input -match '^[1-9]$|^10$') {
-        # If the input is a number between 1 and 10, map it to the corresponding computer
         Write-Host "Selection cancelled."
         break
     } elseif ($input -match '^[1-9]$|^10$') {
         # If the input is a number between 1 and 10, map it to the corresponding computer
         $computerName = $possibleComputers[$input - 1]
     } else {
-        # Assign $input to $computerName
-        $computerName = $input
         # Assign $input to $computerName
         $computerName = $input
     }
@@ -212,24 +165,7 @@ function Asset-Control {
                     } catch {
                         Write-Host "Connection to $computerName failed" -ForegroundColor Red
                     }
-                # Check if $powershell is true
-                if ($powershell -eq $true) {
-                    # Test connection using Test-Connection
-                    try {
-                        if (Test-Connection -ComputerName $ComputerName -Count 1 -ErrorAction Stop) {
-                            Write-Host "Connection to $computerName successful" -ForegroundColor Green
-                        }
-                    } catch {
-                        Write-Host "Connection to $computerName failed" -ForegroundColor Red
-                    }
                 } else {
-                    # Test connection using WMI
-                    try {
-                        $computer = Get-WmiObject -Class Win32_ComputerSystem -ComputerName $computerName -ErrorAction Stop
-                        Write-Host "Connection to $computerName successful" -ForegroundColor Green
-                    } catch {
-                        Write-Host "Connection to $computerName failed" -ForegroundColor Red
-                    }
                     # Test connection using WMI
                     try {
                         $computer = Get-WmiObject -Class Win32_ComputerSystem -ComputerName $computerName -ErrorAction Stop
@@ -288,7 +224,6 @@ function Asset-Control {
                 break
             }
 
-
             '5' {
                 # Start PsExec to open a command prompt on the remote computer
                 $psexecCommand = "psexec.exe \\$computerName cmd.exe"
@@ -327,39 +262,8 @@ function Asset-Control {
                     Write-Host "An error occurred while running Group Policy Update: $_"
                 }
                 break
-                # Run Group Policy Update
-                Write-Host "Running Group Policy Update on $computerName"
-                try {
-                    Start-Process powershell -ArgumentList "-NoExit -Command {Invoke-GPUpdate -Computer $computerName -Force}"
-                } catch {
-                    Write-Host "An error occurred while running Group Policy Update: $_"
-                }
-                break
             }
             '8' {
-                Write-Host "Stopping Cisco AWG Service on $computername"
-                Invoke-Command -ComputerName $computername -ScriptBlock {
-                    Stop-Service -Name 'csc_swgagent' -Force -ErrorAction Stop
-                }
-            }
-            '9' {
-                # Get the session ID of the user with the provided userID
-                $sessionId = (quser /server:$computername | Where-Object { $_ -match $userID }) -replace '.*\s+(\d+)\s+.*', '$1'
-            
-                # Log off the user with the provided userID
-                if ($sessionId) {
-                    logoff $sessionId /server:$computername
-                } else {
-                    Write-Host "No session ID found for user $userID on server $computername."
-                }
-            }
-            '10' {
-                # Open file explorer for the user's profile on the remote computer
-                Write-Host "Opening File Explorer for $userid on $computerName"
-                Invoke-Expression "explorer.exe /e,\\$computerName\c$\Users\$userid"
-                break
-            }
-            '11' {
                 Write-Host "Stopping Cisco AWG Service on $computername"
                 Invoke-Command -ComputerName $computername -ScriptBlock {
                     Stop-Service -Name 'csc_swgagent' -Force -ErrorAction Stop
@@ -603,7 +507,4 @@ function Asset-Control {
         }
         pause
     }
-        pause
-    }
 }
-
