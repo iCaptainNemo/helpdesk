@@ -393,17 +393,19 @@ const ADProperties = ({ permissions }) => {
             </tbody>
           </table>
         </div>
-        {(tabs[activeTab]?.data.ObjectClass === 'user') && (
+        {tabs[activeTab]?.data.ObjectClass === 'user' && (
           <div className="user-account-status-table-container">
             <UserStatusTable
+              key={tabs[activeTab]?.name} // Add key prop
               adObjectID={tabs[activeTab]?.name} // Pass adObjectID to UserStatusTable
               permissions={permissions} // Pass permissions to UserStatusTable
             />
           </div>
         )}
-        {(tabs[activeTab]?.data.ObjectClass === 'computer') && (
+        {tabs[activeTab]?.data.ObjectClass === 'computer' && (
           <div className="computer-status-table-container">
             <ComputerStatusTable
+              key={tabs[activeTab]?.name} // Add key prop
               adObjectID={tabs[activeTab]?.name} // Pass adObjectID to ComputerStatusTable
             />
           </div>
