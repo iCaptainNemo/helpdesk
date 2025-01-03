@@ -7,13 +7,14 @@ const scriptPath = path.join(__dirname, '../functions/LockedOutList.ps1');
 
 async function updateLockedOutUsers() {
     try {
-        const lockedOutUsers = await serverPowerShellScript(scriptPath);
+        let lockedOutUsers = await serverPowerShellScript(scriptPath);
 
         // Ensure lockedOutUsers is an array
         if (!Array.isArray(lockedOutUsers)) {
             logger.error('Expected lockedOutUsers to be an array, but got:', typeof lockedOutUsers);
-            return;
+            lockedOutUsers = [];
         }
+
         // Check if lockedOutUsers is an empty array
         if (lockedOutUsers.length === 0) {
             // Clear the LockedOutUsers table

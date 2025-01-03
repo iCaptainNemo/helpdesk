@@ -78,7 +78,7 @@ const ADProperties = ({ permissions }) => {
   });
   const [activeTab, setActiveTab] = useState(0);
   const [modalIsOpen, setModalIsOpen] = useState(false);
-  const [newPassword, setNewPassword] = useState(process.env.TEMP_PASSWORD || 'Fall2024');
+  const [newPassword, setNewPassword] = useState(process.env.TEMP_PASSWORD || 'Winter2025');
   const [forceChangePassword, setForceChangePassword] = useState(true);
   const [tooltip, setTooltip] = useState({ visible: false, message: '' });
   const [additionalFields, setAdditionalFields] = useState({
