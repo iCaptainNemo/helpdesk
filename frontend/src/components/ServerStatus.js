@@ -5,6 +5,7 @@ const ServerStatus = () => {
     const [serverStatuses, setServerStatuses] = useState([]);
     const [error, setError] = useState(null);
     const [showAll, setShowAll] = useState(false);
+    const [sortConfig, setSortConfig] = useState({ key: 'ServerName', direction: 'ascending' });
 
     const fetchServerStatuses = async () => {
         try {
@@ -32,7 +33,28 @@ const ServerStatus = () => {
         setShowAll(!showAll);
     };
 
-    const filteredStatuses = serverStatuses.filter(server => {
+    const handleSort = (key) => {
+        let direction = 'ascending';
+        if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+            direction = 'descending';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const sortedStatuses = [...serverStatuses].sort((a, b) => {
+        const aValue = a[sortConfig.key] ? a[sortConfig.key].toString().toLowerCase() : '';
+        const bValue = b[sortConfig.key] ? b[sortConfig.key].toString().toLowerCase() : '';
+
+        if (aValue < bValue) {
+            return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+            return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+    });
+
+    const filteredStatuses = sortedStatuses.filter(server => {
         return server.Status !== 'Online' || server.FileShareService !== 'Running' || showAll;
     });
 
@@ -84,12 +106,12 @@ const ServerStatus = () => {
                     </caption>
                     <thead>
                         <tr>
-                            <th>Server Name</th>
-                            <th>Status</th>
-                            <th>LanmanServer</th>
+                            <th onClick={() => handleSort('ServerName')}>Server Name</th>
+                            <th onClick={() => handleSort('Status')}>Status</th>
+                            <th onClick={() => handleSort('FileShareService')}>LanmanServer</th>
                             <th>Up/Downtime</th>
-                            <th>Online Time</th>
-                            <th>Offline Time</th>
+                            <th onClick={() => handleSort('OnlineTime')}>Online Time</th>
+                            <th onClick={() => handleSort('OfflineTime')}>Offline Time</th>
                         </tr>
                     </thead>
                     <tbody>
