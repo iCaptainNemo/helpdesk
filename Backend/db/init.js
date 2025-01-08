@@ -51,9 +51,8 @@ const tables = [
             'Status TEXT',
             'FileShareService TEXT',
             'Location TEXT',
-            'Downtime DATETIME',
-            'LastOnline DATETIME',
-            'BackOnline DATETIME'
+            'OnlineTime DATETIME', 
+            'OfflineTime DATETIME'
         ]
     },
     {

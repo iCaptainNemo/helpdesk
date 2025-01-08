@@ -26,7 +26,7 @@ async function getServerStatuses() {
             // Prepare the SQL statement for updating server statuses
             const updateStmt = db.prepare(`
                 UPDATE Servers
-                SET Status = ?, FileShareService = ?, Downtime = ?, LastOnline = ?, BackOnline = ?
+                SET Status = ?, FileShareService = ?, OnlineTime = ?, OfflineTime = ?
                 WHERE ServerName = ?
             `);
 
@@ -35,41 +35,25 @@ async function getServerStatuses() {
             // Map through the server statuses and update the database
             const updatePromises = statusesArray.map(async server => {
                 const existingServer = await fetchServer(server.ServerName);
-                let downtime = null;
-                let lastOnline = existingServer.LastOnline;
-                let backOnline = existingServer.BackOnline;
+                let onlineTime = existingServer.OnlineTime;
+                let offlineTime = existingServer.OfflineTime;
 
                 if (server.Status === 'Online') {
                     // Server is online
-                    if (existingServer.Status !== 'Online') {
-                        // Server was previously offline
-                        if (lastOnline) {
-                            // Set BackOnline time if LastOnline is set
-                            backOnline = currentTime;
-                            // Calculate downtime in minutes
-                            downtime = Math.floor((currentTime - new Date(lastOnline)) / 60000);
-                        }
-                    } else {
-                        // Check if the server has been online for 24 hours
-                        if (backOnline && (currentTime - new Date(backOnline)) >= 24 * 60 * 60 * 1000) {
-                            lastOnline = null;
-                            backOnline = null;
-                        }
+                    if (!onlineTime) {
+                        // Set OnlineTime to current time if it is null
+                        onlineTime = currentTime;
                     }
+                    // Nullify OfflineTime
+                    offlineTime = null;
                 } else {
                     // Server is offline
-                    if (existingServer.Status === 'Online') {
-                        // Server was previously online
-                        lastOnline = currentTime;
-                    } else if (!lastOnline) {
-                        // Set LastOnline time if it is null
-                        lastOnline = currentTime;
+                    if (!offlineTime) {
+                        // Set OfflineTime to current time if it is null
+                        offlineTime = currentTime;
                     }
-                    if (lastOnline) {
-                        // Calculate downtime in minutes
-                        downtime = Math.floor((currentTime - new Date(lastOnline)) / 60000);
-                    }
-                    backOnline = null;
+                    // Nullify OnlineTime
+                    onlineTime = null;
                 }
 
                 // Update the server status in the database
@@ -77,9 +61,8 @@ async function getServerStatuses() {
                     updateStmt.run(
                         server.Status,
                         server.FileShareService,
-                        downtime,
-                        lastOnline,
-                        backOnline,
+                        onlineTime,
+                        offlineTime,
                         server.ServerName,
                         (err) => {
                             if (err) {

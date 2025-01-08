@@ -38,6 +38,35 @@ const ServerStatus = () => {
 
     const allServersOnline = serverStatuses.every(server => server.Status === 'Online' && server.FileShareService === 'Running');
 
+    const calculateUpDowntime = (onlineTime, offlineTime) => {
+        const currentTime = new Date();
+        let diffTime;
+
+        if (onlineTime) {
+            diffTime = Math.abs(currentTime - new Date(onlineTime));
+        } else if (offlineTime) {
+            diffTime = Math.abs(currentTime - new Date(offlineTime));
+        } else {
+            return 'N/A';
+        }
+
+        const diffMinutes = Math.floor(diffTime / (1000 * 60));
+        const days = Math.floor(diffMinutes / 1440); // 1440 minutes in a day
+        const hours = Math.floor((diffMinutes % 1440) / 60);
+        const remainingMinutes = diffMinutes % 60;
+
+        let formattedTime = '';
+        if (days > 0) {
+            formattedTime += `${days} days `;
+        }
+        if (hours > 0) {
+            formattedTime += `${hours} hours `;
+        }
+        formattedTime += `${remainingMinutes} minutes`;
+
+        return formattedTime;
+    };
+
     return (
         <div className="server-status-container">
             {error ? (
@@ -58,9 +87,9 @@ const ServerStatus = () => {
                             <th>Server Name</th>
                             <th>Status</th>
                             <th>LanmanServer</th>
-                            <th>Downtime</th>
-                            <th>Last Online</th>
-                            <th>Back Online</th>
+                            <th>Up/Downtime</th>
+                            <th>Online Time</th>
+                            <th>Offline Time</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -74,9 +103,9 @@ const ServerStatus = () => {
                                     <td>{server.ServerName}</td>
                                     <td className={server.Status === 'Online' ? 'status-online' : 'status-offline'}>{server.Status}</td>
                                     <td className={server.FileShareService === 'Running' ? 'service-running' : server.Status === 'Online' ? 'service-warning' : 'service-not-running'}>{server.FileShareService}</td>
-                                    <td>{server.Downtime ? `${server.Downtime} seconds` : 'N/A'}</td>
-                                    <td>{server.LastOnline ? new Date(server.LastOnline).toLocaleString() : 'N/A'}</td>
-                                    <td>{server.BackOnline ? new Date(server.BackOnline).toLocaleString() : 'N/A'}</td>
+                                    <td>{calculateUpDowntime(server.OnlineTime, server.OfflineTime)}</td>
+                                    <td>{server.OnlineTime ? new Date(server.OnlineTime).toLocaleString() : 'N/A'}</td>
+                                    <td>{server.OfflineTime ? new Date(server.OfflineTime).toLocaleString() : 'N/A'}</td>
                                 </tr>
                             ))
                         )}
