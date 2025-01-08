@@ -239,7 +239,7 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
     const lastSetDate = new Date((parseInt(pwdLastSet, 10) / 10000) - epochDiff);
     const currentDate = new Date();
     const diffTime = Math.abs(currentDate - lastSetDate);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) - 1; // Subtract 1 day
     return `${diffDays} days`;
   };
 
