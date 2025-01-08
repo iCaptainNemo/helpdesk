@@ -1,6 +1,11 @@
 const SENSITIVE_KEYS = ['password', 'secret', 'token', 'apikey'];
 const config = require('./config'); // Import the configuration object
 
+let chalk;
+(async () => {
+    chalk = await import('chalk');
+})();
+
 const sanitizeMessage = (message, ...optionalParams) => {
     const regex = new RegExp(`(${SENSITIVE_KEYS.join('|')}):\\s*['"]?([^'"\s]+)`, 'gi');
     const sanitizedMessage = message.replace(regex, '$1: ****');
@@ -15,42 +20,42 @@ const sanitizeMessage = (message, ...optionalParams) => {
 const log = (message, ...optionalParams) => {
     if (process.env.NODE_ENV !== 'production') {
         const [sanitizedMessage, ...sanitizedParams] = sanitizeMessage(message, ...optionalParams);
-        console.log(`[log] ${sanitizedMessage}`, ...sanitizedParams);
+        console.log(chalk?.default.white(`[log] ${sanitizedMessage}`), ...sanitizedParams);
     }
 };
 
 const info = (message, ...optionalParams) => {
     if (process.env.NODE_ENV !== 'production') {
         const [sanitizedMessage, ...sanitizedParams] = sanitizeMessage(message, ...optionalParams);
-        console.info(`[info] ${sanitizedMessage}`, ...sanitizedParams);
+        console.info(chalk?.default.white(`[info] ${sanitizedMessage}`), ...sanitizedParams);
     }
 };
 
 const warn = (message, ...optionalParams) => {
     if (process.env.NODE_ENV !== 'production') {
         const [sanitizedMessage, ...sanitizedParams] = sanitizeMessage(message, ...optionalParams);
-        console.warn(`[warn] ${sanitizedMessage}`, ...sanitizedParams);
+        console.warn(chalk?.default.yellow(`[warn] ${sanitizedMessage}`), ...sanitizedParams);
     }
 };
 
 const error = (message, ...optionalParams) => {
     if (process.env.NODE_ENV !== 'production') {
         const [sanitizedMessage, ...sanitizedParams] = sanitizeMessage(message, ...optionalParams);
-        console.error(`[error] ${sanitizedMessage}`, ...sanitizedParams);
+        console.error(chalk?.default.red(`[error] ${sanitizedMessage}`), ...sanitizedParams);
     }
 };
 
 const verbose = (message, ...optionalParams) => {
     if (process.env.NODE_ENV !== 'production' && config.logging.verbose) {
         const [sanitizedMessage, ...sanitizedParams] = sanitizeMessage(message, ...optionalParams);
-        console.debug(`[verbose] ${sanitizedMessage}`, ...sanitizedParams);
+        console.debug(chalk?.default.magenta(`[verbose] ${sanitizedMessage}`), ...sanitizedParams);
     }
 };
 
 const debug = (message, ...optionalParams) => {
     if (process.env.NODE_ENV !== 'production' && config.logging.debug) {
         const [sanitizedMessage, ...sanitizedParams] = sanitizeMessage(message, ...optionalParams);
-        console.debug(`[debug] ${sanitizedMessage}`, ...sanitizedParams);
+        console.debug(chalk?.default.cyan(`[debug] ${sanitizedMessage}`), ...sanitizedParams);
     }
 };
 
