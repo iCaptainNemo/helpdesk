@@ -104,11 +104,11 @@ function fetchAllAdminUsers() {
 // New functions for managing servers
 function insertServer(server) {
     const query = `
-        INSERT INTO Servers (ServerName, Description, Status, Location, Downtime, LastOnline, BackOnline)
+        INSERT INTO Servers (ServerName, Description, Status, Location, FileShareService, OnlineTime, OfflineTime)
         VALUES (?, ?, ?, ?, ?, ?, ?)
     `;
     const params = [
-        server.ServerName, server.Description, server.Status, server.Location, server.Downtime, server.LastOnline, server.BackOnline
+        server.ServerName, server.Description, server.Status, server.Location, server.FileShareService, server.OnlineTime, server.OfflineTime
     ];
     return executeQuery(query, params);
 }
@@ -116,11 +116,11 @@ function insertServer(server) {
 function updateServer(server) {
     const query = `
         UPDATE Servers
-        SET Description = ?, Status = ?, Location = ?, Downtime = ?, LastOnline = ?, BackOnline = ?
+        SET Description = ?, Status = ?, Location = ?, FileShareService = ?, OnlineTime = ?, OfflineTime = ?
         WHERE ServerName = ?
     `;
     const params = [
-        server.Description, server.Status, server.Location, server.Downtime, server.LastOnline, server.BackOnline, server.ServerName
+        server.Description, server.Status, server.Location, server.FileShareService, server.OnlineTime, server.OfflineTime, server.ServerName
     ];
     return executeQuery(query, params);
 }
