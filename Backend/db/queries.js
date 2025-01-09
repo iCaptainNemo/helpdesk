@@ -131,8 +131,16 @@ function deleteServer(serverName) {
 }
 
 function fetchServer(serverName) {
-    const query = `SELECT * FROM Servers WHERE ServerName = ?;`;
-    return executeQuery(query, [serverName]);
+    return new Promise((resolve, reject) => {
+        const query = `SELECT * FROM Servers WHERE ServerName = ?`;
+        db.get(query, [serverName], (err, row) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(row);
+            }
+        });
+    });
 }
 
 function fetchAllServers() {

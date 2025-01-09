@@ -35,8 +35,9 @@ async function getServerStatuses() {
             // Map through the server statuses and update the database
             const updatePromises = statusesArray.map(async server => {
                 const existingServer = await fetchServer(server.ServerName);
-                let onlineTime = existingServer.OnlineTime;
-                let offlineTime = existingServer.OfflineTime;
+                
+                let onlineTime = existingServer?.OnlineTime;
+                let offlineTime = existingServer?.OfflineTime;
 
                 if (server.Status === 'Online') {
                     // Server is online
