@@ -230,13 +230,13 @@ const ADProperties = ({ permissions }) => {
   const launchProgram = (program, args) => {
     let url;
     if (program === 'CmRcViewer') {
-      url = `jarvis:CmRcView${args}`;
+      url = `jarvis:cmrcvie${args}`;
     } else if (program === 'msra') {
-      url = `jarvis:msra${args}`;
+      url = `jarvis:msraaaa${args}`;
     } else if (program === 'powershell') {
-      url = `jarvis:powershe${args}`;
+      url = `jarvis:powersh${args}`;
     } else if (program === 'cmd') {
-      url = `jarvis:cmd.exe${args}`;
+      url = `jarvis:cmdexec${args}`;
     } else {
       url = `jarvis:${program}${args}`;
     }
