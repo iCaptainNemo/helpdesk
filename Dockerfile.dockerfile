@@ -1,47 +1,34 @@
 # Stage 1: Build the frontend
 FROM node:14 AS build-frontend
-
-# Set the working directory
 WORKDIR /app/frontend
-
-# Copy the frontend package.json and package-lock.json
 COPY frontend/package*.json ./
-
-# Install frontend dependencies
 RUN npm install
-
-# Copy the rest of the frontend application code
 COPY frontend/ ./
-
-# Build the frontend application
 RUN npm run build
 
 # Stage 2: Build the backend
 FROM node:14 AS build-backend
-
-# Set the working directory
 WORKDIR /app/backend
-
-# Copy the backend package.json and package-lock.json
 COPY Backend/package*.json ./
-
-# Install backend dependencies
 RUN npm install
-
-# Copy the rest of the backend application code
 COPY Backend/ ./
-
-# Copy the built frontend application from the previous stage
 COPY --from=build-frontend /app/frontend/build ./public
 
-# Copy the setup script
-COPY Backend/setup.sh ./
+# Stage 3: Final runtime
+FROM node:14
+WORKDIR /app
 
-# Make the setup script executable
-RUN chmod +x ./setup.sh
+# Copy built applications
+COPY --from=build-backend /app/backend ./backend
+COPY --from=build-frontend /app/frontend/build ./frontend
 
-# Expose the port the backend runs on
-EXPOSE 3001
+# Copy config files
+COPY example_setupConfig.js .
+COPY setupConfig.js* ./
 
-# Start the setup script
-CMD ["./setup.sh"]
+COPY Backend/setup.sh /app/setup.sh
+RUN chmod +x /app/setup.sh
+
+ENV DOCKER_ENV=true
+EXPOSE 3000 3001
+CMD ["/app/setup.sh"]

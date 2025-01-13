@@ -1,39 +1,65 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../styles/Setup.css'; // Import the CSS file
+import '../styles/Setup.css';
 
 const Setup = () => {
   const [formData, setFormData] = useState({
-    PORT: '',
-    REACT_APP_API_KEY: '',
-    DB_PATH: '',
-    SESSION_SECRET: '',
-    JWT_SECRET: '',
-    FRONTEND_URL_1: '',
-    FRONTEND_URL_2: '',
-    BACKEND_URL: '',
-    LOCKED_OUT_USERS_REFRESH_INTERVAL: '',
-    SERVER_STATUS_REFRESH_INTERVAL: '',
-    SUBNET_PATTERN: '',
-    JWT_EXPIRATION: '',
-    LOGFILE: '',
-    AD_GROUPS: '',
-    TEMP_PASSWORD: '',
-    SUPER_ADMIN_ID: '',
-    SUPER_ADMIN_PASSWORD: ''
+    server: {
+      port: 3001,
+      backendUrl: 'http://localhost:3001',
+      frontendUrl: 'http://localhost:3000',
+      frontendUrl2: '',
+      subnetPattern: ''
+    },
+    database: {
+      type: 'local',
+      path: './Backend/db/database.db',
+      host: '',
+      port: '',
+      name: '',
+      user: '',
+      password: ''
+    },
+    security: {
+      jwtSecret: '',
+      sessionSecret: '',
+      tempPassword: 'Welcome123!',
+      apiKey: '',
+      jwtExpiration: '7D'
+    },
+    activeDirectory: {
+      groups: '',
+      domainControllers: []
+    },
+    monitoring: {
+      lockedOutUsersRefreshInterval: '2M',
+      serverStatusRefreshInterval: '10M',
+      logfilePath: './logs'
+    },
+    admin: {
+      superAdminId: '',
+      superAdminPassword: ''
+    }
   });
 
   const navigate = useNavigate();
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [dbType, setDbType] = useState('local');
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+  const handleChange = (section, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [field]: value
+      }
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/setup`, {
+      const response = await fetch(`${formData.server.backendUrl}/api/setup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -42,35 +68,158 @@ const Setup = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save environment variables');
+        throw new Error('Failed to save configuration');
       }
 
-      alert('Environment variables and super admin created successfully');
-      navigate('/dashboard');
+      alert('Setup completed successfully');
+      navigate('/login');
     } catch (error) {
-      console.error('Error saving environment variables:', error);
-      alert('Error saving environment variables');
+      console.error('Error saving configuration:', error);
+      alert('Error saving configuration');
     }
   };
 
   return (
     <div className="setupContainer">
-      <h2>Setup Environment Variables and Super Admin</h2>
+      <h2>Initial Setup</h2>
       <form onSubmit={handleSubmit}>
-        {Object.keys(formData).map((key) => (
-          <div key={key} className="formGroup">
-            <label htmlFor={key}>{key}</label>
+        {/* Server Configuration */}
+        <section className="setup-section">
+          <h3>Server Configuration</h3>
+          <div className="formGroup">
+            <label>Backend URL</label>
             <input
               type="text"
-              id={key}
-              name={key}
-              value={formData[key]}
-              onChange={handleChange}
+              value={formData.server.backendUrl}
+              onChange={(e) => handleChange('server', 'backendUrl', e.target.value)}
               required
             />
           </div>
-        ))}
-        <button type="submit" className="setupButton">Save</button>
+          <div className="formGroup">
+            <label>Frontend URL</label>
+            <input
+              type="text"
+              value={formData.server.frontendUrl}
+              onChange={(e) => handleChange('server', 'frontendUrl', e.target.value)}
+              required
+            />
+          </div>
+        </section>
+
+        {/* Database Configuration */}
+        <section className="setup-section">
+          <h3>Database Configuration</h3>
+          <div className="formGroup">
+            <label>Database Type</label>
+            <select
+              value={formData.database.type}
+              onChange={(e) => {
+                setDbType(e.target.value);
+                handleChange('database', 'type', e.target.value);
+              }}
+            >
+              <option value="local">Local SQLite</option>
+              <option value="remote">Remote Database</option>
+            </select>
+          </div>
+          {formData.database.type === 'local' ? (
+            <div className="formGroup">
+              <label>Database Path</label>
+              <input
+                type="text"
+                value={formData.database.path}
+                onChange={(e) => handleChange('database', 'path', e.target.value)}
+                required
+              />
+            </div>
+          ) : (
+            <>
+              <div className="formGroup">
+                <label>Database Host</label>
+                <input
+                  type="text"
+                  value={formData.database.host}
+                  onChange={(e) => handleChange('database', 'host', e.target.value)}
+                  required
+                />
+              </div>
+              <div className="formGroup">
+                <label>Database Port</label>
+                <input
+                  type="text"
+                  value={formData.database.port}
+                  onChange={(e) => handleChange('database', 'port', e.target.value)}
+                  required
+                />
+              </div>
+              {/* Add other remote database fields */}
+            </>
+          )}
+        </section>
+
+        {/* Admin Configuration */}
+        <section className="setup-section">
+          <h3>Admin Configuration</h3>
+          <div className="formGroup">
+            <label>Super Admin Username</label>
+            <input
+              type="text"
+              value={formData.admin.superAdminId}
+              onChange={(e) => handleChange('admin', 'superAdminId', e.target.value)}
+              required
+            />
+          </div>
+          <div className="formGroup">
+            <label>Super Admin Password</label>
+            <input
+              type="password"
+              value={formData.admin.superAdminPassword}
+              onChange={(e) => handleChange('admin', 'superAdminPassword', e.target.value)}
+              required
+            />
+          </div>
+        </section>
+
+        {/* Advanced Settings Toggle */}
+        <div className="advanced-toggle">
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+          >
+            {showAdvanced ? 'Hide Advanced Settings' : 'Show Advanced Settings'}
+          </button>
+        </div>
+
+        {/* Advanced Settings */}
+        {showAdvanced && (
+          <>
+            <section className="setup-section">
+              <h3>Active Directory Settings</h3>
+              <div className="formGroup">
+                <label>AD Groups (comma-separated)</label>
+                <input
+                  type="text"
+                  value={formData.activeDirectory.groups}
+                  onChange={(e) => handleChange('activeDirectory', 'groups', e.target.value)}
+                />
+              </div>
+            </section>
+
+            <section className="setup-section">
+              <h3>Monitoring Settings</h3>
+              <div className="formGroup">
+                <label>Log File Path</label>
+                <input
+                  type="text"
+                  value={formData.monitoring.logfilePath}
+                  onChange={(e) => handleChange('monitoring', 'logfilePath', e.target.value)}
+                />
+              </div>
+            </section>
+          </>
+        )}
+
+        <button type="submit" className="setupButton">Complete Setup</button>
       </form>
     </div>
   );

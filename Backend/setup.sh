@@ -1,28 +1,48 @@
 #!/bin/sh
 
-# Check if backend .env file exists
-if [ ! -f .env ]; then
-  echo "Copying .env.example.conf to .env"
-  cp .env.example.conf .env
+# Check for setupConfig.js
+if [ ! -f ../setupConfig.js ]; then
+    echo "Creating setupConfig.js from example..."
+    cp ../example_setupConfig.js ../setupConfig.js
+    if [ $? -ne 0 ]; then
+        echo "Failed to create setupConfig.js"
+        exit 1
+    fi
 fi
 
-# Check if backend .env file is filled out
-if grep -q 'your-' .env; then
-  echo "Please fill out the backend .env file with your configuration."
-  exit 1
+# Validate config
+node -e "
+const config = require('../setupConfig.js');
+const required = {
+    'server.port': config.server?.port,
+    'server.backendUrl': config.server?.backendUrl,
+    'server.frontendUrl': config.server?.frontendUrl,
+    'database.type': config.database?.type,
+    'security.jwtSecret': config.security?.jwtSecret,
+    'security.sessionSecret': config.security?.sessionSecret,
+    'activeDirectory.groups': config.activeDirectory?.groups
+};
+
+const missing = Object.entries(required)
+    .filter(([key, value]) => !value)
+    .map(([key]) => key);
+
+if (missing.length > 0) {
+    console.error('Missing required fields in setupConfig.js:', missing.join(', '));
+    process.exit(1);
+}
+"
+
+if [ $? -ne 0 ]; then
+    echo "Configuration validation failed"
+    exit 1
 fi
 
-# Check if frontend .env file exists
-if [ ! -f ../frontend/.env ]; then
-  echo "Copying ../frontend/.env.example.conf to ../frontend/.env"
-  cp ../frontend/.env.example.conf ../frontend/.env
+# Start services based on environment
+if [ "$DOCKER_ENV" = "true" ]; then
+    cd /app/backend && npm start &
+    cd /app/frontend && npm start
+else
+    cd ../Backend && npm start &
+    cd ../frontend && npm start
 fi
-
-# Check if frontend .env file is filled out
-if grep -q 'your-' ../frontend/.env; then
-  echo "Please fill out the frontend .env file with your configuration."
-  exit 1
-fi
-
-# Start the backend application
-npm start
