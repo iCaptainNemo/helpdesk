@@ -189,22 +189,26 @@ const LockedOutUsers = () => {
 
     return (
         <div className="locked-out-users-container">
-            {lockedOutUsers.length === 0 ? (
-                <p>No locked out users found.</p>
-            ) : (
-                <table>
-                    <caption>Locked Out Users</caption>
-                    <thead>
+            <table>
+                <caption>Locked Out Users</caption>
+                <thead>
+                    <tr>
+                        <th>UserID</th>
+                        <th>Name</th>
+                        <th>Department</th>
+                        <th>Account Lockout Time</th>
+                        {permissions.includes('execute_script') && <th>Action</th>}
+                    </tr>
+                </thead>
+                <tbody>
+                    {lockedOutUsers.length === 0 ? (
                         <tr>
-                            <th>UserID</th>
-                            <th>Name</th>
-                            <th>Department</th>
-                            <th>Account Lockout Time</th>
-                            {permissions.includes('execute_script') && <th>Action</th>}
+                            <td colSpan={permissions.includes('execute_script') ? 5 : 4}>
+                                No locked out users found.
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        {sortedUsers.map(user => (
+                    ) : (
+                        sortedUsers.map(user => (
                             <tr
                                 key={user.UserID}
                                 className={isRecentLockout(user.AccountLockoutTime) ? 'recent-lockout' : ''}
@@ -225,10 +229,10 @@ const LockedOutUsers = () => {
                                     </td>
                                 )}
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            )}
+                        ))
+                    )}
+                </tbody>
+            </table>
             {contextMenu.visible && (
                 <div
                     className="context-menu"

@@ -1,50 +1,66 @@
-﻿# Import the Active Directory module
+﻿<#
+.SYNOPSIS
+    Retrieves list of locked out AD users within last 24 hours
+.DESCRIPTION
+    Queries Active Directory for locked out users, filters for enabled accounts
+    locked in last 24 hours, returns JSON formatted results
+.OUTPUTS
+    JSON object with LockedOutUsers array containing user details
+#>
+
+# Import required AD module for domain operations
 Import-Module ActiveDirectory
 
-# Function to retrieve domain controllers
+# Helper function to get domain controller information
 function Get-DomainControllers {
     $dcList = @{ }
     try {
+        # Get current domain context
         $currentDomain = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain()
+        
+        # Build dictionary of domain controllers
         $currentDomain.DomainControllers | ForEach-Object {
             $dcList[$_.Name] = $_
         }
 
-        # Retrieve the primary domain controller (PDC) emulator role owner DN
+        # Get PDC emulator for consistent lockout status
         $PDC = $currentDomain.PdcRoleOwner
 
         return @{
-            DcList = $dcList
-            PDC = $PDC
+            DcList = $dcList  # All DCs for potential future use
+            PDC = $PDC       # Primary DC for lockout checks
         }
     } catch {
         Write-Output "Error: $_"
     }
 }
 
-# Retrieve domain controllers
+# Get DC info for domain queries
 $domainControllers = Get-DomainControllers
 $PDC = $domainControllers.PDC
 
-# Retrieve all locked-out users
+# Query AD for any locked out users
 $lockedOutUsers = Search-ADAccount -LockedOut -UsersOnly
 
+# Return empty array if no locked accounts found
 if ($lockedOutUsers.Count -eq 0) {
-    # Return a JSON object indicating no locked-out users
     return @{ LockedOutUsers = @() } | ConvertTo-Json -Compress
 }
 
-# Iterate through all locked-out users and get additional AD properties
+# Get additional user properties needed for display
 $lockedOutUsersWithProperties = foreach ($lockedOutUser in $lockedOutUsers) {
     Get-ADUser -Identity $lockedOutUser.SamAccountName -Properties SamAccountName, Name, Department, AccountLockoutTime, Enabled
 }
 
-# Filter locked-out users whose lockoutTime is within the last day and are enabled
+# Filter for:
+# 1. Accounts locked within last 24 hours
+# 2. Currently enabled accounts only
 $filteredLockedOutUsers = $lockedOutUsersWithProperties | Where-Object {
     $_.AccountLockoutTime -ge (Get-Date).AddDays(-1) -and $_.Enabled -eq $true
 }
 
-# Manually construct the JSON output
+# Transform AD objects to custom JSON structure
+# Convert lockout time to Unix timestamp for frontend
 $filteredLockedOutUsersJson = $filteredLockedOutUsers | ForEach-Object {
     @{
         SamAccountName = $_.SamAccountName
@@ -55,5 +71,5 @@ $filteredLockedOutUsersJson = $filteredLockedOutUsers | ForEach-Object {
     }
 } | ConvertTo-Json -Compress
 
-# Output the JSON
+# Return JSON formatted results
 $filteredLockedOutUsersJson
