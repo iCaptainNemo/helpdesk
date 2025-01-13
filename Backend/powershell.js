@@ -3,7 +3,7 @@ const { log, info, warn, error, verbose, debug } = require('./utils/logger');
 
 // List of scripts where stdout logging should be suppressed
 const scriptsToSuppressLogging = [
-    'LockedOutList.ps1',
+//    'LockedOutList.ps1',
     'getDomainInfo.ps1',
     'Get-ADObject.ps1',
     'logFilePath.ps1',
