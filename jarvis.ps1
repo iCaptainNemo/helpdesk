@@ -101,6 +101,7 @@ $UserVars = @{}
 . .\functions\Test-DomainControllers.ps1
 . .\functions\Unlock-ADAccountOnAllDomainControllers.ps1
 . .\functions\Clear-Browsers.ps1
+. .\functions\GetLAPS.ps1
 
 # Create env.ps1 file if missing and test domain controllers
 # Create env.ps1 file if missing and test domain controllers
