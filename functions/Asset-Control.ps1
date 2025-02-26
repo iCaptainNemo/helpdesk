@@ -148,6 +148,7 @@ function Asset-Control {
         Write-Host "14: Group Policy Pull"
         Write-Host "15: Copy Browsers Bookmarks"
         Write-Host "16: Get Bitlocker Recovery Key"
+        Write-Host "17: Get LAPS"
         Write-Host "66: Remote Restart"
         Write-Host "0. Back to Main Menu"
 
@@ -474,6 +475,17 @@ function Asset-Control {
                 } catch {
                     Write-Host "Error retrieving BitLocker recovery info for $computerName : $_" -ForegroundColor Red
                 }   Write-Host "`n"
+            }
+            '17'{
+                try {
+                    # Get LAPS
+                    $lapsPassword = Get-LAPSPassword -computerName $computerName.Name
+                    Write-Host "LAPS Password: $lapsPassword" -ForegroundColor Cyan
+                    Write-Host "-------------------------------------------------------------------------`n" -ForegroundColor Gray
+                } catch {
+                    Write-Host "Error retrieving LAPS password for $computerName : $_" -ForegroundColor Red
+                }
+                Write-Host "`n" 
             }
             '66' {
                 $minutes = Read-Host "Please enter the number of minutes before restart"
