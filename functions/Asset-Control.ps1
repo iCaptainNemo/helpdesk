@@ -479,7 +479,7 @@ function Asset-Control {
             '17'{
                 try {
                     # Get LAPS
-                    $lapsPassword = Get-LAPSPassword -computerName $computerName.Name
+                    $lapsPassword = Get-LAPSPassword -computerName $computerName
                     Write-Host "LAPS Password: $lapsPassword" -ForegroundColor Cyan
                     Write-Host "-------------------------------------------------------------------------`n" -ForegroundColor Gray
                 } catch {
