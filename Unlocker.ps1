@@ -4,26 +4,49 @@ param (
     [switch]$debug = $false
 )
 
-
 $Host.UI.RawUI.WindowTitle = Split-Path -Path $MyInvocation.MyCommand.Definition -Leaf
 
-if ($debug) {
-    # Ask user if they want to see debugging lines (Continue) or debug (Inquire)
-    $debugPreferenceChoice = Read-Host "See debug lines (Continue) or debug (Inquire)? Default is Continue. (C/I)"
-
-    if ($debugPreferenceChoice -eq 'I' -or $debugPreferenceChoice -eq 'i') {
-        $DebugPreference = 'Inquire'
-        Write-Host "Debugging is enabled with Inquire preference" -ForegroundColor Green
-    } else {
-        $DebugPreference = 'Continue'
-        Write-Host "Debugging is enabled with Continue preference" -ForegroundColor Green
-    }
-}
-
-# DEBUG: Print the UserID and StopLoop values from external call
 Write-Debug "UserID: $UserID"
 Write-Debug "Stop Loop Switch: $stoploop"
 
+function Test-DomainController {
+    param (
+        [string]$DCName,
+        [int]$TimeoutMilliseconds = 2000
+    )
+    
+    Write-Debug "Testing connection to $DCName"
+    try {
+        # Test basic connectivity first
+        $ping = New-Object System.Net.NetworkInformation.Ping
+        $result = $ping.Send($DCName, $TimeoutMilliseconds)
+        
+        if ($result.Status -eq 'Success') {
+            # Test LDAP connectivity using .NET instead of Test-Connection
+            try {
+                $ldapConnection = New-Object System.DirectoryServices.DirectoryEntry("LDAP://$DCName")
+                if ($ldapConnection.Name -ne $null) {
+                    Write-Debug "LDAP connection successful to $DCName"
+                    return $true
+                }
+            }
+            catch {
+                Write-Debug "LDAP connection failed to $DCName : $_"
+                return $false
+            }
+            finally {
+                if ($ldapConnection) {
+                    $ldapConnection.Dispose()
+                }
+            }
+        }
+        return $false
+    }
+    catch {
+        Write-Debug "DC $DCName is not responding: $_"
+        return $false
+    }
+}
 
 function Get-DomainRoot {
     try {
@@ -44,37 +67,63 @@ function Get-DomainRoot {
     }
 }
 
-# Call the function and store the result in a variable
 $domainRoot = Get-DomainRoot
+
 function Get-DomainControllers {
     $dcList = @{}
+    $skippedDCs = @()
+    
     try {
         $currentDomain = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain()
         Write-Debug "Current Domain: $($currentDomain)"
 
+        Write-Host "`nChecking Domain Controller availability..." -ForegroundColor Cyan
+        
         $currentDomain.DomainControllers | ForEach-Object {
-            $dcList[$_.Name] = $_
+            $dcName = $_.Name
+            Write-Host "Testing DC: $dcName" -NoNewline
+            
+            if (Test-DomainController -DCName $dcName) {
+                $dcList[$dcName] = $_
+                Write-Host " - Available" -ForegroundColor Green
+            }
+            else {
+                $skippedDCs += $dcName
+                Write-Host " - Unavailable (Skipping)" -ForegroundColor Yellow
+            }
         }
 
-        # Retrieve the primary domain controller (PDC) emulator role owner DN
+        # Get PDC and DDC
         $PDC = $currentDomain.PdcRoleOwner
-        Write-Debug "Primary DC: $($PDC)"
-
-        # Retrieve the distinguished name of the DDC
         $DDC = $currentDomain.RidRoleOwner
-        Write-Debug "Distributed DC: $($DDC)"
-        Write-Debug "Number of domain controllers found: $($dcList.Count)"
+
+        if ($skippedDCs -contains $PDC.Name) {
+            Write-Warning "Primary DC ($($PDC.Name)) is not responding!"
+        }
+        if ($skippedDCs -contains $DDC.Name) {
+            Write-Warning "Distributed DC ($($DDC.Name)) is not responding!"
+        }
+
+        Write-Host "`nResponsive DCs: $($dcList.Count)" -ForegroundColor Green
+        Write-Host "Skipped DCs: $($skippedDCs.Count)" -ForegroundColor Yellow
+        
+        if ($skippedDCs.Count -gt 0) {
+            Write-Host "Skipped Domain Controllers:" -ForegroundColor Yellow
+            $skippedDCs | ForEach-Object { Write-Host "- $_" -ForegroundColor Yellow }
+        }
+        
+        Write-Host ""
 
         return @{
             DcList = $dcList
             PDC = $PDC
             DDC = $DDC
+            SkippedDCs = $skippedDCs
         }
     } catch {
-        Write-Host "Error: $_"
+        Write-Host "Error getting domain controllers: $_" -ForegroundColor Red
     }
 }
-
 # Call the function and store the result in a variable
 $result = Get-DomainControllers
 
@@ -82,6 +131,7 @@ $result = Get-DomainControllers
 $dcList = $result.DcList
 $PDC = $result.PDC
 $DDC = $result.DDC
+$global:SkippedDCs = $result.SkippedDCs
 
 # Function: Get-User - Prompt for a user ID and return the sanitized valuefunction Get-User {
 function Get-User {
@@ -166,6 +216,12 @@ function Check-LockedOut {
     )
 
     try {
+        # Skip check if DC is in the SkippedDCs list
+        if ($global:SkippedDCs -contains $targetDC) {
+            Write-Host "Skipping check for $targetDC - DC is unavailable" -ForegroundColor Yellow
+            return
+        }
+
         $searcher = New-Object System.DirectoryServices.DirectorySearcher
         $searcher.Filter = "(sAMAccountName=$userId)"
 
@@ -237,6 +293,12 @@ function Unlock-User {
         [hashtable]$dcList,
         [string]$domainRoot
     )
+
+    # Skip unlock if DC is in the SkippedDCs list
+    if ($global:SkippedDCs -contains $targetDC) {
+        Write-Host "Skipping unlock for $targetDC - DC is unavailable" -ForegroundColor Yellow
+        return
+    }
 
     $searcher = New-Object System.DirectoryServices.DirectorySearcher
     $searcher.Filter = "(sAMAccountName=$userId)"
