@@ -77,7 +77,7 @@ function Get-DomainControllers {
         $currentDomain = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain()
         Write-Debug "Current Domain: $($currentDomain)"
 
-        Write-Host "`nChecking Domain Controller availability..." -ForegroundColor Cyan
+        Write-Debug "`nChecking Domain Controller availability..."
         
         $currentDomain.DomainControllers | ForEach-Object {
             $dcName = $_.Name
