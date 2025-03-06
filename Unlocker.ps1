@@ -81,15 +81,15 @@ function Get-DomainControllers {
         
         $currentDomain.DomainControllers | ForEach-Object {
             $dcName = $_.Name
-            Write-Host "Testing DC: $dcName" -NoNewline
+            Write-Debug "Testing DC: $dcName"
             
             if (Test-DomainController -DCName $dcName) {
                 $dcList[$dcName] = $_
-                Write-Host " - Available" -ForegroundColor Green
+                Write-Debug " - Available"
             }
             else {
                 $skippedDCs += $dcName
-                Write-Host " - Unavailable (Skipping)" -ForegroundColor Yellow
+                Write-Debug " - Unavailable (Skipping)"
             }
         }
 
@@ -125,6 +125,7 @@ function Get-DomainControllers {
     }
 }
 # Call the function and store the result in a variable
+Write-Host "Getting available domain controllers...Please hold" -ForegroundColor Yellow
 $result = Get-DomainControllers
 
 # Access the DcList, PDC, and DDC from the result
