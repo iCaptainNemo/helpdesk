@@ -287,7 +287,9 @@ function Unlock-User {
 while ($true) {
     # Function: Get-User - Prompt for a user ID and return the sanitized value
     if (!$stoploop) {
-        cls
+        if (-not $debug) {
+            cls
+        }
     }
     if (-not $UserID) {
         $userId = Get-User
