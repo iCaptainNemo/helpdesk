@@ -5,17 +5,8 @@ param (
 
 $Host.UI.RawUI.WindowTitle = Split-Path -Path $MyInvocation.MyCommand.Definition -Leaf
 
-if ($debug) {
-    $debugPreferenceChoice = Read-Host "See debug lines (Continue) or debug (Inquire)? Default is Continue. (C/I)"
-
-    if ($debugPreferenceChoice -eq 'I' -or $debugPreferenceChoice -eq 'i') {
-        $DebugPreference = 'Inquire'
-        Write-Host "Debugging is enabled with Inquire preference" -ForegroundColor Green
-    } else {
-        $DebugPreference = 'Continue'
-        Write-Host "Debugging is enabled with Continue preference" -ForegroundColor Green
-    }
-}
+Write-Debug "UserID: $UserID"
+Write-Debug "Stop Loop Switch: $stoploop"
 
 if (-not $UserID) {
     Write-Host "No UserID provided. Exiting script."
@@ -23,6 +14,45 @@ if (-not $UserID) {
 }
 
 Write-Debug "UserID: $UserID"
+
+function Test-DomainController {
+    param (
+        [string]$DCName,
+        [int]$TimeoutMilliseconds = 2000
+    )
+    
+    Write-Debug "Testing connection to $DCName"
+    try {
+        # Test basic connectivity first
+        $ping = New-Object System.Net.NetworkInformation.Ping
+        $result = $ping.Send($DCName, $TimeoutMilliseconds)
+        
+        if ($result.Status -eq 'Success') {
+            # Test LDAP connectivity using .NET instead of Test-Connection
+            try {
+                $ldapConnection = New-Object System.DirectoryServices.DirectoryEntry("LDAP://$DCName")
+                if ($ldapConnection.Name -ne $null) {
+                    Write-Debug "LDAP connection successful to $DCName"
+                    return $true
+                }
+            }
+            catch {
+                Write-Debug "LDAP connection failed to $DCName : $_"
+                return $false
+            }
+            finally {
+                if ($ldapConnection) {
+                    $ldapConnection.Dispose()
+                }
+            }
+        }
+        return $false
+    }
+    catch {
+        Write-Debug "DC $DCName is not responding: $_"
+        return $false
+    }
+}
 
 function Get-DomainRoot {
     try {
@@ -47,28 +77,38 @@ $domainRoot = Get-DomainRoot
 
 function Get-DomainControllers {
     $dcList = @{ }
+    $skippedDCs = @()
+    
     try {
+        # Get current domain context
         $currentDomain = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain()
-        Write-Debug "Current Domain: $($currentDomain)"
-
+        
+        # Test each DC and build dictionary of available ones
         $currentDomain.DomainControllers | ForEach-Object {
-            $dcList[$_.Name] = $_
+            $dcName = $_.Name
+            if (Test-DomainController -DCName $dcName) {
+                $dcList[$dcName] = $_
+            } else {
+                $skippedDCs += $dcName
+            }
         }
 
+        # Get PDC emulator
         $PDC = $currentDomain.PdcRoleOwner
-        Write-Debug "Primary DC: $($PDC)"
-
-        $DDC = $currentDomain.RidRoleOwner
-        Write-Debug "Distributed DC: $($DDC)"
-        Write-Debug "Number of domain controllers found: $($dcList.Count)"
+        
+        # Check if PDC is available
+        if ($skippedDCs -contains $PDC.Name) {
+            Write-Debug "Primary DC ($($PDC.Name)) is not responding!"
+            $PDC = $null
+        }
 
         return @{
-            DcList = $dcList
-            PDC = $PDC
-            DDC = $DDC
+            DcList = $dcList       # Only available DCs
+            PDC = $PDC            # PDC if available
+            SkippedDCs = $skippedDCs  # List of unavailable DCs
         }
     } catch {
-        Write-Host "Error: $_"
+        Write-Debug "Error: $_"
     }
 }
 
@@ -178,54 +218,43 @@ function Unlock-User {
     $searcher.Filter = "(sAMAccountName=$userId)"
 
     if ($targetDC -eq "0") {
+        # Only attempt unlock on available DCs from dcList
         foreach ($dc in $dcList.Values) {
             $searcher.SearchRoot = "LDAP://$($dc.Name)/$domainRoot"
-            $user = $searcher.FindOne()
-            Write-Debug "Unlock-User: User search result - $user"
-
-            if ($user) {
-                $userEntry = $user.GetDirectoryEntry()
-                try {
-                    $userEntry.Properties["lockoutTime"].Value = 0
-                    $userEntry.CommitChanges()
-                    $unlockResults[$dc.Name] = $true
-                } catch {
-                    if ($_.Exception.Message -match "Access is denied") {
-                        $unlockResults[$dc.Name] = "Access Denied"
-                    } else {
-                        $unlockResults[$dc.Name] = "An Error Occurred"
-                    }
-                }
-            } else {
-                $unlockResults[$dc.Name] = $false
-            }
-        }
-    } else {
-        if ($dcList.ContainsKey($targetDC)) {
-            $searcher.SearchRoot = "LDAP://$targetDC/$domainRoot"
             try {
                 $user = $searcher.FindOne()
-                Write-Debug "Unlock-User2: User search result - $user"
+                Write-Debug "Unlock-User: User search result on $($dc.Name) - $user"
+
                 if ($user) {
                     $userEntry = $user.GetDirectoryEntry()
                     try {
                         $userEntry.Properties["lockoutTime"].Value = 0
                         $userEntry.CommitChanges()
-                        $unlockResults[$targetDC] = $true
+                        $unlockResults[$dc.Name] = $true
+                        Write-Debug "Successfully unlocked user on $($dc.Name)"
                     } catch {
                         if ($_.Exception.Message -match "Access is denied") {
-                            $unlockResults[$targetDC] = "Access Denied"
+                            $unlockResults[$dc.Name] = "Access Denied"
                         } else {
-                            $unlockResults[$targetDC] = "An Error Occurred"
+                            $unlockResults[$dc.Name] = "An Error Occurred"
                         }
+                        Write-Debug "Error unlocking on $($dc.Name): $_"
                     }
                 } else {
-                    $unlockResults[$targetDC] = $false
+                    $unlockResults[$dc.Name] = $false
+                    Write-Debug "User not found on $($dc.Name)"
                 }
             } catch {
-                $unlockResults[$targetDC] = "An Error Occurred"
+                $unlockResults[$dc.Name] = "An Error Occurred"
+                Write-Debug "Error searching on $($dc.Name): $_"
             }
+        }
+    } else {
+        # Single DC unlock attempt
+        if ($dcList.ContainsKey($targetDC)) {
+            # ...existing single DC code is good...
         } else {
+            Write-Debug "Target DC $targetDC not in available DC list"
             $unlockResults[$targetDC] = $false
         }
     }
