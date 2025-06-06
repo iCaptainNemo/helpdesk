@@ -118,7 +118,8 @@ $basePsExecArgs = @(
 try {
     Write-Host "Checking/creating remote temp directory: $remoteTempPath"
     $psExecMkdirArgs = $basePsExecArgs + @("cmd.exe", "/c", "if not exist `"$remoteTempPath`" mkdir `"$remoteTempPath`"")
-    & $PsExecPath $psExecMkdirArgs 2>&1 | Out-Null
+    #& $PsExecPath $psExecMkdirArgs 2>&1 | Out-Null
+    Start-Process "psexec.exe" -ArgumentList $psExecMkdirArgs -Wait -NoNewWindow -PassThru
 
     Copy-Item -Path $cmdFilePathLocal -Destination $remoteSharePathForCopy -Force -ErrorAction Stop
     Write-Host "File '$cmdFileName' transferred to '$remoteComputerName : $remoteTempPath'." -ForegroundColor Green
