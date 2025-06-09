@@ -72,6 +72,8 @@ if (-not (Get-Command $PsExecPath -ErrorAction SilentlyContinue)) {
 $cmdFileName = "AddPrinter_$($remoteComputerName)_$((Get-Date).ToString('yyyyMMddHHmmss')).cmd"
 $cmdFilePathLocal = Join-Path -Path $PSTempPath -ChildPath $cmdFileName
 
+<#  ---- OPTION 1 -----
+
 $cmdContent = @"
 @echo off
 echo Attempting to install printer: \\$printServerName\$printerName >> C:\TEMP\printer_install_log.txt 2>&1
@@ -83,6 +85,68 @@ IF %ERRORLEVEL% NEQ 0 (
 )
     timeout /t 10 /nobreak
 "@
+---------------------------------------#>
+<# -------- OPTION 2 --------
+$cmdContent = @"
+@echo off
+setlocal
+
+set PRINTER=\\$printServerName\$printerName
+set LOG=C:\TEMP\printer_install_log.txt
+
+echo Installing printer for active session: %PRINTER% >> %LOG%
+
+REM Use the active user session and install printer for them
+for /f "tokens=3" %%s in ('query user ^| findstr /R /C:"Active"') do (
+    echo Found active session ID: %%s >> %LOG%
+    tscon %%s /dest:console >nul 2>&1
+    rundll32 printui.dll,PrintUIEntry /in /n %PRINTER% >> %LOG% 2>&1
+)
+
+if %ERRORLEVEL% NEQ 0 (
+    echo Printer installation failed with error %ERRORLEVEL% >> %LOG%
+) else (
+    echo Printer installed successfully. >> %LOG%
+)
+
+endlocal
+timeout /t 10 >nul
+exit /b 0
+"@
+------------------------------------#>
+
+# Option 3: Install printer for the active user session
+$cmdContent = @"
+@echo off
+setlocal
+
+set PRINTER=\\$printServerName\$printerName
+set LOG=C:\TEMP\printer_install_log.txt
+
+echo ----------------------------- >> %LOG%
+echo Script started: %DATE% %TIME% >> %LOG%
+
+for /f "skip=1 tokens=1,2,3,4,5,6,7" %%a in ('query user') do (
+    if "%%d"=="Active" (
+        echo Found active user: %%a with session ID %%c >> %LOG%
+        echo Attempting to install: %PRINTER% >> %LOG%
+
+        echo Calling rundll32... >> %LOG%
+        rundll32 printui.dll,PrintUIEntry /in /n "%PRINTER%" >> %LOG% 2>&1
+
+        echo rundll32 finished with errorlevel %ERRORLEVEL% >> %LOG%
+        goto end
+    )
+)
+
+echo No active session found >> %LOG%
+
+:end
+echo Script finished: %DATE% %TIME% >> %LOG%
+endlocal
+timeout /t 10 >nul
+"@
+
 
 Write-Host "`n--- Creating local .cmd file ---"
 if (-not (Test-Path $PSTempPath -PathType Container)) {
@@ -138,6 +202,7 @@ try {
         "-s",
         "cmd.exe",
         "/c",
+        #"start",
         "`"$remoteCmdFilePath`""  # <-- Proper quoting: this is the only change
     )
     Write-Host "Full PsExec command: $PsExecPath $($psExecExecuteArgs -join ' ')"
@@ -158,7 +223,7 @@ Start-Sleep -Seconds 5
 
 Write-Host "--- Deleting .cmd file from remote computer ---"
 try {
-    $psExecDeleteArgs = $basePsExecArgs + @("cmd.exe", "/c", "del /Q `"$remoteCmdFilePath`"")
+    $psExecDeleteArgs = $basePsExecArgs + @("/c", "del /Q `"$remoteCmdFilePath`"")
     & $PsExecPath $psExecDeleteArgs 2>&1 | Out-Null
     Write-Host "File '$cmdFileName' deleted from remote computer." -ForegroundColor Green
 } catch {
