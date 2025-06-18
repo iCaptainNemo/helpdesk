@@ -31,7 +31,6 @@ Write-Host "--- Printer Deployment Script ---"
 
 # Trim inputs to prevent accidental leading/trailing spaces
 $remoteComputerName = (Get-ValidatedInput -Prompt "Enter the remote computer name:").Trim()
-# $userID = (Get-ValidatedInput -Prompt "Enter the user ID for Active Directory check (also used for remote AppData path):").Trim()
 $printServerName = (Get-ValidatedInput -Prompt "Enter the print server name (e.g., HSSServer###):" -ValidationRegex "^HSSServer\d{3}$" -ErrorMessage "Print server name must start with 'HSSServer' and end with 3 numbers (e.g., HSSServer123).").Trim()
 $printerName = (Get-ValidatedInput -Prompt "Enter the printer name:").Trim()
 
@@ -48,12 +47,6 @@ if (-not $adModuleLoaded) {
     } catch {
         Write-Warning "Computer '$remoteComputerName' NOT found in AD. Continuing."
     }
-    # try {
-    #    Get-ADUser -Identity $userID -ErrorAction Stop | Out-Null
-    #   Write-Host "User ID '$userID' found in AD." -ForegroundColor Green} 
-    #catch {
-    #    Write-Warning "User ID '$userID' NOT found in AD. Continuing."
-    #}
     try {
         Get-ADComputer -Identity $printServerName -ErrorAction Stop | Out-Null
         Write-Host "Print server '$printServerName' found in AD." -ForegroundColor Green
@@ -71,49 +64,6 @@ if (-not (Get-Command $PsExecPath -ErrorAction SilentlyContinue)) {
 # --- Construct .cmd file content ---
 $cmdFileName = "AddPrinter_$($remoteComputerName)_$((Get-Date).ToString('yyyyMMddHHmmss')).cmd"
 $cmdFilePathLocal = Join-Path -Path $PSTempPath -ChildPath $cmdFileName
-
-<#  ---- OPTION 1 -----
-
-$cmdContent = @"
-@echo off
-echo Attempting to install printer: \\$printServerName\$printerName >> C:\TEMP\printer_install_log.txt 2>&1
-rundll32 printui.dll,PrintUIEntry /in /n \\$printServerName\$printerName >> C:\TEMP\printer_install_log.txt 2>&1
-IF %ERRORLEVEL% NEQ 0 (
-    echo Error installing printer. Error code: %ERRORLEVEL% >> C:\TEMP\printer_install_log.txt
-) ELSE (
-    echo Printer installed successfully. >> C:\TEMP\printer_install_log.txt
-)
-    timeout /t 10 /nobreak
-"@
----------------------------------------#>
-<# -------- OPTION 2 --------
-$cmdContent = @"
-@echo off
-setlocal
-
-set PRINTER=\\$printServerName\$printerName
-set LOG=C:\TEMP\printer_install_log.txt
-
-echo Installing printer for active session: %PRINTER% >> %LOG%
-
-REM Use the active user session and install printer for them
-for /f "tokens=3" %%s in ('query user ^| findstr /R /C:"Active"') do (
-    echo Found active session ID: %%s >> %LOG%
-    tscon %%s /dest:console >nul 2>&1
-    rundll32 printui.dll,PrintUIEntry /in /n %PRINTER% >> %LOG% 2>&1
-)
-
-if %ERRORLEVEL% NEQ 0 (
-    echo Printer installation failed with error %ERRORLEVEL% >> %LOG%
-) else (
-    echo Printer installed successfully. >> %LOG%
-)
-
-endlocal
-timeout /t 10 >nul
-exit /b 0
-"@
-------------------------------------#>
 
 # Option 3: Install printer for the active user session
 $cmdContent = @"
@@ -146,7 +96,6 @@ echo Script finished: %DATE% %TIME% >> %LOG%
 endlocal
 timeout /t 10 >nul
 "@
-
 
 Write-Host "`n--- Creating local .cmd file ---"
 if (-not (Test-Path $PSTempPath -PathType Container)) {
@@ -182,8 +131,7 @@ $basePsExecArgs = @(
 try {
     Write-Host "Checking/creating remote temp directory: $remoteTempPath"
     $psExecMkdirArgs = $basePsExecArgs + @("cmd.exe", "/c", "if not exist `"$remoteTempPath`" mkdir `"$remoteTempPath`"")
-    #& $PsExecPath $psExecMkdirArgs 2>&1 | Out-Null
-    Start-Process "psexec.exe" -ArgumentList $psExecMkdirArgs -Wait -NoNewWindow -PassThru
+    Start-Process "psexec.exe" -ArgumentList $psExecMkdirArgs -Wait -NoNewWindow -PassThru | Out-Null
 
     Copy-Item -Path $cmdFilePathLocal -Destination $remoteSharePathForCopy -Force -ErrorAction Stop
     Write-Host "File '$cmdFileName' transferred to '$remoteComputerName : $remoteTempPath'." -ForegroundColor Green
@@ -192,42 +140,113 @@ try {
     exit 1
 }
 
-# --- PsExec Execution ---
-Write-Host "`n--- Executing .cmd file on remote computer ---"
-try {
-    $psExecExecuteArgs = @(
-        "\\$remoteComputerName",
-        "-i", "1",
-        "-h",
-        "-s",
-        "cmd.exe",
-        "/c",
-        #"start",
-        "`"$remoteCmdFilePath`""  # <-- Proper quoting: this is the only change
-    )
-    Write-Host "Full PsExec command: $PsExecPath $($psExecExecuteArgs -join ' ')"
+# --- Executing .cmd file on remote computer via Scheduled Task as Active User ---
+Write-Host "`n--- Executing .cmd file on remote computer via Scheduled Task (Active User) ---"
 
-    #$psexecOutput = & $PsExecPath $psExecExecuteArgs 2>&1 | Out-String
-    #Write-Host "PsExec Output:`n$psexecOutput"
-    $result = Start-Process "psexec.exe" -ArgumentList $psExecExecuteArgs -Wait -NoNewWindow -PassThru
-    Write-Host "PsExec Output:`n$result"
-    Write-Host "Command execution initiated." -ForegroundColor Green
-} catch {
-    Write-Error "Failed to execute .cmd file via PsExec. Error: $($_.Exception.Message)"
+Write-Host "`n--- Executing .cmd file on remote computer via Scheduled Task (Active User) ---"
+
+# Query active session and username
+$queryUserOutput = query user /server:$remoteComputerName 2>&1 | Out-String
+if ($queryUserOutput -match 'No User exists for \*') {
+    Write-Host "❌ Failed to retrieve sessions from $remoteComputerName or no users logged on." -ForegroundColor Red
+    Write-Host "Output: $queryUserOutput"
     exit 1
 }
+if ($queryUserOutput -notmatch "USERNAME") { # Check for header
+    Write-Host "❌ Failed to retrieve valid session information from $remoteComputerName." -ForegroundColor Red
+    Write-Host "Output: $queryUserOutput"
+    exit 1
+}
+Write-Host "`nSession information for ${remoteComputerName}:" -ForegroundColor Cyan
+Write-Host $queryUserOutput
 
-# --- Wait and Cleanup ---
+$userName = $null
+$sessionId = $null
+
+# Iterate over lines to find a suitable active user.
+# Regex: Username (optional >), Session Name, ID, State (Active), Idle, Logon Time
+foreach ($line in ($queryUserOutput -split '[ \t]*\r?\n[ \t]*')) { # Split by lines, trim whitespace around lines
+    if ($line -match '^\s*(>?\S+)\s+(\S+)\s+(\d+)\s+Active\s+') {
+        $potentialUserName = $matches[1] -replace '^>', '' # Remove leading >
+        $potentialSessionName = $matches[2]
+        $potentialSessionId = $matches[3]
+
+        # Prioritize console session, otherwise take the first active one found
+        if ($potentialSessionName -eq 'console') {
+            $userName = $potentialUserName
+            $sessionId = $potentialSessionId
+            break
+        } elseif (-not $userName) { # If no console session found yet, take this one
+            $userName = $potentialUserName
+            $sessionId = $potentialSessionId
+        }
+    }
+}
+if (-not $userName) {
+    Write-Host "❌ No suitable active user session found on $remoteComputerName." -ForegroundColor Red
+    exit 1
+}
+Write-Host "✅ Found active user: $userName (Session ID: $sessionId)" -ForegroundColor Green
+
+
+# Create and run scheduled task as the active user
+$taskName = "TempPrinterTask_$([guid]::NewGuid().ToString('N'))"
+$startTime = (Get-Date).AddMinutes(1).ToString("HH:mm")
+$taskRunUser = $userName # Use the extracted username
+
+# PowerShell commands to be encoded and run remotely
+# Using $taskRunUser which is the clean username.
+# SCHTASKS should be able to resolve this for /ru with /it.
+$powerShellCommandsToEncode = @"
+`$ProgressPreference = 'SilentlyContinue' # Suppress "Preparing modules" progress output
+
+& schtasks.exe /create /tn "$taskName" /tr "$remoteCmdFilePath" /sc ONCE /st "$startTime" /ru "$taskRunUser" /f /it /rl LIMITED
+if (`$LASTEXITCODE -ne 0) {
+    Write-Output "WARNING: Remote: Failed to create scheduled task '$taskName' for user '$taskRunUser'. SCHTASKS Exit Code: `$LASTEXITCODE"
+} else {
+    Write-Output "INFO: Remote: Task '$taskName' created successfully for user '$taskRunUser'."
+    & schtasks.exe /run /tn "$taskName"
+    if (`$LASTEXITCODE -ne 0) {
+        Write-Output "WARNING: Remote: Failed to run scheduled task '$taskName'. SCHTASKS Exit Code: `$LASTEXITCODE"
+    } else {
+        Write-Output "INFO: Remote: Task '$taskName' triggered. Waiting 15 seconds for .cmd execution..."
+        Start-Sleep -Seconds 15 # PowerShell equivalent of timeout, and avoids redirection issues
+    }
+}
+
+Write-Output "INFO: Remote: Cleaning up task '$taskName'."
+& schtasks.exe /delete /tn "$taskName" /f
+if (`$LASTEXITCODE -ne 0) {
+    Write-Output "WARNING: Remote: Failed to delete scheduled task '$taskName'. SCHTASKS Exit Code: `$LASTEXITCODE (This may be normal if creation failed)."
+} else {
+    Write-Output "INFO: Remote: Task '$taskName' deleted."
+}
+"@
+
+# Invoke the scheduled task creation remotely with PsExec
+$encodedScript = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($powerShellCommandsToEncode))
+
+$psexecArgs = "\\$remoteComputerName", "powershell.exe", "-NoProfile", "-EncodedCommand", $encodedScript
+
+Write-Host "`n--- Running scheduled task remotely ---"
+$psexecProcess = Start-Process -FilePath $PsExecPath -ArgumentList $psexecArgs -Wait -PassThru -NoNewWindow
+if ($psexecProcess.ExitCode -eq 0) {
+    Write-Host "✅ Remote PowerShell script for printer task executed on $remoteComputerName for user $userName. Check remote output/logs for details." -ForegroundColor Green
+} else {
+    Write-Warning "Remote PowerShell script execution via PsExec failed with exit code $($psexecProcess.ExitCode). This indicates an error within the PowerShell script itself or its ability to launch."
+ }
+ 
+ # --- Cleanup local and remote files ---
 Write-Host "`n--- Waiting 5 seconds before cleanup ---"
 Start-Sleep -Seconds 5
 
 Write-Host "--- Deleting .cmd file from remote computer ---"
 try {
-    $psExecDeleteArgs = $basePsExecArgs + @("/c", "del /Q `"$remoteCmdFilePath`"")
-    & $PsExecPath $psExecDeleteArgs 2>&1 | Out-Null
+    $deleteRemoteArgs = "\\$remoteComputerName", "cmd.exe", "/c", "del /f /q `"$remoteCmdFilePath`""
+    Start-Process -FilePath $PsExecPath -ArgumentList $deleteRemoteArgs -Wait -NoNewWindow | Out-Null
     Write-Host "File '$cmdFileName' deleted from remote computer." -ForegroundColor Green
 } catch {
-    Write-Warning "Failed to delete remote .cmd file. You may need to remove it manually. Error: $($_.Exception.Message)"
+    Write-Warning "Failed to delete .cmd file from remote computer: $($_.Exception.Message)"
 }
 
 Write-Host "`nScript finished."
