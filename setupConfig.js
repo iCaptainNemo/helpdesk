@@ -33,7 +33,7 @@ const config = {
       // REQUIRED:
       jwtSecret: 'NDvU35hHjy', // From JWT_SECRET
       sessionSecret: '7VftBffqO8', // From SESSION_SECRET
-      tempPassword: 'Spring2025', // From TEMP_PASSWORD
+      tempPassword: 'Summer2025', // From TEMP_PASSWORD
       
       // OPTIONAL:
       apiKey: 'P@$$w0rd', // From REACT_APP_API_KEY
