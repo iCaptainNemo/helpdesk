@@ -224,7 +224,7 @@ function Asset-Control {
 
             '5' {
                 # Start PsExec to open a command prompt on the remote computer
-                $psexecCommand = "psexec.exe \\$computerName cmd.exe"
+                $psexecCommand = "psexec.exe -u \\$computerName cmd.exe"
                 Write-Host "Starting PsExec to open a command prompt on $computerName"
                 
                 # Execute the PsExec command
