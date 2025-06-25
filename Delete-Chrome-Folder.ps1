@@ -41,7 +41,7 @@ do {
                         Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
                     }
                     
-                    Remove-Item -Path $path -Force -ErrorAction Stop
+                    Remove-Item -Path $path -Recurse -Force -ErrorAction Stop
                     Start-Sleep -Seconds 1
                     
                     @{
