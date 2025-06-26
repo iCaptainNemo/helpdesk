@@ -3,6 +3,7 @@ do {
     
     # Prompt for inputs with validation
     do {
+        Clear-Host
         $computerName = Read-Host "Enter the remote computer name"
     } while ([string]::IsNullOrWhiteSpace($computerName))
 
