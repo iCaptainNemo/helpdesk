@@ -1,7 +1,17 @@
+# Node.js
+node_modules/
+
+# Backend specific
+Backend/node_modules/
+
+# Frontend specific
+frontend/node_modules/
+
+# Environment variables
 .env
-Config/*
-/node_modules
-/frontend/build
-/frontend/node_modules
-/backend/db/database.db
-/backend/node_modules
+
+# Logs
+*.log
+
+# Database files (if SQLite or similar)
+database.db
