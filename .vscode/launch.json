@@ -1,0 +1,21 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "PowerShell: Launch Helpdesk GUI (Windows PowerShell 5.1)",
+            "type": "PowerShell",
+            "request": "launch",
+            "script": "${workspaceFolder}/Start-HelpdeskGUI.ps1",
+            "cwd": "${workspaceFolder}",
+            "createTemporaryIntegratedConsole": false
+        },
+        {
+            "name": "PowerShell: Launch Helpdesk GUI (PowerShell 7 - No Database)",
+            "type": "PowerShell",
+            "request": "launch",
+            "script": "${workspaceFolder}/Start-HelpdeskGUI.ps1",
+            "cwd": "${workspaceFolder}",
+            "createTemporaryIntegratedConsole": false
+        }
+    ]
+}

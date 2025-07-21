@@ -15,3 +15,14 @@ frontend/node_modules/
 
 # Database files (if SQLite or similar)
 database.db
+database/
+*.db
+
+# SQLite libraries (download separately)
+lib/System.Data.SQLite.dll
+
+# WPF specific
+bin/
+obj/
+*.user
+*.suo

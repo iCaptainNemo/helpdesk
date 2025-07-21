@@ -1,0 +1,222 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Helpdesk GUI - WPF Edition" 
+        Height="800" 
+        Width="1200"
+        Background="#FF0D1117"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        ResizeMode="CanResize">
+
+    <Window.Resources>
+        <!-- Tron-like styles -->
+        <Style x:Key="TronButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FF1E2328"/>
+            <Setter Property="Foreground" Value="#FF00D4FF"/>
+            <Setter Property="BorderBrush" Value="#FF00D4FF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#FF00D4FF"/>
+                                <Setter Property="Foreground" Value="#FF0D1117"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TronTextBoxStyle" TargetType="TextBox">
+            <Setter Property="Background" Value="#FF1E2328"/>
+            <Setter Property="Foreground" Value="#FF00D4FF"/>
+            <Setter Property="BorderBrush" Value="#FF00D4FF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="5"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <Style x:Key="TronDataGridStyle" TargetType="DataGrid">
+            <Setter Property="Background" Value="#FF1E2328"/>
+            <Setter Property="Foreground" Value="#FF00D4FF"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#FF00D4FF"/>
+            <Setter Property="BorderBrush" Value="#FF00D4FF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="RowBackground" Value="#FF1E2328"/>
+            <Setter Property="AlternatingRowBackground" Value="#FF2A2F36"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+        </Style>
+
+        <Style x:Key="TronLabelStyle" TargetType="Label">
+            <Setter Property="Foreground" Value="#FF00D4FF"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="5"/>
+        </Style>
+    </Window.Resources>
+
+    <!-- Main Border with Glow Effect -->
+    <Border BorderBrush="#FF00D4FF" BorderThickness="2" CornerRadius="5">
+        <Border.Effect>
+            <DropShadowEffect Color="#FF00D4FF" BlurRadius="10" ShadowDepth="0" Opacity="0.5"/>
+        </Border.Effect>
+
+        <Grid Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Title Bar -->
+            <Grid Grid.Row="0" x:Name="TitleBar">
+                <Label Content="Helpdesk GUI - WPF Edition" 
+                       Style="{StaticResource TronLabelStyle}"
+                       FontSize="18"
+                       HorizontalAlignment="Left"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="—" Width="30" Height="30" 
+                            x:Name="MinimizeButton"
+                            Style="{StaticResource TronButtonStyle}"/>
+                    <Button Content="□" Width="30" Height="30" 
+                            x:Name="MaximizeButton"
+                            Style="{StaticResource TronButtonStyle}"/>
+                    <Button Content="✕" Width="30" Height="30" 
+                            x:Name="CloseButton"
+                            Style="{StaticResource TronButtonStyle}"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Search Section -->
+            <Grid Grid.Row="1" Margin="0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Label Grid.Column="0" Content="Search AD Object:" Style="{StaticResource TronLabelStyle}"/>
+                <TextBox Grid.Column="1" x:Name="SearchTextBox" 
+                         Style="{StaticResource TronTextBoxStyle}"/>
+                <Button Grid.Column="2" Content="Search" 
+                        x:Name="SearchButton"
+                        Style="{StaticResource TronButtonStyle}"/>
+                <Button Grid.Column="3" Content="Unlock User" 
+                        x:Name="UnlockButton"
+                        Style="{StaticResource TronButtonStyle}"
+                        IsEnabled="False"/>
+            </Grid>
+
+            <!-- Main Content Area -->
+            <TabControl Grid.Row="2" 
+                        Background="#FF1E2328"
+                        BorderBrush="#FF00D4FF"
+                        BorderThickness="1">
+
+                <!-- AD Object Viewer Tab -->
+                <TabItem Header="AD Object Details" Foreground="#FF00D4FF" Background="#FF1E2328">
+                    <Grid Margin="10">
+                        <DataGrid x:Name="ADObjectDataGrid" 
+                                  Style="{StaticResource TronDataGridStyle}"
+                                  AutoGenerateColumns="True"
+                                  IsReadOnly="True"/>
+                    </Grid>
+                </TabItem>
+
+                <!-- Server Status Tab -->
+                <TabItem Header="Server Status" Foreground="#FF00D4FF" Background="#FF1E2328">
+                    <Grid Margin="10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Orientation="Horizontal">
+                            <Button Content="Refresh Servers" 
+                                    x:Name="RefreshServersButton"
+                                    Style="{StaticResource TronButtonStyle}"/>
+                            <Label Content="Last Updated:" Style="{StaticResource TronLabelStyle}"/>
+                            <Label x:Name="ServerStatusLastUpdated" 
+                                   Content="Never" 
+                                   Style="{StaticResource TronLabelStyle}"/>
+                        </StackPanel>
+
+                        <DataGrid Grid.Row="1" 
+                                  x:Name="ServerStatusDataGrid"
+                                  Style="{StaticResource TronDataGridStyle}"
+                                  AutoGenerateColumns="True"
+                                  IsReadOnly="True"/>
+                    </Grid>
+                </TabItem>
+
+                <!-- Domain Controllers Tab -->
+                <TabItem Header="Domain Controllers" Foreground="#FF00D4FF" Background="#FF1E2328">
+                    <Grid Margin="10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Orientation="Horizontal">
+                            <Button Content="Refresh Domain Controllers" 
+                                    x:Name="RefreshDomainControllersButton"
+                                    Style="{StaticResource TronButtonStyle}"/>
+                            <Label Content="Last Updated:" Style="{StaticResource TronLabelStyle}"/>
+                            <Label x:Name="DomainControllersLastUpdated" 
+                                   Content="Never" 
+                                   Style="{StaticResource TronLabelStyle}"/>
+                        </StackPanel>
+
+                        <DataGrid Grid.Row="1" 
+                                  x:Name="DomainControllersDataGrid"
+                                  Style="{StaticResource TronDataGridStyle}"
+                                  AutoGenerateColumns="True"
+                                  IsReadOnly="True"/>
+                    </Grid>
+                </TabItem>
+
+                <!-- Logs Tab -->
+                <TabItem Header="Application Logs" Foreground="#FF00D4FF" Background="#FF1E2328">
+                    <Grid Margin="10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Orientation="Horizontal">
+                            <Button Content="Clear Logs" 
+                                    x:Name="ClearLogsButton"
+                                    Style="{StaticResource TronButtonStyle}"/>
+                            <Button Content="Export Logs" 
+                                    x:Name="ExportLogsButton"
+                                    Style="{StaticResource TronButtonStyle}"/>
+                        </StackPanel>
+
+                        <TextBox Grid.Row="1" 
+                                 x:Name="LogsTextBox"
+                                 Style="{StaticResource TronTextBoxStyle}"
+                                 IsReadOnly="True"
+                                 AcceptsReturn="True"
+                                 TextWrapping="Wrap"
+                                 VerticalScrollBarVisibility="Auto"
+                                 HorizontalScrollBarVisibility="Auto"
+                                 FontFamily="Consolas"/>
+                    </Grid>
+                </TabItem>
+            </TabControl>
+        </Grid>
+    </Border>
+</Window>
