@@ -3,6 +3,7 @@ do {
     
     # Prompt for inputs with validation
     do {
+        Clear-Host
         $computerName = Read-Host "Enter the remote computer name"
     } while ([string]::IsNullOrWhiteSpace($computerName))
 
@@ -30,18 +31,11 @@ do {
             
             if (Test-Path $path) {
                 try {
-                    # Get total size for progress calculation
-                    $total = (Get-ChildItem $path -Recurse | Measure-Object -Property Length -Sum).Sum
-                    $deleted = 0
+                    Write-Progress -Id 1 -Activity "Deleting Folder" -Status "Removing folder: $path" -PercentComplete 50
+                    # This single command removes the entire folder and its contents without confirmation.
+                    Remove-Item -Path $path -Recurse -Force -ErrorAction Stop
                     
-                    Get-ChildItem $path -Recurse | ForEach-Object {
-                        $deleted += $_.Length
-                        $percentComplete = ($deleted / $total) * 100
-                        Write-Progress -Id 1 -Activity "Deleting Files" -Status "Removing $($_.Name)" -PercentComplete $percentComplete
-                        Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
-                    }
-                    
-                    Remove-Item -Path $path -Force -ErrorAction Stop
+                    # Brief pause for the filesystem to update before checking existence.
                     Start-Sleep -Seconds 1
                     
                     @{
