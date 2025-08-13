@@ -72,7 +72,9 @@ setlocal
 
 set PRINTER=\\$printServerName\$printerName
 set LOG=C:\TEMP\printer_install_log.txt
-
+echo =========================================================================
+echo   Printer Installation Script
+echo =========================================================================
 echo ----------------------------- >> %LOG%
 echo Script started: %DATE% %TIME% >> %LOG%
 
