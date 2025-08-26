@@ -3,20 +3,12 @@ while ($panesEnabled -eq $true -and $ShowLastLogEntries -eq $true) {
     Write-Debug "All conditions met, proceeding..."
     Clear-Host
 
-    # Resolve the path to the AdminConfig file
-    $AdminConfig = Resolve-Path ".\.env\.env_$env:USERNAME.ps1"
-
-    Write-Debug "AdminConfig file changed, re-running functions..."
-
-    # Source the AdminConfig file to get the updated variables
-    . $AdminConfig
-
-    # Get the updated UserID
-    $userId = $envVars['UserID']
+    # Get the updated UserID from script environment variables (YAML system)
+    $userId = $script:envVars['UserID']
     Write-Debug "$userID"
 
-    # Update the logFilePath
-    $logFilePath = $envVars['logFileBasePath'] + $envVars['UserID']
+    # Update the logFilePath from script variables
+    $logFilePath = $script:envVars['logFileBasePath'] + $script:envVars['UserID']
 
     # Wait until the Changed event is triggered
     Start-Sleep -seconds 3
@@ -57,15 +49,56 @@ function Show-LastLogEntries {
     try {
         # Check if the log file exists
         if (Test-Path $logFilePath -PathType Leaf) {
-            $logEntries = Get-Content $logFilePath -Tail 10
-            Write-Host "Last 10 login entries.:"
-            # Add a line break or additional Write-Host statements for space
-            Write-Host "`n"
-            foreach ($entry in $logEntries) {
+            # Get all log entries (not just last 10)
+            $allLogEntries = Get-Content $logFilePath
+            
+            # Create hashtable to track latest entry for each computer
+            $uniqueComputers = @{}
+            
+            foreach ($entry in $allLogEntries) {
                 $parsedInfo = Parse-LogEntry -logEntry $entry
+                $computerName = $parsedInfo.PossibleComputerName
+                
+                # Convert date/time to sortable format for comparison
+                try {
+                    $dateTimeString = "$($parsedInfo.Date) $($parsedInfo.Time)"
+                    $dateTime = [DateTime]::Parse($dateTimeString)
+                    
+                    # Only keep this entry if it's the latest for this computer
+                    if (-not $uniqueComputers.ContainsKey($computerName) -or $dateTime -gt $uniqueComputers[$computerName].DateTime) {
+                        $uniqueComputers[$computerName] = @{
+                            ParsedInfo = $parsedInfo
+                            DateTime = $dateTime
+                            OriginalEntry = $entry
+                        }
+                    }
+                } catch {
+                    # If date parsing fails, still include the entry but with current time for sorting
+                    Write-Debug "Failed to parse date for entry: $entry"
+                    if (-not $uniqueComputers.ContainsKey($computerName)) {
+                        $uniqueComputers[$computerName] = @{
+                            ParsedInfo = $parsedInfo
+                            DateTime = Get-Date
+                            OriginalEntry = $entry
+                        }
+                    }
+                }
+            }
+            
+            # Sort by oldest access time first, then take top 10 and reverse for bottom-most recent display
+            $top10UniqueComputers = $uniqueComputers.Values | 
+                Sort-Object { $_.DateTime } -Descending | 
+                Select-Object -First 10 |
+                Sort-Object { $_.DateTime }
+            
+            Write-Host "Last 10 unique computers (most recent access):" -ForegroundColor Green
+            Write-Host ""
+            
+            foreach ($computerEntry in $top10UniqueComputers) {
+                $parsedInfo = $computerEntry.ParsedInfo
                 # Add the PossibleComputerName to the $possibleComputers array
                 $possibleComputers += $parsedInfo.PossibleComputerName
-                # Add the log entry to the $logTable array
+                # Add the log entry to the $logTable array (maintaining original format)
                 $logTable += "$($parsedInfo.PossibleComputerName) $($parsedInfo.Day) $($parsedInfo.Date) $($parsedInfo.Time)"
             }
         } else {

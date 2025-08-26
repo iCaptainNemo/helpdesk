@@ -7,7 +7,7 @@ function Get-UserId {
             Write-Debug "Panes enabled and GetUserId is true"
             $UserID = (Read-Host "Enter User ID").Replace(' ', '')
             try {
-                if ($powershell -eq $true) {
+                if ($script:EnvironmentInfo.PowerShellAD -eq $true) {
                     Get-ADUser -Identity $UserID -ErrorAction Stop | Out-Null
                 } else {
                     # Use dsquery and dsget to get the user from AD
@@ -20,12 +20,9 @@ function Get-UserId {
                         throw
                     }
                 }
-                $AdminConfig = ".\.env\.env_$env:USERNAME.ps1"
-                $envVars['UserID'] = $UserID
-                # Convert the updated hashtable to a list of strings
-                $envVarsList = "`$envVars = @{}" + ($envVars.GetEnumerator() | ForEach-Object { "`n`$envVars['$($_.Key)'] = '$($_.Value)'" })
-                # Write the updated environmental variables to the $AdminConfig file
-                Set-Content -Path $AdminConfig -Value ($envVarsList -join "`n")
+                # Legacy .env file writing removed - now using YAML configuration
+                $script:envVars['UserID'] = $UserID
+                # UserID is now stored in script scope for YAML system
             } catch {
                 #Clear-Host
                 Write-Host "Cannot find an object with the given identity. Try again."
@@ -35,7 +32,7 @@ function Get-UserId {
             while ($true) {
                 $UserID = (Read-Host "Enter User ID").Replace(' ', '')
                 try {
-                if ($powershell -eq $true) {
+                if ($script:EnvironmentInfo.PowerShellAD -eq $true) {
                     Get-ADUser -Identity $UserID -ErrorAction Stop | Out-Null
                 } else {
                     # Use dsquery and dsget to get the user from AD
@@ -48,12 +45,9 @@ function Get-UserId {
                         throw
                     }
                 }
-                $AdminConfig = ".\.env\.env_$env:USERNAME.ps1"
-                $envVars['UserID'] = $UserID
-                # Convert the updated hashtable to a list of strings
-                $envVarsList = "`$envVars = @{}" + ($envVars.GetEnumerator() | ForEach-Object { "`n`$envVars['$($_.Key)'] = '$($_.Value)'" })
-                # Write the updated environmental variables to the $AdminConfig file
-                Set-Content -Path $AdminConfig -Value ($envVarsList -join "`n")
+                # Legacy .env file writing removed - now using YAML configuration
+                $script:envVars['UserID'] = $UserID
+                # UserID is now stored in script scope for YAML system
                 return $UserID
             } catch {
                 #Clear-Host

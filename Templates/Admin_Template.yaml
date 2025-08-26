@@ -1,4 +1,3 @@
 Admin:
-    - User: $AdminUser
-    - Temppassword: <PLACEHOLDER>
-    - Logfile: <PLACEHOLDER>
+  Username: "<ADMIN_USERNAME>"
+  TempPassword: "<TEMP_PASSWORD>"  # Leave blank to use domain default

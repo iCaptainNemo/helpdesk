@@ -1,8 +1,10 @@
 # Function to test domain controllers for ADWS service
 function Test-DomainControllers {
-    # Check if env.ps1 file already exists
-    if (Test-Path ".\.env_$currentDomain.ps1") {
-        Write-Host ".env_$currentDomain.ps1 file already exists. continuing."
+    # Check if domain controllers are already configured in YAML
+    $domainConfigName = "domain_$($script:EnvironmentInfo.Domain -replace '\.', '_')"
+    $domainConfig = $script:ConfigManager.LoadConfig($domainConfigName)
+    if ($domainConfig -and $domainConfig['DomainControllers'] -and $domainConfig['DomainControllers']['PSDomains'].Count -gt 0) {
+        Write-Host "Domain controllers already configured in YAML. Continuing."
         return
     }
 
@@ -27,11 +29,11 @@ function Test-DomainControllers {
         }
     }
 
-    # Export variables to env.ps1 file
-    $exportScript = @"
-    `$PSDomains = @('{0}')
-    `$cmdDomains = @('{1}')
-"@ -f ($PSDomains -join "', '"), ($cmdDomains -join "', '")
-
-    $exportScript | Out-File -FilePath ".\.env\.env_$currentDomain.ps1"
+    # Update domain YAML configuration with tested domain controllers
+    $domainConfig['DomainControllers']['PSDomains'] = $PSDomains
+    $domainConfig['DomainControllers']['CMDDomains'] = $cmdDomains
+    
+    # Save updated domain configuration
+    $script:ConfigManager.SaveConfig($domainConfigName, $domainConfig)
+    Write-Host "Domain controllers updated in YAML configuration: $domainConfigName.yaml"
 }

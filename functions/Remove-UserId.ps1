@@ -1,15 +1,10 @@
-# Remove the 'UserID' key from the $envVars hashtable and write the updated environmental variables to the $AdminConfig file
+# Remove the 'UserID' key from the script environment variables (YAML system)
 function Remove-UserId {
     param (
-        [string]$AdminConfig
+        [string]$AdminConfig  # Legacy parameter - not used in YAML system
     )
 
-    # Set 'UserID' key in $envVars to null
-    $envVars['UserID'] = $null
-
-    # Convert the updated hashtable to a list of strings
-    $envVarsList = "`$envVars = @{}" + ($envVars.GetEnumerator() | ForEach-Object { "`n`$envVars['$($_.Key)'] = '$($_.Value)'" })
-
-    # Write the updated environmental variables to the $AdminConfig file
-    Set-Content -Path $AdminConfig -Value ($envVarsList -join "`n")
+    # Clear the 'UserID' from the script environment variables
+    $script:envVars['UserID'] = $null
+    Write-Debug "UserID cleared from script environment variables"
 }

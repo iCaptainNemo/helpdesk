@@ -1,6 +1,6 @@
 # Function to set $tempPassword
 function Set-TempPassword {
-    if ($envVars.ContainsKey('tempPassword')) {
+    if ($script:envVars.ContainsKey('tempPassword') -and $script:envVars['tempPassword']) {
             return
     }
     do {
@@ -20,11 +20,10 @@ function Set-TempPassword {
         }
         $confirm = Read-Host "Use '$tempPassword'. Is this correct? (n to redo)"
     } while ($confirm -eq 'n')
-    # Update the tempPassword in the $envVars hashtable
-    $envVars['tempPassword'] = $tempPassword
-    # Convert the updated hashtable to a list of strings
-    $envVarsList = "`$envVars = @{}" + ($envVars.GetEnumerator() | ForEach-Object { "`n`$envVars['$($_.Key)'] = '$($_.Value)'" })
-    # Write the updated environmental variables to the $AdminConfig file
-    Set-Content -Path "$AdminConfig" -Value ($envVarsList -join "`n")
+    # Update the tempPassword in the script environment variables (YAML system)
+    $script:envVars['tempPassword'] = $tempPassword
+    Write-Debug "Updated temp password in script environment variables"
+    
+    # TODO: Consider updating admin YAML config file for persistence
     return $tempPassword
 }

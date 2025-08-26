@@ -5,21 +5,13 @@ while ($panesEnabled -eq $true -and $ADUserProp -eq $true) {
     Write-Debug "All conditions met, proceeding..."
     Clear-Host
 
-    # Resolve the path to the AdminConfig file
-    $AdminConfig = Resolve-Path ".\.env\.env_$env:USERNAME.ps1"
-
-    Write-Debug "AdminConfig file changed, re-running functions..."
-
-    # Source the AdminConfig file to get the updated variables
-    . $AdminConfig
-
-    # Get the updated UserID
-    $userId = $envVars['UserID']
+    # Get the updated UserID from script environment variables (YAML system)
+    $userId = $script:envVars['UserID']
     Write-Debug "$userID"
 
     # Re-run the Get-ADUserProperties and Show-ADUserProperties functions with the updated UserID
-    $adUser = Get-ADUserProperties -userId $envVars['UserID']
-    Show-ADUserProperties -userId $envVars['UserID'] -adUser $adUser
+    $adUser = Get-ADUserProperties -userId $script:envVars['UserID']
+    Show-ADUserProperties -userId $script:envVars['UserID'] -adUser $adUser
 
     # Wait until the Changed event is triggered
     Start-Sleep -seconds 3
@@ -61,7 +53,7 @@ function Get-ADUserProperties {
         [string]$userId
     )
     try {
-        if ($powershell -eq $true) {
+        if ($script:EnvironmentInfo.PowerShellAD -eq $true) {
             $adUser = Get-ADUser -Identity $userId -Properties * -Server $PDC
             Write-Debug "Get-ADUser returned: $adUser"
         } else {

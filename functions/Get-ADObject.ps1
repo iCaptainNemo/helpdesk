@@ -1,7 +1,5 @@
-# Import the Active Directory module
-Import-Module ActiveDirectory
-
 # Function to retrieve an object from Active Directory and return its properties
+# Note: ActiveDirectory module is imported by the main jarvis.ps1 script
 function Get-ADObjectType {
     param (
         [string]$object
@@ -34,7 +32,9 @@ function Get-ADObjectType {
     }
 }
 
-# Main script execution
-$object = $args[0]
-$properties = Get-ADObjectType -object $object
-$properties
+# Main script execution - only run when called directly, not when dot-sourced
+if ($MyInvocation.InvocationName -ne '.') {
+    $object = $args[0]
+    $properties = Get-ADObjectType -object $object
+    $properties
+}

@@ -5,8 +5,8 @@ function Asset-Control {
         [string]$computerName 
     )
 
-    # Check $powershell boolean
-    if ($powershell -eq $true) {
+    # Check if PowerShell AD module is available
+    if ($script:EnvironmentInfo.PowerShellAD -eq $true) {
 
     # Add a line break or additional Write-Host statements for space
     Write-Host "`n"  # This adds a line break
@@ -18,7 +18,7 @@ function Asset-Control {
     $possibleComputers = $possibleComputers | Sort-Object | Get-Unique
 
     # Display possible computers as a numbered list
-    if ($powershell -eq $true) { Write-Host "Possible Computers:" }
+    if ($script:EnvironmentInfo.PowerShellAD -eq $true) { Write-Host "Possible Computers:" }
     $psLoggedOnPath = ".\Tools\PsLoggedon.exe"
     $computerStatus = @{}
 
@@ -83,8 +83,8 @@ function Asset-Control {
     # Display the selected computer
     Write-Host "Selected computer: $computerName"
 
-    # Check if $powershell is true
-    if ($powershell -eq $true) {
+    # Check if PowerShell AD module is available
+    if ($script:EnvironmentInfo.PowerShellAD -eq $true) {
         # Get computer properties
         try {
             $computer = Get-ADComputer $computerName -Properties *
@@ -156,8 +156,8 @@ function Asset-Control {
 
         switch ($assetChoice) {
             '1' {
-                # Check if $powershell is true
-                if ($powershell -eq $true) {
+                # Check if PowerShell AD module is available
+                if ($script:EnvironmentInfo.PowerShellAD -eq $true) {
                     # Test connection using Test-Connection
                     try {
                         if (Test-Connection -ComputerName $ComputerName -Count 1 -ErrorAction Stop) {

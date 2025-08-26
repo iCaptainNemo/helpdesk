@@ -1,4 +1,29 @@
+# GitHub workflows
 .github/workflows/
+
+# Environment configuration files (generated from templates)
 .env/*
+!.env/.gitkeep
+
+# Configuration files (generated from templates)
 Config/*
+!Config/.gitkeep
+
+# Database files
 *.db
+
+# Generated YAML configuration files (keep templates only)
+# Domain-specific configs
+domain_*.yaml
+# Admin user configs  
+admin_*.yaml
+# User session configs
+user_*.yaml
+
+# PowerShell session files
+*.ps1.backup
+*.ps1.orig
+
+# Temporary files
+*.tmp
+*.temp
