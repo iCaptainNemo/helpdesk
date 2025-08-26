@@ -112,14 +112,6 @@ helpdesk/
 - Basic domain controller testing
 - Legacy .env file configuration system
 
-## 🤝 Contributing
-
-This project is designed for internal helpdesk use. For modifications:
-1. Review `CLAUDE.md` for detailed development guidelines
-2. Test changes in a development environment first
-3. Maintain backward compatibility with existing configurations
-4. Update version information after significant changes
-
 ## 📄 License
 
 Internal use only. See LICENSE file for details.
