@@ -13,7 +13,7 @@
 .SYNOPSIS
     Test network connectivity to a remote computer
 .DESCRIPTION
-    Tests connectivity using Test-Connection (PowerShell AD) or WMI (fallback mode)
+    Performs a simple ping test to check if computer is reachable
 .PARAMETER userId
     The user ID for context (required for consistent interface)
 .PARAMETER computerName
@@ -21,7 +21,7 @@
 .EXAMPLE
     Test-ComputerConnection -userId "jdoe" -computerName "COMPUTER01"
 .NOTES
-    Uses different methods based on available PowerShell modules
+    Performs 2 pings for quick reachability test
 #>
 function Test-ComputerConnection {
     [CmdletBinding()]
@@ -37,13 +37,19 @@ function Test-ComputerConnection {
     
     Write-Host "Testing connection to '$computerName'..." -ForegroundColor Cyan
 
-    # Check if PowerShell AD module is available for enhanced testing
-    if ($script:EnvironmentInfo.PowerShellAD -eq $true) {
-        Write-Debug "Using PowerShell AD method for connection testing"
-        Test-PowerShellConnection -computerName $computerName
-    } else {
-        Write-Debug "Using WMI fallback method for connection testing"  
-        Test-WMIConnection -computerName $computerName
+    try {
+        # Simple ping test with 2 pings
+        $pingResult = Test-Connection -ComputerName $computerName -Count 2 -Quiet -ErrorAction Stop
+        
+        if ($pingResult) {
+            Write-Host "SUCCESS: '$computerName' is reachable" -ForegroundColor Green
+        } else {
+            Write-Host "FAILED: '$computerName' is not responding to ping" -ForegroundColor Red
+        }
+    }
+    catch {
+        Write-Host "ERROR: Unable to test connection to '$computerName'" -ForegroundColor Red
+        Write-Host "Error details: $($_.Exception.Message)" -ForegroundColor Red
     }
 
     Read-Host "Press Enter to continue"
@@ -161,47 +167,47 @@ function Test-WMIConnection {
 .PARAMETER computerName
     Name of the computer to test ports on
 #>
-function Test-ServicePorts {
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory=$true)]
-        [string]$computerName
-    )
+# function Test-ServicePorts {
+#     [CmdletBinding()]
+#     param (
+#         [Parameter(Mandatory=$true)]
+#         [string]$computerName
+#     )
 
-    $commonPorts = @(
-        @{ Port = 135; Service = "RPC Endpoint Mapper" },
-        @{ Port = 139; Service = "NetBIOS Session Service" },
-        @{ Port = 445; Service = "SMB/CIFS" },
-        @{ Port = 3389; Service = "Remote Desktop" },
-        @{ Port = 5985; Service = "WinRM HTTP" },
-        @{ Port = 5986; Service = "WinRM HTTPS" }
-    )
+#     $commonPorts = @(
+#         @{ Port = 135; Service = "RPC Endpoint Mapper" },
+#         @{ Port = 139; Service = "NetBIOS Session Service" },
+#         @{ Port = 445; Service = "SMB/CIFS" },
+#         @{ Port = 3389; Service = "Remote Desktop" },
+#         @{ Port = 5985; Service = "WinRM HTTP" },
+#         @{ Port = 5986; Service = "WinRM HTTPS" }
+#     )
 
-    foreach ($portTest in $commonPorts) {
-        Write-Host "   $($portTest.Service) (port $($portTest.Port)): " -NoNewline
+#     foreach ($portTest in $commonPorts) {
+#         Write-Host "   $($portTest.Service) (port $($portTest.Port)): " -NoNewline
         
-        try {
-            $tcpClient = New-Object System.Net.Sockets.TcpClient
-            $connect = $tcpClient.BeginConnect($computerName, $portTest.Port, $null, $null)
-            $wait = $connect.AsyncWaitHandle.WaitOne(3000, $false)
+#         try {
+#             $tcpClient = New-Object System.Net.Sockets.TcpClient
+#             $connect = $tcpClient.BeginConnect($computerName, $portTest.Port, $null, $null)
+#             $wait = $connect.AsyncWaitHandle.WaitOne(3000, $false)
             
-            if ($wait) {
-                try {
-                    $tcpClient.EndConnect($connect)
-                    Write-Host "OPEN" -ForegroundColor Green
-                } catch {
-                    Write-Host "CLOSED" -ForegroundColor Red
-                }
-            } else {
-                Write-Host "TIMEOUT" -ForegroundColor Yellow
-            }
+#             if ($wait) {
+#                 try {
+#                     $tcpClient.EndConnect($connect)
+#                     Write-Host "OPEN" -ForegroundColor Green
+#                 } catch {
+#                     Write-Host "CLOSED" -ForegroundColor Red
+#                 }
+#             } else {
+#                 Write-Host "TIMEOUT" -ForegroundColor Yellow
+#             }
             
-            $tcpClient.Close()
-        } catch {
-            Write-Host "ERROR" -ForegroundColor Red
-        }
-    }
-}
+#             $tcpClient.Close()
+#         } catch {
+#             Write-Host "ERROR" -ForegroundColor Red
+#         }
+#     }
+# }
 
 <#
 .SYNOPSIS
