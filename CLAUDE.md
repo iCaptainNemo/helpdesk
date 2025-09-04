@@ -67,6 +67,42 @@ helpdesk/
    ```
 3. No PowerShell code changes required - menu system loads dynamically
 
+### Converting Standalone Scripts to Asset Control Functions
+When converting standalone scripts from `Standalone-NotReady/` to Asset Control functions:
+
+1. **Remove standalone execution logic**:
+   - Delete `while ($true)` loops and user prompts
+   - Remove `Read-Host` for computer names (passed as parameters)
+   - Remove `Clear-Host` calls and exit logic
+
+2. **Add function wrapper with standard parameters**:
+   ```powershell
+   function Function-Name {
+       [CmdletBinding()]
+       param (
+           [Parameter(Mandatory=$true)]
+           [string]$userId,
+           
+           [Parameter(Mandatory=$true)]
+           [string]$computerName
+       )
+       
+       Write-Debug "Operation on computer: $computerName (requested by: $userId)"
+       # Original logic here (minus prompts and loops)
+       Read-Host "Press Enter to continue"
+   }
+   ```
+
+3. **Update error handling**:
+   - Keep try/catch blocks but remove script exits
+   - Replace standalone error messages with function-appropriate ones
+   - Ensure function returns gracefully on errors
+
+4. **Add to AssetControlMenu.yaml**:
+   - Choose next available ID number
+   - Use descriptive name and function name
+   - Set module to match filename (without .ps1)
+
 ### Configuration Management
 - Use SQLite database for structured persistent data
 - Use YAML files for configuration that needs human editing
