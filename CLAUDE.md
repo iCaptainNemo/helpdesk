@@ -49,9 +49,10 @@ helpdesk/
    - `Functions/Utilities/` - Utility and helper functions
    - `Functions/Standalone/` - Scripts for future integration
 2. **🚨 CRITICAL**: Ensure file contains ONLY function definitions - no immediate execution code
-3. Follow existing error handling patterns and PowerShell documentation standards
-4. Use `Write-Debug` for troubleshooting output
-5. Test that file can be dot-sourced without prompting user
+3. **🚨 NO EMOJIS**: Never use emoji characters in PowerShell files - they require BOM encoding and cause file loading issues
+4. Follow existing error handling patterns and PowerShell documentation standards
+5. Use `Write-Debug` for troubleshooting output
+6. Test that file can be dot-sourced without prompting user
 
 ### Adding Asset Control Features
 1. Create new module in `Functions/AssetControl/` directory
