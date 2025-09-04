@@ -1,3 +1,26 @@
+<#
+.SYNOPSIS
+    Advanced server monitoring and status reporting system
+.DESCRIPTION
+    Comprehensive server monitoring tool that provides real-time status monitoring,
+    uptime tracking, and detailed system reporting for domain servers. Supports
+    YAML-based configuration and automated discovery of servers based on naming schemes.
+.PARAMETER Debug
+    Enable debug mode for verbose output and troubleshooting
+.FUNCTIONALITY
+    - Server discovery based on configurable naming patterns
+    - Real-time connectivity monitoring with status indicators
+    - Uptime tracking and performance metrics
+    - YAML configuration for domain-specific settings
+    - Class-based architecture for extensibility and maintenance
+.NOTES
+    Author: Helpdesk Team
+    Version: 2.0
+    Requires: PowerShell 5.1+, Network connectivity, YAML module
+    Part of: Jarvis Helpdesk Automation System - Standalone Tools
+    Usage: .\Get-ServerStatus.ps1 [-Debug]
+#>
+
 param (
     [switch]$Debug  # Parameter to enable debug mode
 )
@@ -7,8 +30,8 @@ if ($Debug) {
     $DebugPreference = 'Continue'
 }
 
-# Clear the screen
-cls
+# Clear the screen (debug-aware)
+if (-not $PSBoundParameters['Debug']) { Clear-Host }
 
 # Write a debug message if debug mode is enabled
 Write-Debug "Debug mode is enabled."
@@ -204,7 +227,7 @@ while ($true) {
     Write-Debug "Current time: $currentTime"
 
     foreach ($server in $servers) {
-        cls
+        if (-not $DebugPreference -eq 'Continue') { Clear-Host }
         Write-Host "Checking status for server: $server"
         $status = $serverManager.CheckServerStatus($server)
         $statusText = if ($status) { "Online" } else { "Offline" }
@@ -290,7 +313,7 @@ while ($true) {
             $recentlyOnline.Remove($server)
         }
     }
-    cls
+    if (-not $DebugPreference -eq 'Continue') { Clear-Host }
     # Display the last time the script was run
     Write-Host "Last run: $(Get-Date)"
 
@@ -334,5 +357,5 @@ while ($true) {
         Write-Debug "Time remaining: $([math]::Round(($startTime.AddSeconds($timeout) - $currentTime).TotalSeconds)) seconds"
         Start-Sleep -Seconds 1
     }
-    cls
+    if (-not $DebugPreference -eq 'Continue') { Clear-Host }
 }

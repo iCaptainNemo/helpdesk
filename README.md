@@ -21,15 +21,17 @@ A comprehensive PowerShell-based helpdesk automation system designed for multi-d
 
 ### Installation
 1. Clone or copy the repository to your domain environment
-2. Run the main script: `.\jarvis.ps1`
-3. Follow the initial configuration prompts for domain and admin setup
+2. **⚠️ IMPORTANT**: Customize `Functions/Utilities/Show-LastLogEntries.ps1` for your domain's log format (see Domain-Specific Customization below)
+3. Run the main script: `.\jarvis.ps1`
+4. Follow the initial configuration prompts for domain and admin setup
 
 ### First Run
 On first execution, Jarvis will:
 - Detect your domain environment (PowerShell AD vs WMI)
 - Create domain-specific configuration from templates
-- Set up admin user preferences
+- Set up admin user preferences (including log entry display count)
 - Test domain controller connectivity (if needed)
+- Prompt for log file display preferences (default: 10 entries)
 
 ## 📁 Project Structure
 
@@ -62,6 +64,8 @@ helpdesk/
 ### Admin Configuration (`Config/admin_<username>.yaml`)
 - Individual admin user preferences  
 - Custom temporary passwords
+- Log entry display count (configurable per admin)
+- Domain-specific logging configuration
 - Personal settings overrides
 
 ### User Session Management
@@ -77,6 +81,37 @@ helpdesk/
 - **Log Analysis**: Parse and display user activity logs with unique computer tracking
 - **SCCM Integration**: Remote tools and system management
 - **Browser Management**: Clear cache, cookies, and profile data
+
+## ⚠️ Domain-Specific Customization Required
+
+### Log Entry Management Customization
+**CRITICAL**: `Functions/Utilities/Show-LastLogEntries.ps1` must be customized for each domain deployment.
+
+**Required Customizations:**
+1. **Log File Paths**: Update log file location and naming convention
+2. **Log Format Parsing**: Modify `Parse-LogEntry` function to match your domain's log format
+3. **Computer Name Extraction**: Ensure computer names are correctly extracted from log entries
+4. **Date/Time Format**: Adjust date parsing to match your timestamp format
+5. **Admin Configuration**: Set logging preferences in admin YAML files
+
+**Example Domain Log Formats:**
+```
+# Format 1: "COMPUTER01 Mon 01/15/2024 14:30:25.123"
+# Format 2: "[2024-01-15 14:30:25] COMPUTER01 - User Login"
+# Format 3: "COMPUTER01,Mon,01/15/2024,14:30:25"
+```
+
+**Customization Steps:**
+1. Examine your domain's existing computer access logs
+2. Update `$logFilePath` construction in `Show-LastLogEntries` function
+3. Modify `Parse-LogEntry` function field splitting and extraction logic
+4. Test computer name extraction works correctly
+5. Verify log entry count configuration in admin YAML files
+
+**Failure to customize this file will result in:**
+- No computer suggestions in Asset Control menu
+- Broken log analysis functionality
+- Reduced system effectiveness for helpdesk operations
 
 ## 🔧 Development
 

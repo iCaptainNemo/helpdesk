@@ -1,4 +1,27 @@
-# Function to set $tempPassword
+<#
+.SYNOPSIS
+    Temporary password management for user account operations
+.DESCRIPTION
+    Manages temporary password settings for password reset operations. Supports both
+    user-defined passwords and automatic seasonal password generation (e.g., Spring2024).
+    Integrates with YAML configuration system for consistent password management.
+.FUNCTIONALITY
+    - Interactive temporary password input with validation
+    - Automatic seasonal password generation based on current date
+    - Integration with script environment variables (YAML system)
+    - Prevents duplicate password prompting within session
+.OUTPUTS
+    Sets script-level $tempPassword variable for use by password reset functions
+.EXAMPLE
+    Set-TempPassword
+    Prompts for temporary password or generates seasonal default
+.NOTES
+    Author: Helpdesk Team
+    Version: 2.0
+    Requires: YAML environment configuration system
+    Part of: Jarvis Helpdesk Automation System - User Management
+#>
+
 function Set-TempPassword {
     if ($script:envVars.ContainsKey('tempPassword') -and $script:envVars['tempPassword']) {
             return

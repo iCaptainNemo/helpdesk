@@ -64,8 +64,8 @@ if ($PSBoundParameters['Debug']) {
     Write-Debug "Debug mode enabled - verbose output activated"
 }
 
-# Clear screen and set window properties
-Clear-Host
+# Clear screen and set window properties (skip in debug mode for better troubleshooting)
+if (-not $PSBoundParameters['Debug']) { Clear-Host }
 $Host.UI.RawUI.WindowTitle = "Jarvis Helpdesk - $(Split-Path -Path $MyInvocation.MyCommand.Definition -Leaf)"
 Write-Debug "Window title set and screen cleared"
 
@@ -209,64 +209,66 @@ Write-Debug "Session variables initialized for admin user: $script:AdminUser"
 # MODULAR FUNCTION LIBRARY LOADING
 # ============================================================================
 
-# Define the functions directory and get all PowerShell function files
-$FunctionsPath = Join-Path $PSScriptRoot "functions"
+# Define the Functions directory with new modular structure
+$FunctionsPath = Join-Path $PSScriptRoot "Functions"
 Write-Debug "Loading functions from: $FunctionsPath"
 
-# Critical functions that must be loaded first (order dependency)
-$CoreFunctions = @(
-    "Test-DomainControllers.ps1",
-    "Set-TempPassword.ps1", 
-    "Get-UserId.ps1",
-    "ADUserProp.ps1"
+# Define function directories in load order (core functions first)
+$FunctionDirectories = @(
+    @{ Path = "Core"; Required = $true },
+    @{ Path = "UserManagement"; Required = $true },
+    @{ Path = "Utilities"; Required = $true },
+    @{ Path = "AssetControl"; Required = $true }
+    # Note: Standalone directory is intentionally excluded - these are standalone scripts
 )
 
-# All function files to be loaded (add new functions here)
-$AllFunctions = @(
-    "Asset-Control.ps1",
-    "Add-NetworkPrinter.ps1", 
-    "Set-TempPassword.ps1",
-    "ADUserProp.ps1",
-    "Get-UserId.ps1",
-    "Invoke-SCCMRemoteTool.ps1",
-    "Main-Loop.ps1",
-    "Remove-UserId.ps1", 
-    "Show-LastLogEntries.ps1",
-    "Test-DomainControllers.ps1",
-    "Unlock-ADAccountOnAllDomainControllers.ps1",
-    "Clear-Browsers.ps1",
-    "GetLAPS.ps1",
-    "Manage-DB.ps1",
-    "Manage-User.ps1",
-    "Manage-AdminUser.ps1",
-    "Get-ADObject.ps1"
-)
-
-# Load core functions first, then all others
+# Load functions from each directory
 $FunctionLoadErrors = @()
-foreach ($functionFile in $AllFunctions) {
-    $functionPath = Join-Path $FunctionsPath $functionFile
-    try {
-        if (Test-Path $functionPath) {
-            . $functionPath
-            Write-Debug "Successfully loaded function: $functionFile"
-        } else {
-            Write-Warning "Function file not found: $functionFile"
-            $FunctionLoadErrors += "Missing: $functionFile"
+$TotalFunctionsLoaded = 0
+
+foreach ($directory in $FunctionDirectories) {
+    $directoryPath = Join-Path $FunctionsPath $directory.Path
+    Write-Debug "Loading functions from directory: $($directory.Path)"
+    
+    if (Test-Path $directoryPath) {
+        # Get all PowerShell files in the directory
+        $functionFiles = Get-ChildItem -Path $directoryPath -Filter "*.ps1" -File
+        
+        foreach ($functionFile in $functionFiles) {
+            try {
+                Write-Debug "Loading function file: $($directory.Path)\$($functionFile.Name)"
+                . $functionFile.FullName
+                Write-Debug "Successfully loaded: $($directory.Path)\$($functionFile.Name)"
+                $TotalFunctionsLoaded++
+            } catch {
+                $errorMessage = "Failed to load $($directory.Path)\$($functionFile.Name): $($_.Exception.Message)"
+                Write-Error $errorMessage
+                $FunctionLoadErrors += $errorMessage
+            }
         }
-    } catch {
-        Write-Error "Failed to load function $functionFile`: $($_.Exception.Message)"
-        $FunctionLoadErrors += "Error in $functionFile`: $($_.Exception.Message)"
+        
+        Write-Debug "Loaded $($functionFiles.Count) functions from $($directory.Path)"
+    } else {
+        $missingMessage = "Function directory not found: $($directory.Path)"
+        if ($directory.Required) {
+            Write-Error $missingMessage
+            $FunctionLoadErrors += $missingMessage
+        } else {
+            Write-Warning $missingMessage
+        }
     }
 }
 
-# Report any function loading issues
+# Report function loading results
 if ($FunctionLoadErrors.Count -gt 0) {
-    Write-Warning "Some functions failed to load:"
+    Write-Warning "Some functions failed to load ($($FunctionLoadErrors.Count) errors):"
     $FunctionLoadErrors | ForEach-Object { Write-Warning "  $_" }
 } else {
     Write-Debug "All functions loaded successfully"
 }
+
+Write-Debug "Total functions loaded: $TotalFunctionsLoaded"
+Write-Host "Modular function system initialized - $TotalFunctionsLoaded functions loaded" -ForegroundColor Green
 #endregion
 
 #region CONFIGURATION_MANAGEMENT
@@ -343,7 +345,7 @@ class YamlConfigManager {
             # Replace placeholders
             foreach ($key in $replacements.Keys) {
                 $placeholder = "<$($key.ToUpper())>"
-                # Escape backslashes for YAML compatibility  
+                # Escape backslashes only once for YAML string literals
                 $value = $replacements[$key] -replace '\\', '\\\\'
                 $templateContent = $templateContent -replace [regex]::Escape($placeholder), $value
             }
@@ -484,10 +486,21 @@ if (-not $script:ConfigManager.ConfigExists($adminConfigName)) {
         $tempPassword = Read-Host "Enter temp password for $($script:AdminUser) (leave blank for domain default)"
     }
     
+    # Ask for log entry display preference
+    $logEntryCount = Read-Host "How many recent computer log entries should be displayed? (default: 10)"
+    if ([string]::IsNullOrEmpty($logEntryCount) -or -not ($logEntryCount -match '^\d+$')) {
+        $logEntryCount = 10
+        Write-Host "Using default: 10 log entries" -ForegroundColor Gray
+    } else {
+        $logEntryCount = [int]$logEntryCount
+        Write-Host "Set to display: $logEntryCount log entries" -ForegroundColor Green
+    }
+    
     # Create admin configuration from template
     $adminReplacements = @{
         ADMIN_USERNAME = $script:AdminUser
         TEMP_PASSWORD = $tempPassword
+        LOG_ENTRY_COUNT = $logEntryCount
     }
     
     try {
@@ -544,6 +557,23 @@ Write-Host "Temp Password: " -NoNewline; Write-Host "$($script:envVars['tempPass
 Write-Host "Logfile Path: " -NoNewline; Write-Host "$($script:envVars['logFileBasePath'])" -ForegroundColor Yellow
 Write-Host ""
 
+# Initialize domain controller variables from cache for performance optimization
+Write-Host "Initializing domain controllers..." -ForegroundColor Cyan
+try {
+    if (Initialize-DomainControllerVariables) {
+        Write-Host "Domain controllers loaded from cache" -ForegroundColor Green
+        Write-Debug "Available DCs - PowerShell: $($script:PSDomains.Count), Command-line: $($script:cmdDomains.Count)"
+    } else {
+        Write-Host "No cached domain controllers found - will test on first unlock" -ForegroundColor Yellow
+    }
+} catch {
+    Write-Warning "Failed to initialize domain controllers: $($_.Exception.Message)"
+    Write-Debug "Exception details: $($_.Exception)"
+    $script:PSDomains = @()
+    $script:cmdDomains = @()
+}
+Write-Host ""
+
 Write-Host "Press any key to continue..." -ForegroundColor Gray
 $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
 #endregion
@@ -552,8 +582,7 @@ $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
 # Main loop
 while ($true) {
     # Get User ID before entering the main menu
-    Clear-Host
-    Clear-Host
+    if (-not $PSBoundParameters['Debug']) { Clear-Host }
     $script:envVars['UserID'] = Get-UserId
 
     # Initialize $logFilePath inside the main loop and make it available to functions

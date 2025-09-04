@@ -1,0 +1,43 @@
+# Asset Control Menu Template
+# This template defines the structure for asset control menu configuration
+# Replace placeholders marked with <> with actual values
+
+menu:
+  title: "<MENU_TITLE>"                    # Title displayed at top of menu
+  description: "<MENU_DESCRIPTION>"        # Optional description of menu purpose
+  
+  items:
+    - id: 1                                # Unique menu item identifier (integer)
+      name: "<ITEM_NAME_1>"                # Display name shown in menu
+      function: "<FUNCTION_NAME_1>"        # PowerShell function to execute
+      module: "<MODULE_FILENAME_1>"        # Filename in AssetControl folder (without .ps1)
+      description: "<ITEM_DESCRIPTION_1>"  # Help text explaining what this does
+      enabled: true                        # true = show in menu, false = hide
+      
+    - id: 2
+      name: "<ITEM_NAME_2>"
+      function: "<FUNCTION_NAME_2>"
+      module: "<MODULE_FILENAME_2>"
+      description: "<ITEM_DESCRIPTION_2>"
+      enabled: true
+      
+    - id: 3
+      name: "<ITEM_NAME_3>"
+      function: "<FUNCTION_NAME_3>"
+      module: "<MODULE_FILENAME_3>"
+      description: "<ITEM_DESCRIPTION_3>"
+      enabled: true
+
+# Template Usage Instructions:
+# 1. Copy this template to Config/AssetControlMenu.yaml
+# 2. Replace all <PLACEHOLDER> values with actual values
+# 3. Add or remove menu items as needed
+# 4. Ensure module files exist in Functions/AssetControl/
+# 5. Test menu loading with jarvis.ps1
+
+# Example Replacements:
+# <MENU_TITLE> -> "Asset Control Options"
+# <ITEM_NAME_1> -> "Get LAPS Password"
+# <FUNCTION_NAME_1> -> "Get-LAPSPassword"
+# <MODULE_FILENAME_1> -> "laps"
+# <ITEM_DESCRIPTION_1> -> "Retrieve local administrator password"

@@ -1,16 +1,37 @@
-# Main loop function
+<#
+.SYNOPSIS
+    Main application loop for Jarvis helpdesk system
+.DESCRIPTION
+    Provides the primary user interface loop for the Jarvis helpdesk automation system.
+    Handles user authentication, displays AD user properties, manages log entries, and 
+    provides menu options for unlock, password reset, and asset control operations.
+.FUNCTIONALITY
+    - User ID validation and management
+    - AD user property display with color coding
+    - Log entry management and display  
+    - Unlock user accounts on domain controllers
+    - Password reset operations (temporary, permanent, force change)
+    - Asset control menu integration
+    - Script restart and cleanup functionality
+.NOTES
+    Author: Helpdesk Team
+    Version: 2.0
+    Requires: Active Directory access, YAML configuration system
+    Part of: Jarvis Helpdesk Automation System - Core Functions
+#>
+
 function Main-Loop {
     while ($true) {
         # If the restart flag is set, perform the '0' action and restart the loop
         if ($global:restartScript) {
             Remove-UserId -AdminConfig $AdminConfig
-            Clear-Host
+            if (-not $DebugPreference -eq 'Continue') { Clear-Host }
             $global:restartScript = $false
             return $null
         }
 
-        # Clears the console
-        Clear-Host
+        # Clears the console (skip in debug mode for better troubleshooting)
+        if (-not $DebugPreference -eq 'Continue') { Clear-Host }
         
         # Get User ID before entering the main menu
         $userId = Get-UserId
@@ -44,17 +65,24 @@ function Main-Loop {
         switch ($choice) {
             '0' {
                 Remove-UserId -AdminConfig $AdminConfig
-                Clear-Host
+                if (-not $DebugPreference -eq 'Continue') { Clear-Host }
                 return $null
             }
             '1' {
-                # Try to run the new script
+                # Use advanced unlock function with cached domain controllers
+                Write-Host "Unlocking user: $userId" -ForegroundColor Cyan
                 try {
-                    & '.\Unlocker.ps1' -UserID $userId -StopLoop:$true > $null
-                    Write-Host "User ID: $userId unlocked on all domain controllers" -BackgroundColor Green
+                    $unlockSuccess = Unlock-UserAdvanced -userId $userId -stopLoop $true
+                    if ($unlockSuccess) {
+                        Write-Host "User ID: $userId unlocked successfully" -BackgroundColor Green
+                    } else {
+                        Write-Host "Unlock operation completed with some errors - check above for details" -BackgroundColor Yellow
+                    }
                 } catch {
-                    # If an error occurs, fall back to the original command
-                    Unlock-ADAccountOnAllDomainControllers -userId $userId
+                    Write-Host "Error during unlock: $($_.Exception.Message)" -ForegroundColor Red
+                    # Fallback to standalone script if needed
+                    Write-Host "Attempting fallback unlock method..." -ForegroundColor Yellow
+                    & '.\Unlocker.ps1' -UserID $userId -StopLoop:$true > $null
                 }
             
                 Read-Host "Press any key to continue"
@@ -134,7 +162,7 @@ function Main-Loop {
                     # Assuming Remove-UserId is updated to work with hashtable
                     $envVars = Remove-UserId -envVars $envVars
                     $userId = $null
-                    Clear-Host
+                    if (-not $DebugPreference -eq 'Continue') { Clear-Host }
                     $global:restartScript = $false
                     continue
                 }

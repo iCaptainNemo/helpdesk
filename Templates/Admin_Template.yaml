@@ -1,3 +1,14 @@
 Admin:
   Username: "<ADMIN_USERNAME>"
   TempPassword: "<TEMP_PASSWORD>"  # Leave blank to use domain default
+
+Display:
+  LogEntryCount: <LOG_ENTRY_COUNT>  # Number of recent computer log entries to display (default: 10)
+
+Logging:
+  # Domain-specific log parsing configuration
+  # This section must be customized for each domain's log format and storage
+  LogFormat: "<COMPUTER_NAME> <DAY> <DATE> <TIME>"  # Expected log entry format
+  ComputerFieldIndex: 0  # Which field contains computer name (0-based index)
+  DateTimeFormat: "ddd MM/dd/yyyy HH:mm:ss.ff"  # PowerShell date parsing format
+  RequiresCustomization: true  # Flag indicating this section needs domain-specific setup

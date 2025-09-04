@@ -1,0 +1,136 @@
+# Active Directory Properties Configuration Template
+# This template defines which AD properties to retrieve for user and object queries
+# Used by both PowerShell AD module and DirectorySearcher (WMI fallback) methods
+
+# PowerShell AD Module Properties
+# Use '*' for all properties or specify individual properties for performance
+PowerShellAD:
+  UserProperties:
+    # Core Properties (always retrieved)
+    Core:
+      - "SamAccountName"
+      - "DisplayName"
+      - "GivenName"
+      - "Surname"
+      - "UserPrincipalName"
+      - "EmailAddress"
+      - "DistinguishedName"
+      - "MemberOf"
+    
+    # Extended Properties (commonly used in helpdesk operations)
+    Extended:
+      - "HomeDirectory"
+      - "Department"
+      - "telephoneNumber"
+      - "AccountLockoutTime"
+      - "LastBadPasswordAttempt"
+      - "BadLogonCount"
+      - "badPwdCount"
+      - "PasswordExpired"
+      - "PasswordLastSet"
+      - "Enabled"
+      - "LastLogonDate"
+    
+    # Use all properties (performance impact but comprehensive data)
+    UseAllProperties: true
+
+  ComputerProperties:
+    Core:
+      - "Name"
+      - "DistinguishedName"
+      - "DNSHostName"
+      - "OperatingSystem"
+      - "LastLogonDate"
+      - "Enabled"
+
+  ObjectProperties:
+    # For general AD object queries (Get-ADObject)
+    General:
+      - "Name"
+      - "ObjectClass"
+      - "DistinguishedName"
+      - "ObjectGUID"
+    
+    # BitLocker recovery properties
+    BitLocker:
+      - "msFVE-RecoveryPassword"
+      - "whenCreated"
+
+# DirectorySearcher Properties (WMI Fallback Method)
+# Properties must match LDAP attribute names exactly
+DirectorySearcher:
+  UserProperties:
+    # Core user properties for DirectorySearcher queries
+    Core:
+      - "cn"
+      - "distinguishedName"
+      - "displayName"
+      - "givenName"
+      - "sn"
+      - "userPrincipalName"
+      - "mail"
+      - "memberOf"
+      - "sAMAccountName"
+    
+    # Extended properties for comprehensive user data
+    Extended:
+      - "lockoutTime"
+      - "pwdLastSet"
+      - "userAccountControl"
+      - "homeDirectory"
+      - "department"
+      - "telephoneNumber"
+      - "badPwdCount"
+      - "badPasswordTime"
+      - "lastLogon"
+      - "objectGUID"
+    
+    # Account control flags for user status determination
+    AccountControl:
+      - "userAccountControl"  # Used to determine if account is disabled, locked, etc.
+
+  ComputerProperties:
+    Core:
+      - "cn"
+      - "distinguishedName"
+      - "dNSHostName"
+      - "operatingSystem"
+      - "lastLogon"
+      - "userAccountControl"
+      - "sAMAccountName"
+
+# Property Mapping between PowerShell AD and DirectorySearcher
+# Used to normalize property names between the two methods
+PropertyMapping:
+  # PowerShell AD Property -> DirectorySearcher Property
+  SamAccountName: "sAMAccountName"
+  DisplayName: "displayName"
+  GivenName: "givenName"
+  Surname: "sn"
+  UserPrincipalName: "userPrincipalName"
+  EmailAddress: "mail"
+  DistinguishedName: "distinguishedName"
+  HomeDirectory: "homeDirectory"
+  Department: "department"
+  telephoneNumber: "telephoneNumber"
+  DNSHostName: "dNSHostName"
+  OperatingSystem: "operatingSystem"
+
+# Performance Settings
+Performance:
+  # Whether to cache frequently accessed properties
+  EnablePropertyCaching: true
+  
+  # Maximum cache age in minutes
+  CacheExpirationMinutes: 15
+  
+  # Whether to use optimized property lists based on function requirements
+  UseOptimizedLists: false
+
+# Validation Settings
+Validation:
+  # Validate that properties exist before querying (adds overhead but prevents errors)
+  ValidatePropertiesExist: false
+  
+  # Log property retrieval performance for optimization
+  LogPerformanceMetrics: false

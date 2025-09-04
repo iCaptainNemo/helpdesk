@@ -1,9 +1,24 @@
+<#
+.SYNOPSIS
+    Active Directory user property management and display functions
+.DESCRIPTION
+    Provides functions to retrieve and display comprehensive AD user information including
+    group memberships, account status, password information, and lockout details.
+    Supports both PowerShell AD module and DirectorySearcher fallback methods.
+.NOTES
+    Author: Helpdesk Team
+    Version: 2.0
+    Requires: Active Directory access, PowerShell AD module (preferred) or WMI fallback
+    Part of: Jarvis Helpdesk Automation System
+#>
+
 Write-Debug "Value of panesEnabled: $panesEnabled"
 
-#This is an infinite loop that will keep running until you stop the script
+# Legacy loop function - kept for compatibility but wrapped in function
+# This is an infinite loop that will keep running until you stop the script
 while ($panesEnabled -eq $true -and $ADUserProp -eq $true) {
     Write-Debug "All conditions met, proceeding..."
-    Clear-Host
+    if (-not $DebugPreference -eq 'Continue') { Clear-Host }
 
     # Get the updated UserID from script environment variables (YAML system)
     $userId = $script:envVars['UserID']
@@ -52,17 +67,26 @@ function Get-ADUserProperties {
     param (
         [string]$userId
     )
+    
+    # Load AD properties configuration
+    $adPropsConfig = Get-ADPropertiesConfig
+    Write-Debug "AD Properties configuration loaded for user query"
+    
     try {
         if ($script:EnvironmentInfo.PowerShellAD -eq $true) {
-            $adUser = Get-ADUser -Identity $userId -Properties * -Server $PDC
+            # Use YAML-configured properties instead of hardcoded '*'
+            $properties = $adPropsConfig.PowerShellAD.UserProperties.All
+            $adUser = Get-ADUser -Identity $userId -Properties $properties -Server $PDC
             Write-Debug "Get-ADUser returned: $adUser"
         } else {
             # Use System.DirectoryServices.DirectorySearcher to get the user properties from Active Directory
             $searcher = New-Object System.DirectoryServices.DirectorySearcher
             $searcher.Filter = "(sAMAccountName=$userId)"
             
-            # Specify which properties to retrieve
-            $searcher.PropertiesToLoad.AddRange(@("cn", "distinguishedName", "displayName", "givenName", "sn", "userPrincipalName", "mail", "memberOf", "lockoutTime", "pwdLastSet", "userAccountControl"))
+            # Use YAML-configured properties for DirectorySearcher
+            $dsProperties = $adPropsConfig.DirectorySearcher.UserProperties.All
+            $searcher.PropertiesToLoad.AddRange($dsProperties)
+            Write-Debug "DirectorySearcher will query properties: $($dsProperties -join ', ')"
 
             # Perform the search
             $result = $searcher.FindOne()
@@ -118,22 +142,51 @@ function Show-ADUserProperties {
         [string]$userId,
         $adUser
     )
+    
+    # Load AD properties configuration to determine what to display
+    $adPropsConfig = Get-ADPropertiesConfig
+    Write-Debug "AD Properties configuration loaded for display formatting"
 
     if ($adUser -is [Microsoft.ActiveDirectory.Management.ADUser]) {
         # Process $adUser as Microsoft.ActiveDirectory.Management.ADUser
-        $properties = [ordered]@{
-                'User ID'                   = $adUser.SamAccountName
-                'Given Name'                = $adUser.GivenName
-                'Display Name'              = $adUser.DisplayName
-                'HomeShare'                 = $adUser.HomeDirectory
-                'Email'                     = $adUser.EmailAddress
-                'Department'                = $adUser.Department
-                'Telephone'                 = $adUser.telephoneNumber
-                'Account Lockout Time'      = $adUser.AccountLockoutTime
-                'Last Bad Password Attempt' = $adUser.LastBadPasswordAttempt
-                'Bad Logon Count'           = $adUser.BadLogonCount
-                'Bad Password Count'        = $adUser.badPwdCount
+        # Build display properties dynamically from YAML config
+        $properties = [ordered]@{}
+        
+        # Define display property mapping (friendly name -> AD property name)
+        $displayMapping = @{
+            'User ID'                   = 'SamAccountName'
+            'Given Name'                = 'GivenName' 
+            'Display Name'              = 'DisplayName'
+            'Title'                     = 'Title'
+            'HomeShare'                 = 'HomeDirectory'
+            'Email'                     = 'EmailAddress'
+            'Department'                = 'Department'
+            'Telephone'                 = 'telephoneNumber'
+            'Account Lockout Time'      = 'AccountLockoutTime'
+            'Last Bad Password Attempt' = 'LastBadPasswordAttempt'
+            'Bad Logon Count'           = 'BadLogonCount'
+            'Bad Password Count'        = 'badPwdCount'
+        }
+        
+        # Get the properties that were actually retrieved based on YAML config
+        if ($adPropsConfig.PowerShellAD.UserProperties.UseAllProperties -eq $true) {
+            # If using all properties, show all mapped display properties
+            foreach ($displayName in $displayMapping.Keys) {
+                $adProperty = $displayMapping[$displayName]
+                if ($adUser.PSObject.Properties[$adProperty]) {
+                    $properties[$displayName] = $adUser.$adProperty
+                }
             }
+        } else {
+            # Only show properties that were configured to be retrieved
+            $retrievedProperties = $adPropsConfig.PowerShellAD.UserProperties.Core + $adPropsConfig.PowerShellAD.UserProperties.Extended
+            foreach ($displayName in $displayMapping.Keys) {
+                $adProperty = $displayMapping[$displayName]
+                if ($retrievedProperties -contains $adProperty -and $adUser.PSObject.Properties[$adProperty]) {
+                    $properties[$displayName] = $adUser.$adProperty
+                }
+            }
+        }
             # Display properties with color coding
             $properties.GetEnumerator() | Format-Table
 
@@ -190,21 +243,40 @@ function Show-ADUserProperties {
         }
     elseif ($adUser -is [System.DirectoryServices.DirectoryEntry]) {
         # Process $adUser as System.DirectoryServices.DirectoryEntry
-
-        # Create a custom object and add each property individually
+        
+        # Define display property mapping for DirectorySearcher (friendly name -> LDAP attribute)
+        $dsDisplayMapping = @{
+            'User ID'                   = 'sAMAccountName'
+            'Full Name'                 = 'cn'
+            'Display Name'              = 'displayName'
+            'Given Name'                = 'givenName'
+            'Surname'                   = 'sn'
+            'Title'                     = 'title'
+            'Email'                     = 'mail'
+            'Department'                = 'department'
+            'Telephone'                 = 'telephoneNumber'
+            'Home Directory'            = 'homeDirectory'
+            'User Principal Name'       = 'userPrincipalName'
+            'Distinguished Name'        = 'distinguishedName'
+            'Lockout Time'              = 'lockoutTime'
+            'Password Last Set'         = 'pwdLastSet'
+            'User Account Control'      = 'userAccountControl'
+        }
+        
+        # Build display object dynamically from YAML config
         $customUser = New-Object PSObject
-        $customUser | Add-Member -MemberType NoteProperty -Name "User ID" -Value $adUser.Properties["sAMAccountName"].Value
-        $customUser | Add-Member -MemberType NoteProperty -Name "Full Name" -Value $adUser.Properties["cn"].Value
-      #  $customUser | Add-Member -MemberType NoteProperty -Name "Distinguished Name" -Value $adUser.Properties["distinguishedName"].Value
-      #  $customUser | Add-Member -MemberType NoteProperty -Name "Display Name" -Value $adUser.Properties["displayName"].Value
-      #  $customUser | Add-Member -MemberType NoteProperty -Name "Given Name" -Value $adUser.Properties["givenName"].Value
-      #  $customUser | Add-Member -MemberType NoteProperty -Name "Surname (Last Name)" -Value $adUser.Properties["sn"].Value
-      #  $customUser | Add-Member -MemberType NoteProperty -Name "User Principal Name" -Value $adUser.Properties["userPrincipalName"].Value
-        $customUser | Add-Member -MemberType NoteProperty -Name "Email" -Value $adUser.Properties["mail"].Value
-      #  $customUser | Add-Member -MemberType NoteProperty -Name "Member Of" -Value $adUser.Properties["memberOf"].Value
-        $customUser | Add-Member -MemberType NoteProperty -Name "Lockout Time" -Value $adUser.Properties["lockoutTime"].Value
-        $customUser | Add-Member -MemberType NoteProperty -Name "Password Last Set" -Value $adUser.Properties["pwdLastSet"].Value
-      #  $customUser | Add-Member -MemberType NoteProperty -Name "User Account Control" -Value $adUser.Properties["userAccountControl"].Value
+        $retrievedProperties = $adPropsConfig.DirectorySearcher.UserProperties.All
+        
+        # Only add properties that were configured to be retrieved and have values
+        foreach ($displayName in $dsDisplayMapping.Keys) {
+            $ldapAttribute = $dsDisplayMapping[$displayName]
+            if ($retrievedProperties -contains $ldapAttribute) {
+                $propertyValue = $adUser.Properties[$ldapAttribute].Value
+                if ($null -ne $propertyValue -and $propertyValue -ne "") {
+                    $customUser | Add-Member -MemberType NoteProperty -Name $displayName -Value $propertyValue
+                }
+            }
+        }
 
         # Display properties in a table
         $customUser | Format-List
