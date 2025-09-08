@@ -49,52 +49,97 @@ function verifyToken(req, res, next) {
   });
 }
 
-// Login route using database authentication
+// Login route with support for both local .env and database authentication
 router.post('/login', sanitizeInput, async (req, res) => {
   const { AdminID, password } = req.body;
   logger.info('Received login request for AdminID:', AdminID);
 
   try {
-    // Check if user exists in the database
-    const adminUser = await fetchAdminUser(AdminID);
-    logger.info(`Fetched admin user for AdminID ${AdminID}:`, adminUser);
-    if (!adminUser) {
-      logger.warn(`No account found for AdminID: ${AdminID}`);
-      return res.status(404).json({ error: 'No account found' });
+    const deploymentMode = process.env.DEPLOYMENT_MODE;
+    
+    if (deploymentMode === 'local') {
+      // Local mode: Use .env authentication
+      const envUsername = process.env.ADMIN_USERNAME;
+      const envPasswordHash = process.env.ADMIN_PASSWORD;
+      
+      if (!envUsername || !envPasswordHash) {
+        logger.error('Local mode credentials not configured in .env');
+        return res.status(500).json({ error: 'Authentication not configured' });
+      }
+      
+      if (AdminID !== envUsername) {
+        logger.warn(`Invalid username for local mode: ${AdminID}`);
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+      
+      const bcrypt = require('bcrypt');
+      const isPasswordValid = await bcrypt.compare(password, envPasswordHash);
+      logger.info(`Local auth password verification result for AdminID ${AdminID}: ${isPasswordValid}`);
+      
+      if (!isPasswordValid) {
+        logger.warn('Invalid password for local mode:', AdminID);
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+      
+      // Generate JWT token for local mode
+      const token = jwt.sign({ AdminID, sessionID: req.sessionID }, SECRET_KEY, { expiresIn: JWT_EXPIRATION });
+      logger.info(`JWT token generated for local mode AdminID: ${AdminID}, SessionID: ${req.sessionID}`);
+
+      // Store session information for local mode
+      req.session.AdminID = AdminID;
+      req.session.adminComputer = process.env.COMPUTERNAME || 'localhost';
+      logger.info(`Local mode session created for AdminID: ${AdminID}`);
+
+      // Return response for local mode
+      res.json({ 
+        token, 
+        AdminID, 
+        adminComputer: process.env.COMPUTERNAME || 'localhost', 
+        sessionID: req.sessionID,
+        mode: 'local'
+      });
+    } else {
+      // Database authentication for remote mode or legacy systems
+      const adminUser = await fetchAdminUser(AdminID);
+      logger.info(`Fetched admin user for AdminID ${AdminID}:`, adminUser);
+      if (!adminUser) {
+        logger.warn(`No account found for AdminID: ${AdminID}`);
+        return res.status(404).json({ error: 'No account found' });
+      }
+
+      // Check if password is null and prompt for an update
+      if (!adminUser.password) {
+        logger.warn(`Password is null for AdminID: ${AdminID}`);
+        return res.status(403).json({ error: 'Password needs to be updated' });
+      }
+
+      // Verify password
+      const isPasswordValid = await verifyPassword(password, adminUser.password);
+      logger.info(`Password verification result for AdminID ${AdminID}: ${isPasswordValid}`);
+
+      if (!isPasswordValid) {
+        logger.warn('Invalid password for AdminID:', AdminID);
+        return res.status(401).json({ error: 'Invalid password' });
+      }
+
+      // Generate JWT token
+      const token = jwt.sign({ AdminID, sessionID: req.sessionID }, SECRET_KEY, { expiresIn: JWT_EXPIRATION });
+      logger.info(`JWT token generated for AdminID: ${AdminID}, SessionID: ${req.sessionID}`);
+
+      // Store session information
+      req.session.AdminID = AdminID;
+      req.session.adminComputer = adminUser.AdminComputer;
+      logger.info(`Session created for AdminID: ${AdminID}, AdminComputer: ${adminUser.AdminComputer}`);
+
+      // Include session ID and adminComputer in the response
+      res.json({ 
+        token, 
+        AdminID, 
+        adminComputer: adminUser.AdminComputer, 
+        sessionID: req.sessionID,
+        mode: 'database'
+      });
     }
-
-    // Check if password is null and prompt for an update
-    if (!adminUser.password) {
-      logger.warn(`Password is null for AdminID: ${AdminID}`);
-      return res.status(403).json({ error: 'Password needs to be updated' });
-    }
-
-    // // Check if adminComputer is present in the adminUser object
-    // if (!adminUser.AdminComputer) {
-    //   logger.warn(`AdminComputer not found for AdminID: ${AdminID}`);
-    //   return res.status(404).json({ error: 'AdminComputer not found' });
-    // }
-
-    // Verify password
-    const isPasswordValid = await verifyPassword(password, adminUser.password);
-    logger.info(`Password verification result for AdminID ${AdminID}: ${isPasswordValid}`); // Add logging
-
-    if (!isPasswordValid) {
-      logger.warn('Invalid password for AdminID:', AdminID);
-      return res.status(401).json({ error: 'Invalid password' });
-    }
-
-    // Generate JWT token with adminComputer
-    const token = jwt.sign({ AdminID, sessionID: req.sessionID }, SECRET_KEY, { expiresIn: JWT_EXPIRATION });
-    logger.info(`JWT token generated for AdminID: ${AdminID}, SessionID: ${req.sessionID}`);
-
-    // Store session information
-    req.session.AdminID = AdminID; // Store AdminID in the session
-    req.session.adminComputer = adminUser.AdminComputer; // Store adminComputer in the session
-    logger.info(`Session created for AdminID: ${AdminID}, AdminComputer: ${adminUser.AdminComputer}`);
-
-    // Include session ID and adminComputer in the response
-    res.json({ token, AdminID, adminComputer: adminUser.AdminComputer, sessionID: req.sessionID });
   } catch (error) {
     logger.error('Login failed:', error);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -142,15 +187,32 @@ router.post('/update-temp-password', sanitizeInput, async (req, res) => {
 router.get('/profile', verifyToken, async (req, res) => {
   try {
     const adminID = req.AdminID;
-    const adminUser = await fetchAdminUser(adminID);
-    const roles = await fetchRolesForUser(adminID);
-    const permissions = await fetchPermissionsForRoles(roles.map(role => role.RoleID));
+    const deploymentMode = process.env.DEPLOYMENT_MODE;
+    
+    if (deploymentMode === 'local') {
+      // Local mode: Return basic profile information from .env
+      const defaultPermissions = ['read', 'write', 'execute']; // Full permissions for local mode
+      res.json({
+        profile: {
+          AdminID: adminID,
+          AdminComputer: process.env.COMPUTERNAME || 'localhost',
+          mode: 'local'
+        },
+        roles: [{ RoleID: 'local-admin', RoleName: 'Local Administrator' }],
+        permissions: defaultPermissions
+      });
+    } else {
+      // Database mode: Use existing database logic
+      const adminUser = await fetchAdminUser(adminID);
+      const roles = await fetchRolesForUser(adminID);
+      const permissions = await fetchPermissionsForRoles(roles.map(role => role.RoleID));
 
-    res.json({
-      profile: adminUser,
-      roles: roles, // roles now contains RoleID and RoleName
-      permissions: permissions // permissions already contains PermissionName
-    });
+      res.json({
+        profile: adminUser,
+        roles: roles,
+        permissions: permissions
+      });
+    }
   } catch (error) {
     logger.error('Failed to fetch profile:', error);
     res.status(500).json({ error: 'Failed to fetch profile' });

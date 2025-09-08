@@ -10,6 +10,8 @@ import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Configure from './pages/Configure'; // Import the Configure page
 import Setup from './pages/Setup'; // Import the Setup page
+import SplashScreen from './components/SplashScreen'; // Import the Splash Screen
+import SetupWizard from './components/SetupWizard'; // Import the Setup Wizard
 
 // Always use the backend server IP address
 const ENDPOINT = process.env.REACT_APP_BACKEND_URL;
@@ -19,6 +21,7 @@ function App() {
   const [AdminID, setAdminID] = useState(''); // Store AdminID from the server
   const [permissions, setPermissions] = useState([]); // Store permissions
   const [initialCheck, setInitialCheck] = useState(false); // Track the first authentication check
+  const [setupComplete, setSetupComplete] = useState(null); // Track setup status
 
   // Establish WebSocket connection
   useEffect(() => {
@@ -41,8 +44,31 @@ function App() {
     };
   }, []);
 
-  // Verify token and fetch permissions
+  // Check setup status first
   useEffect(() => {
+    const checkSetupStatus = async () => {
+      try {
+        const response = await fetch(`${ENDPOINT}/api/setup/status`);
+        if (response.ok) {
+          const data = await response.json();
+          setSetupComplete(data.configured);
+        } else {
+          setSetupComplete(false);
+        }
+      } catch (error) {
+        console.error('Error checking setup status:', error);
+        setSetupComplete(false);
+      }
+    };
+
+    checkSetupStatus();
+  }, []);
+
+  // Verify token and fetch permissions (only if setup is complete)
+  useEffect(() => {
+    if (setupComplete === null) return; // Wait for setup status check
+    if (!setupComplete) return; // Skip if setup is not complete
+    
     const token = localStorage.getItem('token');
     if (token) {
       fetch(`${ENDPOINT}/api/auth/verify-token`, {
@@ -83,7 +109,7 @@ function App() {
     } else {
       setInitialCheck(true);
     }
-  }, []);
+  }, [setupComplete]);
 
   // Handle login
   const handleLogin = (AdminID, token) => {
@@ -121,30 +147,47 @@ function App() {
     }
   };
 
-  // Show loading screen until initial authentication check is complete
-  if (!initialCheck) {
+  // Show loading screen until setup status and initial authentication check is complete
+  if (setupComplete === null || (!setupComplete && !initialCheck)) {
     return <div>Loading...</div>;
   }
 
   return (
     <Router>
       <div className="App">
-        {isAuthenticated ? (
-          <>
-            <HeaderWrapper AdminID={AdminID} onLogout={handleLogout} />
-            <Navbar permissions={permissions} />
-            <Routes>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/ad-object/:adObjectID?" element={<ADProperties permissions={permissions} />} /> {/* Update route to handle optional adObjectID */}
-              <Route path="/Profile" element={<Profile permissions={permissions} />} />
-              <Route path="/configure" element={<Configure permissions={permissions} />} />
-              <Route path="/setup" element={<Setup />} /> {/* Add the setup route */}
-              <Route path="*" element={<Navigate to="/dashboard" />} />
-            </Routes>
-          </>
-        ) : (
-          <Login onLogin={handleLogin} />
-        )}
+        <Routes>
+          {/* Setup Routes - Only show if setup is not complete */}
+          {!setupComplete && (
+            <>
+              <Route path="/" element={<SplashScreen />} />
+              <Route path="/setup-wizard" element={<SetupWizard />} />
+              <Route path="*" element={<Navigate to="/" />} />
+            </>
+          )}
+          
+          {/* Main Application Routes - Only show if setup is complete */}
+          {setupComplete && (
+            <>
+              {isAuthenticated ? (
+                <>
+                  <Route path="/" element={<Navigate to="/dashboard" />} />
+                  <Route path="/dashboard" element={<><HeaderWrapper AdminID={AdminID} onLogout={handleLogout} /><Navbar permissions={permissions} /><Dashboard /></>} />
+                  <Route path="/ad-object/:adObjectID?" element={<><HeaderWrapper AdminID={AdminID} onLogout={handleLogout} /><Navbar permissions={permissions} /><ADProperties permissions={permissions} /></>} />
+                  <Route path="/Profile" element={<><HeaderWrapper AdminID={AdminID} onLogout={handleLogout} /><Navbar permissions={permissions} /><Profile permissions={permissions} /></>} />
+                  <Route path="/configure" element={<><HeaderWrapper AdminID={AdminID} onLogout={handleLogout} /><Navbar permissions={permissions} /><Configure permissions={permissions} /></>} />
+                  <Route path="/setup" element={<><HeaderWrapper AdminID={AdminID} onLogout={handleLogout} /><Navbar permissions={permissions} /><Setup /></>} />
+                  <Route path="*" element={<Navigate to="/dashboard" />} />
+                </>
+              ) : (
+                <>
+                  <Route path="/" element={<Login onLogin={handleLogin} />} />
+                  <Route path="/login" element={<Login onLogin={handleLogin} />} />
+                  <Route path="*" element={<Navigate to="/" />} />
+                </>
+              )}
+            </>
+          )}
+        </Routes>
       </div>
     </Router>
   );

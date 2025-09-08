@@ -15,6 +15,7 @@ const { getServerStatuses } = require('./utils/ServerManageUtil'); // Import the
 const { updateDomainControllers, DomainControllerStatus  } = require('./utils/domainManager'); // Import the updateDomainControllers function
 const logger = require('./utils/logger'); // Import the logger
 const sessionStore = require('./utils/sessionStore'); // Import your session store
+const { getSystemInfo } = require('./config/modes'); // Import configuration system
 
 const app = express();
 const server = http.createServer(app);
@@ -101,6 +102,7 @@ const multiFetchRoute = require('./routes/multiFetch'); // Import the multiFetch
 const serverManagerRoute = require('./routes/serverManager'); // Import the serverManager route
 const setupRoute = require('./routes/setup'); // Import the setup route
 const domainControllersRouter = require('./routes/domainControllers'); // Import the domainControllers route
+const remoteApiRoute = require('./routes/remoteApi'); // Import the remote API route
 
 // Use routes and pass db to them
 app.use('/api/fetch-adobject', fetchADObjectRoute);
@@ -124,6 +126,7 @@ app.use('/api/multi-fetch', multiFetchRoute);
 app.use('/api/server-manager', serverManagerRoute);
 app.use('/api/setup', setupRoute); // Register the setup route
 app.use('/api/domain-controllers', domainControllersRouter); // Use the domainControllers route
+app.use('/api/remote', remoteApiRoute); // Register the remote API routes
 
 // Middleware to handle 403 Forbidden errors
 app.use(forbidden);
@@ -164,6 +167,16 @@ const HOST = '0.0.0.0'; // Listen on all network interfaces
 
 server.listen(PORT, HOST, () => {
     logger.info(`Server is running on http://${HOST}:${PORT}`);
+    
+    // Log system configuration information
+    const systemInfo = getSystemInfo();
+    logger.info(`Deployment Mode: ${systemInfo.mode}`);
+    logger.info(`Mode Configuration:`, systemInfo.modeConfig);
+    if (systemInfo.validationErrors.length > 0) {
+        logger.warn(`Configuration validation errors:`, systemInfo.validationErrors);
+    }
+    logger.info(`System features:`, systemInfo.features);
+    
     updateLockedOutUsers(); // Initial call to populate the table
     getServerStatuses(); // Initial call to populate the server statuses
     updateDomainControllers(); // Initial call to update domain controllers
