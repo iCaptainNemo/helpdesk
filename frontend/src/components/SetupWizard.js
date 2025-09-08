@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/SetupWizard.css';
 
@@ -8,7 +8,7 @@ const SetupWizard = () => {
   const [formData, setFormData] = useState({
     mode: '', // 'local' or 'remote'
     adminCredentials: {
-      username: '',
+      username: '', // Will be auto-populated with system username
       password: '',
       confirmPassword: ''
     },
@@ -25,6 +25,37 @@ const SetupWizard = () => {
   });
 
   const navigate = useNavigate();
+
+  // Fetch system username when component mounts
+  useEffect(() => {
+    const fetchSystemUsername = async () => {
+      try {
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/setup/system-info`);
+        if (response.ok) {
+          const data = await response.json();
+          setFormData(prev => ({
+            ...prev,
+            adminCredentials: {
+              ...prev.adminCredentials,
+              username: data.systemUsername || 'helpdesk_agent'
+            }
+          }));
+        }
+      } catch (error) {
+        console.error('Error fetching system username:', error);
+        // Fallback to a default username
+        setFormData(prev => ({
+          ...prev,
+          adminCredentials: {
+            ...prev.adminCredentials,
+            username: 'helpdesk_agent'
+          }
+        }));
+      }
+    };
+
+    fetchSystemUsername();
+  }, []);
 
   const handleModeSelection = (mode) => {
     setDeploymentMode(mode);
@@ -160,14 +191,15 @@ const SetupWizard = () => {
         <div className="auth-setup">
           <p>Create your local administrator credentials:</p>
           <div className="form-group">
-            <label>Administrator Username</label>
+            <label>Administrator Username (Auto-detected)</label>
             <input
               type="text"
               value={formData.adminCredentials.username}
-              onChange={(e) => handleInputChange('adminCredentials', 'username', e.target.value)}
-              placeholder="Enter your username"
-              required
+              readOnly
+              className="readonly-input"
+              title="Username automatically detected from your Windows user account"
             />
+            <small>This is your Windows username and cannot be changed</small>
           </div>
           <div className="form-group">
             <label>Password</label>

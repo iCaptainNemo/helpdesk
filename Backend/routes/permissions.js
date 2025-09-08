@@ -7,6 +7,43 @@ const checkRoleHierarchy = require('../middleware/checkRoleHierarchy');
 // Fetch all permissions
 router.get('/', async (req, res) => {
     try {
+        const deploymentMode = process.env.DEPLOYMENT_MODE;
+        
+        if (deploymentMode === 'local') {
+            // Local mode: Return full set of permissions
+            const localPermissions = [
+                { PermissionID: '1', PermissionName: 'read' },
+                { PermissionID: '2', PermissionName: 'write' },
+                { PermissionID: '3', PermissionName: 'execute' },
+                { PermissionID: '4', PermissionName: 'access_configure_page' },
+                { PermissionID: '5', PermissionName: 'execute_script' },
+                { PermissionID: '6', PermissionName: 'manage_users' },
+                { PermissionID: '7', PermissionName: 'manage_tickets' },
+                { PermissionID: '8', PermissionName: 'view_reports' },
+                { PermissionID: '9', PermissionName: 'execute_command' }
+            ];
+            logger.debug('Local mode permissions:', localPermissions);
+            res.json(localPermissions);
+            return;
+        }
+        
+        if (deploymentMode === 'remote') {
+            // Remote mode: Return limited permissions (no configuration access)
+            const remotePermissions = [
+                { PermissionID: '1', PermissionName: 'read' },
+                { PermissionID: '2', PermissionName: 'write' },
+                { PermissionID: '3', PermissionName: 'execute' },
+                { PermissionID: '5', PermissionName: 'execute_script' },
+                { PermissionID: '7', PermissionName: 'manage_tickets' },
+                { PermissionID: '8', PermissionName: 'view_reports' },
+                { PermissionID: '9', PermissionName: 'execute_command' }
+            ];
+            logger.debug('Remote mode permissions:', remotePermissions);
+            res.json(remotePermissions);
+            return;
+        }
+        
+        // Legacy database mode: Use original database queries
         const permissions = await executeQuery('SELECT * FROM Permissions');
         res.json(permissions);
     } catch (error) {

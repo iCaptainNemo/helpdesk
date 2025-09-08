@@ -16,12 +16,15 @@ const Configure = ({ permissions }) => {
         const token = localStorage.getItem('token');
         if (!token) {
             console.error('No token found');
+            navigate('/dashboard');
             return;
         }
 
         // Check if the user has the required permission
-        if (!permissions.includes('access_configure_page')) {
-            navigate('/dashboard'); // Redirect to dashboard if the user does not have the required permission
+        if (!permissions || !permissions.includes('access_configure_page')) {
+            console.warn('Access denied to configuration page. Redirecting to dashboard.');
+            navigate('/dashboard');
+            return;
         }
 
         // Fetch the current logging settings from the backend
@@ -47,9 +50,17 @@ const Configure = ({ permissions }) => {
                 'Authorization': `Bearer ${token}`,
             },
         })
-            .then(response => response.json())
-            .then(data => setUsers(data))
-            .catch(error => console.error('Error fetching users:', error));
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => setUsers(Array.isArray(data) ? data : []))
+            .catch(error => {
+                console.error('Error fetching users:', error);
+                setUsers([]);
+            });
 
         fetch('/api/roles', {
             headers: {
@@ -57,9 +68,17 @@ const Configure = ({ permissions }) => {
                 'Authorization': `Bearer ${token}`,
             },
         })
-            .then(response => response.json())
-            .then(data => setRoles(data))
-            .catch(error => console.error('Error fetching roles:', error));
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => setRoles(Array.isArray(data) ? data : []))
+            .catch(error => {
+                console.error('Error fetching roles:', error);
+                setRoles([]);
+            });
 
         fetch('/api/permissions', {
             headers: {
@@ -67,9 +86,17 @@ const Configure = ({ permissions }) => {
                 'Authorization': `Bearer ${token}`,
             },
         })
-            .then(response => response.json())
-            .then(data => setPermissionsList(data))
-            .catch(error => console.error('Error fetching permissions:', error));
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => setPermissionsList(Array.isArray(data) ? data : []))
+            .catch(error => {
+                console.error('Error fetching permissions:', error);
+                setPermissionsList([]);
+            });
     }, [permissions, navigate]);
 
     const handleDebugToggle = () => {

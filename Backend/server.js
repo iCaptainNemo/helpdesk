@@ -8,6 +8,7 @@ const session = require('express-session'); // Import express-session
 require('dotenv').config();
 
 const db = require('./db/init');
+const { runMigrations } = require('./db/migrations'); // Import migration system
 const verifyToken = require('./middleware/verifyToken'); // Ensure JWT middleware is used
 const verifyPermissions = require('./middleware/verifyPermissions'); // Import the permissions middleware
 const { updateLockedOutUsers } = require('./utils/lockedOutUsersUtils'); // Import the module
@@ -165,8 +166,18 @@ io.on('connection', handleSocketConnection);
 const PORT = process.env.PORT || 3001;
 const HOST = '0.0.0.0'; // Listen on all network interfaces
 
-server.listen(PORT, HOST, () => {
+server.listen(PORT, HOST, async () => {
     logger.info(`Server is running on http://${HOST}:${PORT}`);
+    
+    // Run database migrations
+    try {
+        logger.info('Running database migrations...');
+        await runMigrations();
+        logger.info('Database migrations completed successfully');
+    } catch (error) {
+        logger.error('Database migration failed:', error);
+        // Continue startup even if migrations fail to maintain compatibility
+    }
     
     // Log system configuration information
     const systemInfo = getSystemInfo();

@@ -15,16 +15,22 @@ function executeQuery(query, params = []) {
 
 function storeUser(user) {
     const query = `
-        INSERT INTO Users (UserID, LastHelped, TimesUnlocked, PasswordResets, TimesHelped)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO Users (UserID, LastHelped, LastAdminHelped, TimesUnlocked, PasswordResets, TimesHelped)
+        VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(UserID) DO UPDATE SET
             LastHelped = excluded.LastHelped,
+            LastAdminHelped = excluded.LastAdminHelped,
             TimesUnlocked = excluded.TimesUnlocked,
             PasswordResets = excluded.PasswordResets,
             TimesHelped = excluded.TimesHelped
     `;
     const params = [
-        user.UserID, user.LastHelped, user.TimesUnlocked, user.PasswordResets, user.TimesHelped
+        user.UserID, 
+        user.LastHelped, 
+        user.LastAdminHelped || null, 
+        user.TimesUnlocked, 
+        user.PasswordResets, 
+        user.TimesHelped
     ];
     return executeQuery(query, params);
 }
@@ -32,6 +38,72 @@ function storeUser(user) {
 function fetchUser(userID) {
     const query = `SELECT * FROM Users WHERE UserID = ?;`;
     return executeQuery(query, [userID]);
+}
+
+/**
+ * Updates the LastAdminHelped field when an admin performs an action on a user
+ * @param {string} userID - The ID of the user being helped
+ * @param {string} adminID - The ID of the admin helping the user
+ * @returns {Promise} - Promise resolving to the query result
+ */
+function updateLastAdminHelped(userID, adminID) {
+    // Sanitize the adminID to prevent SQL injection
+    const sanitizedAdminID = String(adminID).replace(/[^a-zA-Z0-9_-]/g, '');
+    
+    const query = `
+        INSERT INTO Users (UserID, LastHelped, LastAdminHelped, TimesUnlocked, PasswordResets, TimesHelped)
+        VALUES (?, datetime('now'), ?, 0, 0, 1)
+        ON CONFLICT(UserID) DO UPDATE SET
+            LastHelped = datetime('now'),
+            LastAdminHelped = ?,
+            TimesHelped = TimesHelped + 1
+    `;
+    const params = [userID, sanitizedAdminID, sanitizedAdminID];
+    return executeQuery(query, params);
+}
+
+/**
+ * Increments unlock count and updates LastAdminHelped for user unlock operations
+ * @param {string} userID - The ID of the user being unlocked
+ * @param {string} adminID - The ID of the admin unlocking the user
+ * @returns {Promise} - Promise resolving to the query result
+ */
+function incrementUserUnlockCount(userID, adminID) {
+    const sanitizedAdminID = String(adminID).replace(/[^a-zA-Z0-9_-]/g, '');
+    
+    const query = `
+        INSERT INTO Users (UserID, LastHelped, LastAdminHelped, TimesUnlocked, PasswordResets, TimesHelped)
+        VALUES (?, datetime('now'), ?, 1, 0, 1)
+        ON CONFLICT(UserID) DO UPDATE SET
+            LastHelped = datetime('now'),
+            LastAdminHelped = ?,
+            TimesUnlocked = TimesUnlocked + 1,
+            TimesHelped = TimesHelped + 1
+    `;
+    const params = [userID, sanitizedAdminID, sanitizedAdminID];
+    return executeQuery(query, params);
+}
+
+/**
+ * Increments password reset count and updates LastAdminHelped for password reset operations
+ * @param {string} userID - The ID of the user getting password reset
+ * @param {string} adminID - The ID of the admin resetting the password
+ * @returns {Promise} - Promise resolving to the query result
+ */
+function incrementUserPasswordResetCount(userID, adminID) {
+    const sanitizedAdminID = String(adminID).replace(/[^a-zA-Z0-9_-]/g, '');
+    
+    const query = `
+        INSERT INTO Users (UserID, LastHelped, LastAdminHelped, TimesUnlocked, PasswordResets, TimesHelped)
+        VALUES (?, datetime('now'), ?, 0, 1, 1)
+        ON CONFLICT(UserID) DO UPDATE SET
+            LastHelped = datetime('now'),
+            LastAdminHelped = ?,
+            PasswordResets = PasswordResets + 1,
+            TimesHelped = TimesHelped + 1
+    `;
+    const params = [userID, sanitizedAdminID, sanitizedAdminID];
+    return executeQuery(query, params);
 }
 
 async function insertOrUpdateAdminUser(adminUser) {
@@ -76,6 +148,26 @@ async function insertOrUpdateAdminUser(adminUser) {
 }
 
 function fetchAdminUser(adminID) {
+    const deploymentMode = process.env.DEPLOYMENT_MODE;
+    
+    // Handle local and remote modes without database queries
+    if (deploymentMode === 'local') {
+        const mockAdmin = {
+            AdminID: process.env.ADMIN_USERNAME || adminID,
+            AdminComputer: process.env.COMPUTERNAME || 'localhost'
+        };
+        return Promise.resolve(mockAdmin);
+    }
+    
+    if (deploymentMode === 'remote') {
+        const mockAdmin = {
+            AdminID: 'remote_agent',
+            AdminComputer: process.env.COMPUTERNAME || 'localhost'
+        };
+        return Promise.resolve(mockAdmin);
+    }
+    
+    // Legacy database mode
     const query = `SELECT * FROM Admin WHERE AdminID = ?;`;
     return new Promise((resolve, reject) => {
         db.get(query, [adminID], (err, row) => {
@@ -89,6 +181,26 @@ function fetchAdminUser(adminID) {
 }
 
 function fetchAllAdminUsers() {
+    const deploymentMode = process.env.DEPLOYMENT_MODE;
+    
+    // Handle local and remote modes without database queries
+    if (deploymentMode === 'local') {
+        const mockAdmins = [{
+            AdminID: process.env.ADMIN_USERNAME || 'local_admin',
+            AdminComputer: process.env.COMPUTERNAME || 'localhost'
+        }];
+        return Promise.resolve(mockAdmins);
+    }
+    
+    if (deploymentMode === 'remote') {
+        const mockAdmins = [{
+            AdminID: 'remote_agent',
+            AdminComputer: process.env.COMPUTERNAME || 'localhost'
+        }];
+        return Promise.resolve(mockAdmins);
+    }
+    
+    // Legacy database mode
     const query = `SELECT * FROM Admin;`;
     return new Promise((resolve, reject) => {
         db.all(query, [], (err, rows) => {
@@ -261,6 +373,9 @@ module.exports = {
     executeQuery,
     storeUser,
     fetchUser,
+    updateLastAdminHelped,
+    incrementUserUnlockCount,
+    incrementUserPasswordResetCount,
     insertOrUpdateAdminUser,
     fetchAdminUser,
     insertServer,

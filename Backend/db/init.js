@@ -15,20 +15,14 @@ const dbPath = path.resolve(__dirname, process.env.DB_PATH || 'database.db');
 dbLogger.info(`Attempting to open database at path: ${dbPath}`);
 
 const tables = [
-    {
-        name: 'Admin', // IT Staff
-        columns: [
-            'AdminID TEXT PRIMARY KEY',
-            'temppassword TEXT',
-            'AdminComputer TEXT',
-            'password TEXT'
-        ]
-    },
+    // Note: Admin table removed - authentication now handled via .env file
+    // Admin credentials are stored in Backend/.env as ADMIN_USERNAME and ADMIN_PASSWORD
     {
         name: 'Users', // Active Directory Users
         columns: [
             'UserID TEXT PRIMARY KEY',
             'LastHelped DATETIME',
+            'LastAdminHelped TEXT', // Track which admin last helped this user
             'TimesUnlocked INT',
             'PasswordResets INT',
             'TimesHelped INT'

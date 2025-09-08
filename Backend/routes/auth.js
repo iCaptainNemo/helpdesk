@@ -190,8 +190,8 @@ router.get('/profile', verifyToken, async (req, res) => {
     const deploymentMode = process.env.DEPLOYMENT_MODE;
     
     if (deploymentMode === 'local') {
-      // Local mode: Return basic profile information from .env
-      const defaultPermissions = ['read', 'write', 'execute']; // Full permissions for local mode
+      // Local mode: Return basic profile information from .env with full permissions
+      const localPermissions = ['read', 'write', 'execute', 'access_configure_page', 'execute_script', 'unlock_user', 'reset_password', 'manage_users', 'manage_tickets', 'view_reports', 'execute_command'];
       res.json({
         profile: {
           AdminID: adminID,
@@ -199,10 +199,22 @@ router.get('/profile', verifyToken, async (req, res) => {
           mode: 'local'
         },
         roles: [{ RoleID: 'local-admin', RoleName: 'Local Administrator' }],
-        permissions: defaultPermissions
+        permissions: localPermissions
+      });
+    } else if (deploymentMode === 'remote') {
+      // Remote mode: Return limited permissions (no configuration access)
+      const remotePermissions = ['read', 'write', 'execute', 'execute_script', 'unlock_user', 'reset_password', 'manage_tickets', 'view_reports', 'execute_command'];
+      res.json({
+        profile: {
+          AdminID: adminID,
+          AdminComputer: process.env.COMPUTERNAME || 'localhost',
+          mode: 'remote'
+        },
+        roles: [{ RoleID: 'remote-agent', RoleName: 'Remote Agent' }],
+        permissions: remotePermissions
       });
     } else {
-      // Database mode: Use existing database logic
+      // Database/legacy mode: Use existing database logic
       const adminUser = await fetchAdminUser(adminID);
       const roles = await fetchRolesForUser(adminID);
       const permissions = await fetchPermissionsForRoles(roles.map(role => role.RoleID));

@@ -28,13 +28,18 @@ const LockedOutUsers = () => {
             });
 
             if (!response.ok) {
-                throw new Error('Failed to fetch permissions');
+                console.warn('Failed to fetch permissions, using default permissions');
+                // Default permissions for when profile fetch fails (local mode fallback)
+                setPermissions(['read', 'write', 'execute', 'unlock_user', 'reset_password']);
+                return;
             }
 
             const data = await response.json();
-            setPermissions(data.permissions || []); // Ensure permissions is an array
+            setPermissions(data.permissions || ['read', 'write', 'execute', 'unlock_user', 'reset_password']); // Default permissions
         } catch (error) {
-            console.error('Error fetching permissions:', error);
+            console.warn('Error fetching permissions, using default permissions:', error);
+            // Fallback to default permissions for local mode
+            setPermissions(['read', 'write', 'execute', 'unlock_user', 'reset_password']);
         }
     };
 

@@ -8,6 +8,27 @@ const { getSystemInfo } = require('../config/modes'); // Import configuration sy
 const logger = require('../utils/logger'); // Import logger
 const router = express.Router();
 
+// Get system information for setup wizard
+router.get('/system-info', (req, res) => {
+  try {
+    const systemUsername = process.env.USERNAME || process.env.USER || 'helpdesk_agent';
+    const sanitizedUsername = systemUsername.replace(/[^a-zA-Z0-9_-]/g, ''); // Sanitize username
+    const computerName = process.env.COMPUTERNAME || process.env.HOSTNAME || 'localhost';
+    
+    logger.info(`Providing system info: username=${sanitizedUsername}, computer=${computerName}`);
+    
+    res.json({
+      systemUsername: sanitizedUsername,
+      computerName: computerName,
+      platform: process.platform,
+      nodeVersion: process.version
+    });
+  } catch (error) {
+    logger.error('Error getting system info:', error);
+    res.status(500).json({ error: 'Failed to get system information' });
+  }
+});
+
 // Check setup status
 router.get('/status', (req, res) => {
   try {
@@ -112,11 +133,14 @@ router.post('/wizard', async (req, res) => {
     };
     
     if (mode === 'local') {
-      // Local mode setup
+      // Local mode setup - use current system username
+      const systemUsername = process.env.USERNAME || process.env.USER || 'helpdesk_agent';
+      const sanitizedUsername = systemUsername.replace(/[^a-zA-Z0-9_-]/g, ''); // Sanitize username
       const hashedPassword = await bcrypt.hash(adminCredentials.password, 10);
+      
       envVars = {
         ...envVars,
-        ADMIN_USERNAME: adminCredentials.username,
+        ADMIN_USERNAME: sanitizedUsername,
         ADMIN_PASSWORD: hashedPassword,
         DB_PATH: './database.db',
         FRONTEND_URL_1: 'http://localhost:3000',
@@ -125,6 +149,8 @@ router.post('/wizard', async (req, res) => {
         SERVER_STATUS_REFRESH_INTERVAL: '10M',
         LOGFILE: systemSettings.logPath || './logs/'
       };
+      
+      logger.info(`Setting up local mode for system user: ${sanitizedUsername}`);
     } else {
       // Remote mode setup
       envVars = {
@@ -176,7 +202,7 @@ router.post('/wizard', async (req, res) => {
     
     res.json({ message: 'Setup completed successfully', mode });
   } catch (error) {
-    console.error('Error during wizard setup:', error);
+    logger.error('Error during wizard setup:', error);
     res.status(500).json({ error: 'Setup failed. Please try again.' });
   }
 });

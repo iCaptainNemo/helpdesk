@@ -8,6 +8,29 @@ const checkRoleHierarchy = require('../middleware/checkRoleHierarchy');
 // Fetch all roles
 router.get('/', async (req, res) => {
     try {
+        const deploymentMode = process.env.DEPLOYMENT_MODE;
+        
+        if (deploymentMode === 'local') {
+            // Local mode: Return predefined local roles
+            const localRoles = [
+                { RoleID: 'local-admin', RoleName: 'Local Administrator' }
+            ];
+            logger.debug('Local mode roles:', localRoles);
+            res.json(localRoles);
+            return;
+        }
+        
+        if (deploymentMode === 'remote') {
+            // Remote mode: Return predefined remote roles
+            const remoteRoles = [
+                { RoleID: 'remote-agent', RoleName: 'Remote Agent' }
+            ];
+            logger.debug('Remote mode roles:', remoteRoles);
+            res.json(remoteRoles);
+            return;
+        }
+        
+        // Legacy database mode: Use original database queries
         const roles = await executeQuery('SELECT * FROM Roles');
         res.json(roles);
     } catch (error) {
