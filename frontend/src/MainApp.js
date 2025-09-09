@@ -12,6 +12,7 @@ import Configure from './pages/Configure'; // Import the Configure page
 import Setup from './pages/Setup'; // Import the Setup page
 import SplashScreen from './components/SplashScreen'; // Import the Splash Screen
 import SetupWizard from './components/SetupWizard'; // Import the Setup Wizard
+import Terminal from './components/Terminal'; // Import the Terminal component
 
 // Always use the backend server IP address
 const ENDPOINT = process.env.REACT_APP_BACKEND_URL;
@@ -171,11 +172,11 @@ function App() {
               {isAuthenticated ? (
                 <>
                   <Route path="/" element={<Navigate to="/dashboard" />} />
-                  <Route path="/dashboard" element={<><HeaderWrapper AdminID={AdminID} onLogout={handleLogout} /><Navbar permissions={permissions} /><Dashboard /></>} />
-                  <Route path="/ad-object/:adObjectID?" element={<><HeaderWrapper AdminID={AdminID} onLogout={handleLogout} /><Navbar permissions={permissions} /><ADProperties permissions={permissions} /></>} />
-                  <Route path="/Profile" element={<><HeaderWrapper AdminID={AdminID} onLogout={handleLogout} /><Navbar permissions={permissions} /><Profile permissions={permissions} /></>} />
-                  <Route path="/configure" element={<><HeaderWrapper AdminID={AdminID} onLogout={handleLogout} /><Navbar permissions={permissions} /><Configure permissions={permissions} /></>} />
-                  <Route path="/setup" element={<><HeaderWrapper AdminID={AdminID} onLogout={handleLogout} /><Navbar permissions={permissions} /><Setup /></>} />
+                  <Route path="/dashboard" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Dashboard /></AuthenticatedLayout>} />
+                  <Route path="/ad-object/:adObjectID?" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ADProperties permissions={permissions} /></AuthenticatedLayout>} />
+                  <Route path="/Profile" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Profile permissions={permissions} /></AuthenticatedLayout>} />
+                  <Route path="/configure" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Configure permissions={permissions} /></AuthenticatedLayout>} />
+                  <Route path="/setup" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Setup /></AuthenticatedLayout>} />
                   <Route path="*" element={<Navigate to="/dashboard" />} />
                 </>
               ) : (
@@ -219,6 +220,23 @@ function HeaderWrapper({ AdminID, onLogout }) {
   };
 
   return <Header AdminID={AdminID} onLogout={onLogout} onFormSubmit={handleFormSubmit} />;
+}
+
+function AuthenticatedLayout({ AdminID, onLogout, permissions, children }) {
+  return (
+    <div className="app-layout">
+      <div className="app-main-content">
+        <HeaderWrapper AdminID={AdminID} onLogout={onLogout} />
+        <Navbar permissions={permissions} />
+        <div className="app-page-content">
+          {children}
+        </div>
+      </div>
+      <div className="app-terminal-section">
+        <Terminal />
+      </div>
+    </div>
+  );
 }
 
 export default App;

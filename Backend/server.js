@@ -83,6 +83,7 @@ app.use(session({
 // Import routes
 const fetchADObjectRoute = require('./routes/fetchADObject'); // Import the fetchADObject route
 const fetchUserRoute = require('./routes/fetchUser'); // Import the fetchUser route
+const updatesRoute = require('./routes/updates'); // Update checking route
 const forbidden = require('./middleware/forbidden'); // Import the forbidden middleware
 const notFound = require('./middleware/notfound'); // Import the notFound middleware
 const authRoutes = require('./routes/auth'); // Authentication routes
@@ -126,6 +127,7 @@ app.use('/api/logging-settings', loggingSettingsRoute); // Use the loggingSettin
 app.use('/api/multi-fetch', multiFetchRoute);
 app.use('/api/server-manager', serverManagerRoute);
 app.use('/api/setup', setupRoute); // Register the setup route
+app.use('/api/updates', updatesRoute); // Update checking routes
 app.use('/api/domain-controllers', domainControllersRouter); // Use the domainControllers route
 app.use('/api/remote', remoteApiRoute); // Register the remote API routes
 
@@ -154,13 +156,30 @@ app.use((err, req, res, next) => {
 // Function to handle Socket.IO connection and disconnection events
 const handleSocketConnection = (socket) => {
     logger.info('New client connected');
+    
+    // Handle terminal room joining
+    socket.on('join-terminal', () => {
+        socket.join('terminal');
+        logger.info('Client joined terminal room');
+        
+        // Send welcome message to terminal
+        socket.emit('system-event', {
+            type: 'info',
+            message: 'Terminal connection established'
+        });
+    });
+    
     socket.on('disconnect', () => {
         logger.info('Client disconnected');
+        socket.leave('terminal');
     });
 };
 
 // Socket.IO setup
 io.on('connection', handleSocketConnection);
+
+// Make io available globally for terminal broadcasting
+global.terminalIO = io;
 
 // Start the server
 const PORT = process.env.PORT || 3001;

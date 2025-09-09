@@ -3,10 +3,62 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jarvis</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src 'self' http://localhost:* ws://localhost:* http://172.25.129.95:* ws://172.25.129.95:*; img-src 'self' data: blob:;">
+  <title>Helpdesk Jarvis</title>
   <link rel="icon" href="%PUBLIC_URL%/old-computer.png" type="image/png">
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+        sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      user-select: none; /* Prevent text selection in Electron */
+    }
+    
+    /* Loading screen for Electron */
+    #loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-size: 18px;
+      z-index: 9999;
+    }
+    
+    #loading-screen.hide {
+      display: none;
+    }
+  </style>
 </head>
 <body>
+  <div id="loading-screen">
+    <div>Loading Helpdesk Jarvis...</div>
+  </div>
   <div id="root"></div>
+  
+  <script>
+    // Hide loading screen once React app loads
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+          loadingScreen.classList.add('hide');
+        }
+      }, 1000);
+    });
+    
+    // Disable right-click context menu in production Electron
+    if (window.electronAPI) {
+      document.addEventListener('contextmenu', e => e.preventDefault());
+    }
+  </script>
 </body>
 </html>

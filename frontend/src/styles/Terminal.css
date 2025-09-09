@@ -1,0 +1,277 @@
+/* Terminal Component Styles */
+
+.terminal-container {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 8px 8px 0 0;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.terminal-header {
+  background: linear-gradient(135deg, #2d2d2d 0%, #1e1e1e 100%);
+  border-bottom: 1px solid #333;
+  padding: 8px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  user-select: none;
+  min-height: 40px;
+}
+
+.terminal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #cccccc;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.terminal-icon {
+  font-size: 16px;
+  color: #ffcc00;
+}
+
+.connection-status {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid;
+  margin-left: 12px;
+}
+
+.connection-status.connected {
+  color: #0dbc79;
+  border-color: #0dbc79;
+  background: rgba(13, 188, 121, 0.1);
+}
+
+.connection-status.disconnected {
+  color: #cd3131;
+  border-color: #cd3131;
+  background: rgba(205, 49, 49, 0.1);
+}
+
+.terminal-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.deployment-mode {
+  font-size: 11px;
+  color: #ffcc00;
+  background: rgba(255, 204, 0, 0.1);
+  border: 1px solid #ffcc00;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+.terminal-btn {
+  background: #333;
+  border: 1px solid #555;
+  color: #cccccc;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 28px;
+}
+
+.terminal-btn:hover {
+  background: #444;
+  border-color: #666;
+  color: #fff;
+}
+
+.terminal-btn:active {
+  background: #222;
+}
+
+.clear-btn:hover {
+  color: #ff6b6b;
+  border-color: #ff6b6b;
+}
+
+.toggle-btn {
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.terminal-content {
+  flex: 1;
+  overflow: hidden;
+  background: #1e1e1e;
+  position: relative;
+}
+
+.xterm-container {
+  height: 100%;
+  padding: 8px;
+}
+
+/* Override xterm.js default styles */
+.xterm-container .xterm {
+  height: 100% !important;
+}
+
+.xterm-container .xterm-viewport {
+  background-color: #1e1e1e !important;
+}
+
+.xterm-container .xterm-screen {
+  background-color: #1e1e1e !important;
+}
+
+.xterm-container .xterm-cursor-layer .xterm-cursor {
+  background-color: #ffffff !important;
+}
+
+/* Custom scrollbar for terminal */
+.xterm-container .xterm-viewport::-webkit-scrollbar {
+  width: 8px;
+}
+
+.xterm-container .xterm-viewport::-webkit-scrollbar-track {
+  background: #2d2d2d;
+  border-radius: 4px;
+}
+
+.xterm-container .xterm-viewport::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+}
+
+.xterm-container .xterm-viewport::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
+
+/* Selection styles */
+.xterm-container .xterm-selection div {
+  background-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Terminal animations */
+@keyframes terminal-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.terminal-container.disconnected .xterm-container::after {
+  content: 'Disconnected from server...';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #cd3131;
+  font-size: 16px;
+  font-weight: bold;
+  pointer-events: none;
+  z-index: 10;
+  background: rgba(30, 30, 30, 0.9);
+  padding: 12px 24px;
+  border-radius: 8px;
+  border: 1px solid #cd3131;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .terminal-header {
+    padding: 6px 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .terminal-title {
+    font-size: 13px;
+  }
+  
+  .terminal-controls {
+    gap: 8px;
+  }
+  
+  .deployment-mode {
+    font-size: 10px;
+    padding: 1px 6px;
+  }
+  
+  .terminal-btn {
+    min-width: 24px;
+    height: 24px;
+    padding: 2px 6px;
+    font-size: 11px;
+  }
+  
+  .xterm-container {
+    padding: 4px;
+  }
+}
+
+/* Dark theme enhancement */
+@media (prefers-color-scheme: dark) {
+  .terminal-container {
+    border-color: #444;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.5);
+  }
+  
+  .terminal-header {
+    background: linear-gradient(135deg, #333 0%, #222 100%);
+    border-color: #444;
+  }
+}
+
+/* Focus states for accessibility */
+.terminal-btn:focus {
+  outline: 2px solid #0078d4;
+  outline-offset: 2px;
+}
+
+.terminal-container:focus-within .terminal-header {
+  border-bottom-color: #0078d4;
+}
+
+/* Loading state */
+.terminal-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #666;
+  font-size: 14px;
+}
+
+.terminal-loading::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  border: 2px solid #333;
+  border-top: 2px solid #666;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 8px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Terminal text effects */
+.terminal-highlight {
+  background: rgba(255, 204, 0, 0.2);
+  color: #ffcc00;
+  padding: 0 2px;
+  border-radius: 2px;
+}

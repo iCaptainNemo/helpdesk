@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(dir:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(npm install:*)",
+      "Bash(npm ls:*)",
+      "Bash(npm uninstall:*)"
     ],
     "deny": [],
     "ask": []

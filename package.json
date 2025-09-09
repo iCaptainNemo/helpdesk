@@ -1,15 +1,84 @@
 {
-  "name": "project-root",
+  "name": "helpdesk-jarvis",
+  "productName": "Helpdesk Jarvis",
+  "description": "IT Helpdesk Management System",
   "version": "1.0.0",
+  "main": "electron/main.js",
+  "homepage": "./",
   "scripts": {
     "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
     "start:backend": "cd Backend && npm start",
     "start:frontend": "cd frontend && npm start",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "cd Backend && npm run dev",
-    "dev:frontend": "cd frontend && npm start"
+    "dev:frontend": "cd frontend && npm start",
+    "electron": "electron .",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "echo 'Backend build complete (no build step needed)'",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:electron": "node scripts/build-electron.js",
+    "build:installer": "node scripts/build-installer.js",
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win",
+    "pack": "npm run build && electron-builder --dir",
+    "postinstall": "electron-builder install-app-deps",
+    "install-deps": "npm install && cd Backend && npm install && cd ../frontend && npm install",
+    "release": "npm run dist:win && npm run build:installer"
+  },
+  "build": {
+    "appId": "com.helpdeskjarvis.app",
+    "productName": "Helpdesk Jarvis",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron/**/*",
+      "Backend/**/*",
+      "frontend/build/**/*",
+      "package.json",
+      "!Backend/node_modules/**/*",
+      "!**/*.map",
+      "!**/node_modules/.cache/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "Backend",
+        "to": "Backend",
+        "filter": [
+          "**/*",
+          "!node_modules/**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "electron/assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Helpdesk Jarvis"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "electron/assets/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "electron/assets/icon.png"
+    }
   },
   "devDependencies": {
-    "concurrently": "^9.0.1"
+    "concurrently": "^9.0.1",
+    "electron": "^38.0.0",
+    "electron-builder": "^26.0.12",
+    "electron-is-dev": "^3.0.1",
+    "electron-log": "^5.4.3",
+    "electron-store": "^8.2.0",
+    "electron-updater": "^6.6.2",
+    "wait-on": "^8.0.4"
   }
 }

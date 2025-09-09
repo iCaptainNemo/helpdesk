@@ -1,0 +1,318 @@
+/* Update Notification Styles */
+
+.update-notification-container {
+  position: relative;
+  z-index: 1000;
+}
+
+/* Update Status Bar */
+.update-status-bar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 0 0 0 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  z-index: 1001;
+}
+
+.update-status-text {
+  font-weight: 500;
+}
+
+.check-updates-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.check-updates-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.check-updates-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Update Notification Modal */
+.update-notification-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1002;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.update-notification-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow: hidden;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Modal Header */
+.update-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.update-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Modal Content */
+.update-content {
+  padding: 24px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.version-info {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.version-info p {
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.version-info strong {
+  color: #495057;
+  font-weight: 600;
+}
+
+/* Release Notes */
+.release-notes {
+  margin-top: 20px;
+}
+
+.release-notes h4 {
+  color: #495057;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  border-bottom: 2px solid #e9ecef;
+  padding-bottom: 8px;
+}
+
+.release-notes-content {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  font-size: 14px;
+  line-height: 1.6;
+  max-height: 200px;
+  overflow-y: auto;
+  color: #495057;
+}
+
+.release-notes-content strong {
+  color: #212529;
+  font-weight: 600;
+}
+
+.release-notes-content em {
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Custom scrollbar for release notes */
+.release-notes-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.release-notes-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.release-notes-content::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.release-notes-content::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Modal Actions */
+.update-actions {
+  padding: 20px 24px;
+  border-top: 1px solid #e9ecef;
+  background: #f8f9fa;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.update-actions button {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  min-width: 120px;
+}
+
+.primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: 1px solid #667eea;
+}
+
+.primary:hover {
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.secondary {
+  background: white;
+  color: #6c757d;
+  border: 1px solid #dee2e6;
+}
+
+.secondary:hover {
+  background: #f8f9fa;
+  color: #495057;
+  border-color: #adb5bd;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+  .update-notification-modal {
+    width: 95%;
+    margin: 20px;
+  }
+  
+  .update-actions {
+    flex-direction: column;
+  }
+  
+  .update-actions button {
+    min-width: auto;
+    width: 100%;
+  }
+  
+  .update-status-bar {
+    position: relative;
+    top: auto;
+    right: auto;
+    border-radius: 0;
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+/* Dark theme support */
+@media (prefers-color-scheme: dark) {
+  .update-notification-modal {
+    background: #2d3748;
+    color: #e2e8f0;
+  }
+  
+  .version-info {
+    background: #4a5568;
+    border-color: #718096;
+  }
+  
+  .version-info strong {
+    color: #e2e8f0;
+  }
+  
+  .release-notes-content {
+    background: #4a5568;
+    border-color: #718096;
+    color: #e2e8f0;
+  }
+  
+  .update-actions {
+    background: #4a5568;
+    border-color: #718096;
+  }
+  
+  .secondary {
+    background: #2d3748;
+    color: #a0aec0;
+    border-color: #718096;
+  }
+  
+  .secondary:hover {
+    background: #4a5568;
+    color: #e2e8f0;
+  }
+}

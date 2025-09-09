@@ -71,14 +71,42 @@ async function executePowerShellScript(scriptPath, params = []) {
         info(`Executing command: ${command}`);
     }
 
+    // Broadcast PowerShell command to terminal
+    if (global.terminalIO) {
+        global.terminalIO.to('terminal').emit('powershell-output', {
+            type: 'command',
+            command: command,
+            timestamp: new Date().toISOString()
+        });
+    }
+
     return new Promise((resolve, reject) => {
         exec(command, (execError, stdout, stderr) => {
             if (execError) {
                 error(`Execution error: ${execError}`);
+                
+                // Broadcast error to terminal
+                if (global.terminalIO) {
+                    global.terminalIO.to('terminal').emit('powershell-output', {
+                        type: 'error',
+                        error: `${execError}\n${stderr}`,
+                        timestamp: new Date().toISOString()
+                    });
+                }
+                
                 return reject(`Execution error: ${execError}\n${stderr}`);
             }
             if (stderr) {
                 error(`stderr: ${stderr}`);
+                
+                // Broadcast stderr to terminal
+                if (global.terminalIO) {
+                    global.terminalIO.to('terminal').emit('powershell-output', {
+                        type: 'error',
+                        error: stderr,
+                        timestamp: new Date().toISOString()
+                    });
+                }
             }
             if (!stdout) {
                 error('No output from PowerShell script');
@@ -87,6 +115,15 @@ async function executePowerShellScript(scriptPath, params = []) {
 
             if (!shouldSuppressLogging) {
                 debug(`stdout: ${stdout}`);
+                
+                // Broadcast output to terminal (only for non-suppressed scripts)
+                if (global.terminalIO) {
+                    global.terminalIO.to('terminal').emit('powershell-output', {
+                        type: 'output',
+                        output: stdout,
+                        timestamp: new Date().toISOString()
+                    });
+                }
             }
 
             try {

@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/xterm": "^5.5.0",
     "css-select": "^4.1.0",
     "nth-check": "^2.0.1",
     "postcss": "^8.4.31",

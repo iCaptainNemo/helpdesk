@@ -15,3 +15,5 @@ frontend/node_modules/
 
 # Database files (if SQLite or similar)
 database.db
+frontend/build/
+dist/

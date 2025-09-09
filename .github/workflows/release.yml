@@ -1,0 +1,146 @@
+name: Build and Release Electron App
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Trigger on version tags (e.g., v1.0.0)
+  workflow_dispatch:  # Allow manual triggers
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install root dependencies
+      run: npm ci
+
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm ci
+
+    - name: Install backend dependencies
+      run: |
+        cd Backend
+        npm ci
+
+    - name: Build React frontend
+      run: |
+        cd frontend
+        npm run build
+
+    - name: Setup Electron dependencies
+      run: |
+        npm install --save-dev electron-updater electron-log electron-store
+        npm install wait-on electron-is-dev
+
+    - name: Build Electron app (Windows)
+      run: |
+        npm run dist:win
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Get version from tag
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+        else
+          echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        fi
+      shell: bash
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.version.outputs.version }}
+        release_name: Helpdesk Jarvis ${{ steps.version.outputs.version }}
+        draft: false
+        prerelease: false
+        body: |
+          ## Changes in this Release
+          
+          ### ✨ New Features
+          - Desktop application packaging with Electron
+          - Auto-updater system for seamless updates
+          - Local vs Remote deployment modes
+          - Enhanced setup wizard with deployment selection
+          
+          ### 🐛 Bug Fixes
+          - Fixed authentication system ripple effects
+          - Improved error handling across components
+          - Enhanced permission management
+          
+          ### 🔧 Technical Improvements
+          - Migrated from database to .env authentication
+          - Updated database schema for better tracking
+          - Improved deployment mode handling
+          
+          ### 📦 Installation
+          1. Download the installer below
+          2. Run the installer as Administrator
+          3. Follow the setup wizard to configure your deployment mode
+          4. Enjoy the new desktop experience!
+          
+          ### 🔄 Updating
+          The app now includes an auto-updater that will notify you when new versions are available.
+          
+          ---
+          
+          🤖 Generated with [Claude Code](https://claude.ai/code)
+          
+          **Full Changelog**: https://github.com/${{ github.repository }}/compare/v1.0.0...${{ steps.version.outputs.version }}
+
+    - name: Upload Windows Installer
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./dist/Helpdesk Jarvis Setup ${{ steps.version.outputs.version }}.exe
+        asset_name: Helpdesk-Jarvis-Setup-${{ steps.version.outputs.version }}.exe
+        asset_content_type: application/octet-stream
+
+    - name: Upload Windows Portable
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./dist/win-unpacked/Helpdesk Jarvis.exe
+        asset_name: Helpdesk-Jarvis-Portable-${{ steps.version.outputs.version }}.exe
+        asset_content_type: application/octet-stream
+      continue-on-error: true  # In case portable build doesn't exist
+
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: electron-dist
+        path: dist/
+        retention-days: 30
+
+  # Future: Add macOS and Linux builds
+  # build-macos:
+  #   runs-on: macos-latest
+  #   # Similar steps for macOS builds
+  
+  # build-linux:
+  #   runs-on: ubuntu-latest  
+  #   # Similar steps for Linux builds
