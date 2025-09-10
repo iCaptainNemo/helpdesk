@@ -2,15 +2,13 @@ const { body, validationResult } = require('express-validator');
 const db = require('./init');
 
 function executeQuery(query, params = []) {
-    return new Promise((resolve, reject) => {
-        db.all(query, params, (err, rows) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(rows);
-            }
-        });
-    });
+    try {
+        const stmt = db.prepare(query);
+        const rows = stmt.all(...params);
+        return Promise.resolve(rows);
+    } catch (err) {
+        return Promise.reject(err);
+    }
 }
 
 function storeUser(user) {
@@ -169,15 +167,13 @@ function fetchAdminUser(adminID) {
     
     // Legacy database mode
     const query = `SELECT * FROM Admin WHERE AdminID = ?;`;
-    return new Promise((resolve, reject) => {
-        db.get(query, [adminID], (err, row) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(row);
-            }
-        });
-    });
+    try {
+        const stmt = db.prepare(query);
+        const row = stmt.get(adminID);
+        return Promise.resolve(row);
+    } catch (err) {
+        return Promise.reject(err);
+    }
 }
 
 function fetchAllAdminUsers() {
@@ -202,15 +198,13 @@ function fetchAllAdminUsers() {
     
     // Legacy database mode
     const query = `SELECT * FROM Admin;`;
-    return new Promise((resolve, reject) => {
-        db.all(query, [], (err, rows) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(rows);
-            }
-        });
-    });
+    try {
+        const stmt = db.prepare(query);
+        const rows = stmt.all();
+        return Promise.resolve(rows);
+    } catch (err) {
+        return Promise.reject(err);
+    }
 }
 
 // New functions for managing servers
@@ -243,16 +237,14 @@ function deleteServer(serverName) {
 }
 
 function fetchServer(serverName) {
-    return new Promise((resolve, reject) => {
+    try {
         const query = `SELECT * FROM Servers WHERE ServerName = ?`;
-        db.get(query, [serverName], (err, row) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(row);
-            }
-        });
-    });
+        const stmt = db.prepare(query);
+        const row = stmt.get(serverName);
+        return Promise.resolve(row);
+    } catch (err) {
+        return Promise.reject(err);
+    }
 }
 
 function fetchAllServers() {
@@ -323,43 +315,77 @@ async function fetchPermissionsForRoles(roleIDs) {
 }
 
 function insertDomainController(controllerName, details, role, callback) {
-    const query = `INSERT INTO DomainControllers (ControllerName, Details, Role) VALUES (?, ?, ?)`;
-    db.run(query, [controllerName, details, role], callback);
+    try {
+        const query = `INSERT INTO DomainControllers (ControllerName, Details, Role) VALUES (?, ?, ?)`;
+        const stmt = db.prepare(query);
+        const result = stmt.run(controllerName, details, role);
+        if (callback) callback(null, result);
+        return Promise.resolve(result);
+    } catch (err) {
+        if (callback) callback(err);
+        return Promise.reject(err);
+    }
 }
 
 function insertCurrentDomain(domainName, PDC, DDC, callback) {
-    const query = `INSERT INTO CurrentDomain (DomainName, PDC, DDC) VALUES (?, ?, ?)`;
-    db.run(query, [domainName, PDC, DDC], callback);
+    try {
+        const query = `INSERT INTO CurrentDomain (DomainName, PDC, DDC) VALUES (?, ?, ?)`;
+        const stmt = db.prepare(query);
+        const result = stmt.run(domainName, PDC, DDC);
+        if (callback) callback(null, result);
+        return Promise.resolve(result);
+    } catch (err) {
+        if (callback) callback(err);
+        return Promise.reject(err);
+    }
 }
 
 function updateDomainControllerStatus(controllerName, status, callback) {
-    const query = `UPDATE DomainControllers SET Status = ? WHERE ControllerName = ?`;
-    db.run(query, [status, controllerName], callback);
+    try {
+        const query = `UPDATE DomainControllers SET Status = ? WHERE ControllerName = ?`;
+        const stmt = db.prepare(query);
+        const result = stmt.run(status, controllerName);
+        if (callback) callback(null, result);
+        return Promise.resolve(result);
+    } catch (err) {
+        if (callback) callback(err);
+        return Promise.reject(err);
+    }
 }
 
 const fetchPDC = (callback) => {
-    const query = 'SELECT PDC FROM CurrentDomain LIMIT 1'; // Adjust the query as necessary
-    db.get(query, [], callback);
+    try {
+        const query = 'SELECT PDC FROM CurrentDomain LIMIT 1';
+        const stmt = db.prepare(query);
+        const row = stmt.get();
+        if (callback) callback(null, row);
+        return Promise.resolve(row);
+    } catch (err) {
+        if (callback) callback(err);
+        return Promise.reject(err);
+    }
   };
 
 function fetchDomainControllers(callback) {
-    const query = `
-        SELECT dc.ControllerName, dc.Details, dc.Role, dc.Status, cd.PDC, cd.DDC
-        FROM DomainControllers dc
-        LEFT JOIN CurrentDomain cd ON dc.ControllerName = cd.PDC OR dc.ControllerName = cd.DDC
-    `;
-    db.all(query, [], (err, rows) => {
-        if (err) {
-            callback(err, null);
-        } else {
-            const result = {
-                domainControllers: rows,
-                PDC: rows.find(row => row.Role === 'PDC'),
-                DDC: rows.find(row => row.Role === 'DDC')
-            };
-            callback(null, result);
-        }
-    });
+    try {
+        const query = `
+            SELECT dc.ControllerName, dc.Details, dc.Role, dc.Status, cd.PDC, cd.DDC
+            FROM DomainControllers dc
+            LEFT JOIN CurrentDomain cd ON dc.ControllerName = cd.PDC OR dc.ControllerName = cd.DDC
+        `;
+        const stmt = db.prepare(query);
+        const rows = stmt.all();
+        const result = {
+            domainControllers: rows,
+            PDC: rows.find(row => row.Role === 'PDC'),
+            DDC: rows.find(row => row.Role === 'DDC')
+        };
+        if (callback) callback(null, result);
+        return Promise.resolve(result);
+    } catch (err) {
+        if (callback) callback(err, null);
+        return Promise.reject(err);
+    }
 }
 
 module.exports = {

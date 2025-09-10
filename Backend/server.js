@@ -1,22 +1,78 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const path = require('path');
-const http = require('http');
-const socketIo = require('socket.io');
-const cors = require('cors');
-const session = require('express-session'); // Import express-session
-require('dotenv').config();
+console.log('Starting Helpdesk Jarvis server...');
+console.log('Node version:', process.version);
+console.log('Is pkg executable:', !!process.pkg);
+console.log('Current working directory:', process.cwd());
 
+// Add global error handlers to catch any unhandled errors
+process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error.message);
+    console.error('Stack trace:', error.stack);
+    console.error('Exiting due to uncaught exception');
+    process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise);
+    console.error('Reason:', reason);
+    console.error('Exiting due to unhandled rejection');
+    process.exit(1);
+});
+
+const express = require('express');
+console.log('Express loaded');
+const bodyParser = require('body-parser');
+console.log('Body parser loaded');
+const path = require('path');
+console.log('Path loaded');
+const http = require('http');
+console.log('HTTP loaded');
+const socketIo = require('socket.io');
+console.log('Socket.IO loaded');
+const cors = require('cors');
+console.log('CORS loaded');
+const session = require('express-session'); // Import express-session
+console.log('Express session loaded');
+const { exec } = require('child_process'); // Import for browser auto-launch
+console.log('Child process loaded');
+const fs = require('fs');
+console.log('FS loaded');
+
+// Handle .env file loading for standalone executable
+console.log('Loading environment variables...');
+if (process.pkg) {
+    // Load .env from current working directory for pkg
+    const envPath = path.join(process.cwd(), '.env');
+    console.log('Looking for .env at:', envPath);
+    console.log('.env file exists:', fs.existsSync(envPath));
+    require('dotenv').config({ path: envPath });
+} else {
+    require('dotenv').config();
+}
+console.log('Environment variables loaded');
+
+console.log('Loading database module...');
 const db = require('./db/init');
-const { runMigrations } = require('./db/migrations'); // Import migration system
-const verifyToken = require('./middleware/verifyToken'); // Ensure JWT middleware is used
-const verifyPermissions = require('./middleware/verifyPermissions'); // Import the permissions middleware
-const { updateLockedOutUsers } = require('./utils/lockedOutUsersUtils'); // Import the module
-const { getServerStatuses } = require('./utils/ServerManageUtil'); // Import the module
-const { updateDomainControllers, DomainControllerStatus  } = require('./utils/domainManager'); // Import the updateDomainControllers function
-const logger = require('./utils/logger'); // Import the logger
-const sessionStore = require('./utils/sessionStore'); // Import your session store
-const { getSystemInfo } = require('./config/modes'); // Import configuration system
+console.log('Database module loaded');
+
+console.log('Loading migrations module...');
+const { runMigrations } = require('./db/migrations');
+console.log('Migrations module loaded');
+
+console.log('Loading middleware modules...');
+const verifyToken = require('./middleware/verifyToken');
+const verifyPermissions = require('./middleware/verifyPermissions');
+console.log('Middleware modules loaded');
+
+console.log('Loading utility modules...');
+const { updateLockedOutUsers } = require('./utils/lockedOutUsersUtils');
+const { getServerStatuses } = require('./utils/ServerManageUtil');
+const { updateDomainControllers, DomainControllerStatus  } = require('./utils/domainManager');
+const logger = require('./utils/logger');
+const sessionStore = require('./utils/sessionStore');
+const { getSystemInfo } = require('./config/modes');
+const RegistrySetup = require('./utils/registrySetup');
+const ToolsManager = require('./utils/toolsManager');
+console.log('All utility modules loaded');
 
 const app = express();
 const server = http.createServer(app);
@@ -64,6 +120,9 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve React build files
+app.use(express.static(path.join(__dirname, '../frontend/build')));
 
 // Middleware to attach the database to requests
 app.use((req, res, next) => {
@@ -131,6 +190,11 @@ app.use('/api/updates', updatesRoute); // Update checking routes
 app.use('/api/domain-controllers', domainControllersRouter); // Use the domainControllers route
 app.use('/api/remote', remoteApiRoute); // Register the remote API routes
 
+// Catch-all handler: send back React's index.html file for any non-API routes
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/build/index.html'));
+});
+
 // Middleware to handle 403 Forbidden errors
 app.use(forbidden);
 
@@ -182,11 +246,23 @@ io.on('connection', handleSocketConnection);
 global.terminalIO = io;
 
 // Start the server
+console.log('Preparing to start server...');
 const PORT = process.env.PORT || 3001;
 const HOST = '0.0.0.0'; // Listen on all network interfaces
+console.log(`Starting server on ${HOST}:${PORT}`);
 
 server.listen(PORT, HOST, async () => {
-    logger.info(`Server is running on http://${HOST}:${PORT}`);
+    console.log('Server listen callback called');
+    const url = `http://localhost:${PORT}`;
+    logger.info(`Server is running on ${url}`);
+    
+    // Auto-open browser for standalone exe usage
+    if (process.pkg) {
+        exec(`start ${url}`, (err) => {
+            if (err) logger.warn('Browser auto-open failed:', err);
+            else logger.info('Browser opened automatically');
+        });
+    }
     
     // Run database migrations
     try {
@@ -196,6 +272,37 @@ server.listen(PORT, HOST, async () => {
     } catch (error) {
         logger.error('Database migration failed:', error);
         // Continue startup even if migrations fail to maintain compatibility
+    }
+    
+    // Setup deep linking for external tool integration
+    try {
+        logger.info('Setting up deep linking integration...');
+        const registrySetup = new RegistrySetup();
+        
+        // Check if we have admin privileges for registry operations
+        const hasAdminPrivs = await registrySetup.checkAdminPrivileges();
+        if (!hasAdminPrivs) {
+            registrySetup.displayAdminWarning();
+        } else {
+            await registrySetup.setupDeepLinking();
+        }
+    } catch (error) {
+        logger.warn('Deep linking setup failed (non-critical):', error);
+        logger.info('External tool integration may not work without manual setup');
+    }
+    
+    // Setup Tools folder and download missing tools
+    try {
+        logger.info('Setting up Tools folder and utilities...');
+        const toolsManager = new ToolsManager();
+        
+        const success = await toolsManager.setupTools();
+        if (!success) {
+            toolsManager.displayManualInstructions();
+        }
+    } catch (error) {
+        logger.warn('Tools setup failed (non-critical):', error);
+        logger.info('Some system monitoring features may not work without tools');
     }
     
     // Log system configuration information

@@ -1,4 +1,4 @@
-const sqlite3 = require('sqlite3').verbose();
+const db = require('./init');
 const path = require('path');
 const fs = require('fs');
 const logger = require('../utils/logger');
@@ -18,15 +18,11 @@ class DatabaseMigrator {
   connect() {
     return new Promise((resolve, reject) => {
       if (!this.db) {
-        this.db = new sqlite3.Database(this.dbPath, (err) => {
-          if (err) {
-            reject(err);
-          } else {
-            this.ensureMigrationTable()
-              .then(() => resolve(this.db))
-              .catch(reject);
-          }
-        });
+        // Use the existing better-sqlite3 connection from init.js
+        this.db = db;
+        this.ensureMigrationTable()
+          .then(() => resolve(this.db))
+          .catch(reject);
       } else {
         resolve(this.db);
       }
@@ -35,74 +31,65 @@ class DatabaseMigrator {
 
   disconnect() {
     return new Promise((resolve) => {
-      if (this.db) {
-        this.db.close((err) => {
-          if (err) {
-            logger.error('Error closing database:', err);
-          }
-          this.db = null;
-          resolve();
-        });
-      } else {
-        resolve();
-      }
+      // For better-sqlite3, we don't close the shared connection
+      // Just reset our reference
+      this.db = null;
+      resolve();
     });
   }
 
   ensureMigrationTable() {
     return new Promise((resolve, reject) => {
-      const createMigrationTable = `
-        CREATE TABLE IF NOT EXISTS ${MIGRATION_TABLE} (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          version TEXT UNIQUE NOT NULL,
-          applied_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          description TEXT
-        )
-      `;
-      this.db.run(createMigrationTable, (err) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve();
-        }
-      });
+      try {
+        const createMigrationTable = `
+          CREATE TABLE IF NOT EXISTS ${MIGRATION_TABLE} (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            version TEXT UNIQUE NOT NULL,
+            applied_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            description TEXT
+          )
+        `;
+        this.db.exec(createMigrationTable);
+        resolve();
+      } catch (err) {
+        reject(err);
+      }
     });
   }
 
   getAppliedMigrations() {
     return new Promise((resolve, reject) => {
-      this.db.all(`SELECT version FROM ${MIGRATION_TABLE} ORDER BY version`, (err, rows) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(rows.map(row => row.version));
-        }
-      });
+      try {
+        const stmt = this.db.prepare(`SELECT version FROM ${MIGRATION_TABLE} ORDER BY version`);
+        const rows = stmt.all();
+        resolve(rows.map(row => row.version));
+      } catch (err) {
+        reject(err);
+      }
     });
   }
 
   recordMigration(version, description) {
     return new Promise((resolve, reject) => {
-      this.db.run(`INSERT INTO ${MIGRATION_TABLE} (version, description) VALUES (?, ?)`, 
-        [version, description], (err) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve();
-          }
-        });
+      try {
+        const stmt = this.db.prepare(`INSERT INTO ${MIGRATION_TABLE} (version, description) VALUES (?, ?)`);
+        stmt.run(version, description);
+        resolve();
+      } catch (err) {
+        reject(err);
+      }
     });
   }
 
   isMigrationApplied(version) {
     return new Promise((resolve, reject) => {
-      this.db.get(`SELECT 1 FROM ${MIGRATION_TABLE} WHERE version = ?`, [version], (err, row) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(row !== undefined);
-        }
-      });
+      try {
+        const stmt = this.db.prepare(`SELECT 1 FROM ${MIGRATION_TABLE} WHERE version = ?`);
+        const row = stmt.get(version);
+        resolve(row !== undefined);
+      } catch (err) {
+        reject(err);
+      }
     });
   }
 
@@ -155,24 +142,28 @@ class DatabaseMigrator {
     return new Promise(async (resolve, reject) => {
       try {
         // Check if Admin table exists
-        const adminTableExists = await new Promise((resolveCheck, rejectCheck) => {
-          this.db.get(`SELECT name FROM sqlite_master WHERE type='table' AND name='Admin'`, 
-            (err, row) => {
-              if (err) rejectCheck(err);
-              else resolveCheck(row !== undefined);
-            });
-        });
+        const adminTableExists = (() => {
+          try {
+            const stmt = this.db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='Admin'`);
+            const row = stmt.get();
+            return row !== undefined;
+          } catch (err) {
+            throw err;
+          }
+        })();
 
         if (adminTableExists) {
           logger.info('Admin table found, backing up admin data before removal');
           
           // Backup admin data to a JSON file for reference
-          const adminData = await new Promise((resolveData, rejectData) => {
-            this.db.all('SELECT * FROM Admin', (err, rows) => {
-              if (err) rejectData(err);
-              else resolveData(rows);
-            });
-          });
+          const adminData = (() => {
+            try {
+              const stmt = this.db.prepare('SELECT * FROM Admin');
+              return stmt.all();
+            } catch (err) {
+              throw err;
+            }
+          })();
 
           if (adminData.length > 0) {
             const backupPath = path.join(__dirname, `admin_backup_${Date.now()}.json`);
@@ -181,38 +172,34 @@ class DatabaseMigrator {
           }
           
           // Drop the Admin table
-          await new Promise((resolveDrop, rejectDrop) => {
-            this.db.run('DROP TABLE Admin', (err) => {
-              if (err) rejectDrop(err);
-              else {
-                logger.info('Admin table removed successfully');
-                resolveDrop();
-              }
-            });
-          });
+          try {
+            this.db.exec('DROP TABLE Admin');
+            logger.info('Admin table removed successfully');
+          } catch (err) {
+            throw err;
+          }
         }
 
         // Check if Users table needs LastAdminHelped column
-        const userTableInfo = await new Promise((resolveInfo, rejectInfo) => {
-          this.db.all(`PRAGMA table_info(Users)`, (err, rows) => {
-            if (err) rejectInfo(err);
-            else resolveInfo(rows);
-          });
-        });
+        const userTableInfo = (() => {
+          try {
+            const stmt = this.db.prepare(`PRAGMA table_info(Users)`);
+            return stmt.all();
+          } catch (err) {
+            throw err;
+          }
+        })();
 
         const hasLastAdminHelped = userTableInfo.some(col => col.name === 'LastAdminHelped');
 
         if (!hasLastAdminHelped) {
           logger.info('Adding LastAdminHelped column to Users table');
-          await new Promise((resolveAlter, rejectAlter) => {
-            this.db.run('ALTER TABLE Users ADD COLUMN LastAdminHelped TEXT', (err) => {
-              if (err) rejectAlter(err);
-              else {
-                logger.info('LastAdminHelped column added successfully');
-                resolveAlter();
-              }
-            });
-          });
+          try {
+            this.db.exec('ALTER TABLE Users ADD COLUMN LastAdminHelped TEXT');
+            logger.info('LastAdminHelped column added successfully');
+          } catch (err) {
+            throw err;
+          }
         } else {
           logger.info('Users table already has LastAdminHelped column');
         }
@@ -233,13 +220,15 @@ class DatabaseMigrator {
     
     try {
       // Check if Admin table still exists
-      const adminTableExists = await new Promise((resolve, reject) => {
-        this.db.get(`SELECT name FROM sqlite_master WHERE type='table' AND name='Admin'`, 
-          (err, row) => {
-            if (err) reject(err);
-            else resolve(row !== undefined);
-          });
-      });
+      const adminTableExists = (() => {
+        try {
+          const stmt = this.db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='Admin'`);
+          const row = stmt.get();
+          return row !== undefined;
+        } catch (err) {
+          throw err;
+        }
+      })();
 
       if (adminTableExists) {
         await this.disconnect();
@@ -247,12 +236,14 @@ class DatabaseMigrator {
       }
 
       // Check if Users table has LastAdminHelped column
-      const userTableInfo = await new Promise((resolve, reject) => {
-        this.db.all(`PRAGMA table_info(Users)`, (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows);
-        });
-      });
+      const userTableInfo = (() => {
+        try {
+          const stmt = this.db.prepare(`PRAGMA table_info(Users)`);
+          return stmt.all();
+        } catch (err) {
+          throw err;
+        }
+      })();
 
       const hasLastAdminHelped = userTableInfo.some(col => col.name === 'LastAdminHelped');
 

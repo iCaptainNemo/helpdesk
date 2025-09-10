@@ -1,6 +1,11 @@
-const sqlite3 = require('sqlite3').verbose();
+const Database = require('better-sqlite3');
 const path = require('path');
-require('dotenv').config();
+const fs = require('fs');
+
+// Configure dotenv with explicit path for Electron compatibility
+const envPath = path.join(__dirname, '..', '.env');
+require('dotenv').config({ path: envPath });
+
 const logger = require('../utils/logger'); // Import the logger module
 
 // Create a wrapper for the logger functions to add the [Database] prefix
@@ -10,7 +15,26 @@ const dbLogger = {
     error: (message, ...optionalParams) => logger.error(`[Database] ${message}`, ...optionalParams),
 };
 
-const dbPath = path.resolve(__dirname, process.env.DB_PATH || 'database.db');
+// Determine the appropriate database path for standalone app
+function getDatabasePath() {
+    // Check if running as standalone executable (pkg)
+    if (process.pkg) {
+        // Use current directory for standalone executable
+        const dbDir = path.join(process.cwd(), 'database');
+        
+        // Ensure directory exists
+        if (!fs.existsSync(dbDir)) {
+            fs.mkdirSync(dbDir, { recursive: true });
+        }
+        
+        return path.join(dbDir, 'database.db');
+    } else {
+        // Development mode - use local path
+        return path.resolve(__dirname, process.env.DB_PATH || 'database.db');
+    }
+}
+
+const dbPath = getDatabasePath();
 
 dbLogger.info(`Attempting to open database at path: ${dbPath}`);
 
@@ -104,140 +128,146 @@ const tables = [
     }
 ];
 
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-        dbLogger.error('Error opening database:', err.message);
-        dbLogger.error('Ensure the database file exists and has the correct permissions.');
-    } else {
-        dbLogger.info('Connected to the SQLite database.');
-        initializeDatabase();
-    }
-});
+// Initialize database with better-sqlite3
+let db;
+try {
+    db = new Database(dbPath);
+    dbLogger.info('Connected to the SQLite database.');
+    // Initialize database tables and data
+    initializeDatabase();
+} catch (err) {
+    dbLogger.error('Error opening database:', err.message);
+    dbLogger.error('Ensure the database file exists and has the correct permissions.');
+    throw err;
+}
 
+// Initialize database tables and data
 function initializeDatabase() {
-    tables.forEach(table => {
-        const columns = table.columns.join(', ');
-        const createTableQuery = `CREATE TABLE IF NOT EXISTS ${table.name} (${columns});`;
-        db.run(createTableQuery, (err) => {
-            if (err) {
-                dbLogger.error(`Error creating table ${table.name}:`, err.message);
-            } else {
+    try {
+        // Create tables
+        tables.forEach(table => {
+            const columns = table.columns.join(', ');
+            const createTableQuery = `CREATE TABLE IF NOT EXISTS ${table.name} (${columns});`;
+            try {
+                db.exec(createTableQuery);
                 dbLogger.info(`Table ${table.name} created or already exists.`);
                 checkAndAddMissingColumns(table);
+            } catch (err) {
+                dbLogger.error(`Error creating table ${table.name}:`, err.message);
             }
         });
-    });
 
-    // Insert initial roles
-    const roles = ['superadmin', 'admin', 'support_agent', 'user'];
-    roles.forEach(role => {
-        const insertRoleQuery = `INSERT OR IGNORE INTO Roles (RoleName) VALUES (?);`;
-        db.run(insertRoleQuery, [role], (err) => {
-            if (err) {
-                dbLogger.error(`Error inserting role ${role}:`, err.message);
-            } else {
+        // Insert initial roles
+        const roles = ['superadmin', 'admin', 'support_agent', 'user'];
+        const insertRoleStmt = db.prepare('INSERT OR IGNORE INTO Roles (RoleName) VALUES (?)');
+        roles.forEach(role => {
+            try {
+                insertRoleStmt.run(role);
                 dbLogger.verbose(`Role ${role} inserted or already exists.`);
+            } catch (err) {
+                dbLogger.error(`Error inserting role ${role}:`, err.message);
             }
         });
-    });
 
-    // Insert initial permissions
-    const permissions = [
-        'access_configure_page',
-        'manage_users',
-        'manage_tickets',
-        'view_reports',
-        'execute_command',
-        'execute_script'
-    ];
-    permissions.forEach(permission => {
-        const insertPermissionQuery = `INSERT OR IGNORE INTO Permissions (PermissionName) VALUES (?);`;
-        db.run(insertPermissionQuery, [permission], (err) => {
-            if (err) {
-                dbLogger.error(`Error inserting permission ${permission}:`, err.message);
-            } else {
+        // Insert initial permissions
+        const permissions = [
+            'access_configure_page',
+            'manage_users',
+            'manage_tickets',
+            'view_reports',
+            'execute_command',
+            'execute_script'
+        ];
+        const insertPermissionStmt = db.prepare('INSERT OR IGNORE INTO Permissions (PermissionName) VALUES (?)');
+        permissions.forEach(permission => {
+            try {
+                insertPermissionStmt.run(permission);
                 dbLogger.verbose(`Permission ${permission} inserted or already exists.`);
+            } catch (err) {
+                dbLogger.error(`Error inserting permission ${permission}:`, err.message);
             }
         });
-    });
 
-    // Assign permissions to roles
-    const rolePermissions = {
-        superadmin: ['access_configure_page', 'manage_users', 'manage_tickets', 'view_reports', 'execute_command', 'execute_script'],
-        admin: ['manage_users', 'manage_tickets', 'view_reports'],
-        support_agent: ['manage_tickets', 'view_reports'],
-        user: []
-    };
+        // Assign permissions to roles
+        const rolePermissions = {
+            superadmin: ['access_configure_page', 'manage_users', 'manage_tickets', 'view_reports', 'execute_command', 'execute_script'],
+            admin: ['manage_users', 'manage_tickets', 'view_reports'],
+            support_agent: ['manage_tickets', 'view_reports'],
+            user: []
+        };
 
-    Object.keys(rolePermissions).forEach(role => {
-        rolePermissions[role].forEach(permission => {
-            const assignPermissionToRoleQuery = `
-                INSERT OR IGNORE INTO RolePermissions (RoleID, PermissionID)
-                SELECT Roles.RoleID, Permissions.PermissionID
-                FROM Roles, Permissions
-                WHERE Roles.RoleName = ? AND Permissions.PermissionName = ?;
-            `;
-            db.run(assignPermissionToRoleQuery, [role, permission], (err) => {
-                if (err) {
-                    dbLogger.error(`Error assigning permission ${permission} to role ${role}:`, err.message);
-                } else {
+        const assignPermissionToRoleStmt = db.prepare(`
+            INSERT OR IGNORE INTO RolePermissions (RoleID, PermissionID)
+            SELECT Roles.RoleID, Permissions.PermissionID
+            FROM Roles, Permissions
+            WHERE Roles.RoleName = ? AND Permissions.PermissionName = ?
+        `);
+
+        Object.keys(rolePermissions).forEach(role => {
+            rolePermissions[role].forEach(permission => {
+                try {
+                    assignPermissionToRoleStmt.run(role, permission);
                     dbLogger.verbose(`Permission ${permission} assigned to role ${role}.`);
+                } catch (err) {
+                    dbLogger.error(`Error assigning permission ${permission} to role ${role}:`, err.message);
                 }
             });
         });
-    });
 
-    // Assign the superadmin role to the first admin user
-    const checkSuperadminQuery = `
-        SELECT AdminID FROM UserRoles
-        JOIN Roles ON UserRoles.RoleID = Roles.RoleID
-        WHERE Roles.RoleName = 'superadmin';
-    `;
-    db.get(checkSuperadminQuery, (err, row) => {
-        if (err) {
-            dbLogger.error('Error checking for existing superadmin:', err.message);
-        } else if (!row) {
-            const assignRoleToUserQuery = `
-                INSERT OR IGNORE INTO UserRoles (AdminID, RoleID)
-                SELECT Admin.AdminID, Roles.RoleID
-                FROM Admin, Roles
-                WHERE Admin.AdminID = (SELECT AdminID FROM Admin ORDER BY ROWID LIMIT 1) AND Roles.RoleName = 'superadmin';
-            `;
-            db.run(assignRoleToUserQuery, (err) => {
-                if (err) {
-                    dbLogger.error('Error assigning superadmin role to the first admin user:', err.message);
-                } else {
+        // Assign the superadmin role to the first admin user
+        const checkSuperadminQuery = `
+            SELECT AdminID FROM UserRoles
+            JOIN Roles ON UserRoles.RoleID = Roles.RoleID
+            WHERE Roles.RoleName = 'superadmin'
+        `;
+        try {
+            const existingSuperadmin = db.prepare(checkSuperadminQuery).get();
+            if (!existingSuperadmin) {
+                const assignRoleToUserQuery = `
+                    INSERT OR IGNORE INTO UserRoles (AdminID, RoleID)
+                    SELECT Admin.AdminID, Roles.RoleID
+                    FROM Admin, Roles
+                    WHERE Admin.AdminID = (SELECT AdminID FROM Admin ORDER BY ROWID LIMIT 1) AND Roles.RoleName = 'superadmin'
+                `;
+                try {
+                    db.prepare(assignRoleToUserQuery).run();
                     dbLogger.info('Superadmin role assigned to the first admin user.');
+                } catch (err) {
+                    dbLogger.error('Error assigning superadmin role to the first admin user:', err.message);
                 }
-            });
-        } else {
-            dbLogger.info('Superadmin role already assigned to an admin user.');
+            } else {
+                dbLogger.info('Superadmin role already assigned to an admin user.');
+            }
+        } catch (err) {
+            dbLogger.error('Error checking for existing superadmin:', err.message);
         }
-    });
+    } catch (err) {
+        dbLogger.error('Database initialization failed:', err.message);
+        throw err;
+    }
 }
 
 function checkAndAddMissingColumns(table) {
-    const existingColumnsQuery = `PRAGMA table_info(${table.name});`;
-    db.all(existingColumnsQuery, (err, rows) => {
-        if (err) {
-            dbLogger.error(`Error fetching columns for table ${table.name}:`, err.message);
-            return;
-        }
+    try {
+        const existingColumnsQuery = `PRAGMA table_info(${table.name})`;
+        const rows = db.prepare(existingColumnsQuery).all();
         const existingColumns = rows.map(row => row.name);
+        
         table.columns.forEach(column => {
             const columnName = column.split(' ')[0];
             if (!existingColumns.includes(columnName) && !column.includes('FOREIGN') && !column.includes('PRIMARY')) {
-                const addColumnQuery = `ALTER TABLE ${table.name} ADD COLUMN ${column};`;
-                db.run(addColumnQuery, (err) => {
-                    if (err) {
-                        dbLogger.error(`Error adding column ${columnName} to table ${table.name}:`, err.message);
-                    } else {
-                        dbLogger.info(`Column ${columnName} added to table ${table.name}.`);
-                    }
-                });
+                const addColumnQuery = `ALTER TABLE ${table.name} ADD COLUMN ${column}`;
+                try {
+                    db.prepare(addColumnQuery).run();
+                    dbLogger.info(`Column ${columnName} added to table ${table.name}.`);
+                } catch (err) {
+                    dbLogger.error(`Error adding column ${columnName} to table ${table.name}:`, err.message);
+                }
             }
         });
-    });
+    } catch (err) {
+        dbLogger.error(`Error fetching columns for table ${table.name}:`, err.message);
+    }
 }
 
 module.exports = db;

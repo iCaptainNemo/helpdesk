@@ -1,117 +1,202 @@
-# Helpdesk Jarvis
+# Helpdesk Jarvis - Standalone IT Management Tool
 
-Helpdesk Jarvis is a comprehensive tool designed to assist helpdesk teams with common tasks and procedures. This repository contains a collection of domain-agnostic PowerShell scripts and a web-based GUI to streamline helpdesk operations, making it easier to manage user accounts, retrieve system information, and perform various administrative tasks.
+**A complete, portable IT helpdesk solution in a single 61MB executable.**
 
-## Features
+Helpdesk Jarvis provides IT professionals with a comprehensive web-based interface for managing user accounts, system monitoring, and administrative tasks. No installation required - just run the exe and get started!
 
-- **PowerShell Scripts**: A collection of scripts to automate common helpdesk tasks.
-- **Web-Based GUI**: A user-friendly interface built with React to interact with the PowerShell scripts.
-- **Session Management**: Secure session handling with JWT authentication.
-- **Database Integration**: SQLite database for storing user and session data.
-- **Real-Time Updates**: Integration with Socket.IO for real-time updates.
+## ✨ Key Features
 
-## Installation
+- **🚀 Zero Installation**: Single executable file - no Node.js, npm, or dependencies required
+- **🔧 Automatic Setup**: Registry integration and tools download automatically on first run
+- **🖥️ System Management**: User unlock, password reset, computer status monitoring
+- **🔗 External Tool Integration**: Launch Remote Desktop, PowerShell, PsExec with one click
+- **📊 Real-time Monitoring**: Live updates for locked users and system status
+- **🛡️ Secure Authentication**: JWT-based sessions with Active Directory integration
+- **📱 Modern Interface**: Responsive React-based web UI accessible from any browser
 
-### Prerequisites
+## 🚀 Quick Start
 
-- Node.js (v14.x or later)
-- npm (v6.x or later)
-- PowerShell (v5.1 or later)
-- SQLite3
+### Option 1: Download Pre-built Executable (Recommended)
 
-### Backend Setup
+1. **Download** the latest `helpdesk-jarvis.exe` from [Releases](https://github.com/your-repo/releases)
+2. **Place** the exe in your desired folder (e.g., `C:\IT-Tools\`)
+3. **Run as Administrator** (first time only for registry setup)
+4. **Access** the web interface at `http://localhost:3001` (opens automatically)
 
-1. **Navigate to the Backend directory**:
-    ```sh
-    cd Backend
-    ```
+### Option 2: Build from Source
 
-2. **Install dependencies**:
-    ```sh
-    npm install
-    ```
+```bash
+# Clone repository
+git clone https://github.com/your-repo/helpdesk-GUI.git
+cd helpdesk-GUI
 
-3. **Create a [`.env`](command:_github.copilot.openSymbolFromReferences?%5B%22%22%2C%5B%7B%22uri%22%3A%7B%22scheme%22%3A%22file%22%2C%22authority%22%3A%22%22%2C%22path%22%3A%22%2Fh%3A%2Fhelpdesk-GUI%2FBackend%2Fdb%2Finit.js%22%2C%22query%22%3A%22%22%2C%22fragment%22%3A%22%22%7D%2C%22pos%22%3A%7B%22line%22%3A4%2C%22character%22%3A46%7D%7D%5D%2C%22c819a34a-31cc-494a-963c-5d945048c05e%22%5D "Go to definition") file**:
-    ```sh
-    cp .env.example .env
-    ```
+# Build standalone executable
+npm run dist:win
 
-4. **Configure the [`.env`](command:_github.copilot.openSymbolFromReferences?%5B%22%22%2C%5B%7B%22uri%22%3A%22file%22%2C%22path%22%3A%22%2Fh%3A%2Fhelpdesk-GUI%2FBackend%2Fdb%2Finit.js%22%7D%2C%7B%22start%22%3A%7B%22line%22%3A4%2C%22character%22%3A46%7D%2C%22end%22%3A%7B%22line%22%3A4%2C%22character%22%3A46%7D%7D%5D "Go to definition") file** with your environment variables.
+# Run the built executable
+dist/helpdesk-jarvis.exe
+```
 
-5. **Start the backend server**:
-    ```sh
-    npm start
-    ```
+## 🛠️ First Run Setup
 
-### Frontend Setup
+When you run the executable for the first time:
 
-1. **Navigate to the frontend directory**:
-    ```sh
-    cd frontend
-    ```
+### Automatic Setup (Run as Administrator)
+- ✅ Creates registry entries for `jarvis://` protocol handler
+- ✅ Downloads required tools (PsLoggedon.exe, PsInfo.exe, etc.) from GitHub
+- ✅ Creates JarvisLauncher integration for external tools
+- ✅ Opens browser automatically to setup wizard
 
-2. **Install dependencies**:
-    ```sh
-    npm install
-    ```
+### Manual Setup (If Admin Rights Unavailable)
+If you can't run as administrator, the application will show instructions for:
+- Manually downloading tools to the `Tools/` folder
+- Running registry setup batch files
+- External tool integration setup
 
-3. **Create a [`.env`](command:_github.copilot.openSymbolFromReferences?%5B%22%22%2C%5B%7B%22uri%22%3A%22file%22%2C%22path%22%3A%22%2Fh%3A%2Fhelpdesk-GUI%2FBackend%2Fdb%2Finit.js%22%7D%2C%7B%22start%22%3A%7B%22line%22%3A4%2C%22character%22%3A46%7D%2C%22end%22%3A%7B%22line%22%3A4%2C%22character%22%3A46%7D%7D%5D "Go to definition") file**:
-    ```sh
-    cp .env.example .env
-    ```
+## 📋 System Requirements
 
-4. **Configure the [`.env`](command:_github.copilot.openSymbolFromReferences?%5B%22%22%2C%5B%7B%22uri%22%3A%22file%22%2C%22path%22%3A%22%2Fh%3A%2Fhelpdesk-GUI%2FBackend%2Fdb%2Finit.js%22%7D%2C%7B%22start%22%3A%7B%22line%22%3A4%2C%22character%22%3A46%7D%2C%22end%22%3A%7B%22line%22%3A4%2C%22character%22%3A46%7D%7D%5D "Go to definition") file** with your environment variables.
+- **OS**: Windows 10/11 or Windows Server 2016+
+- **Architecture**: x64 (64-bit)
+- **Memory**: 512MB RAM minimum
+- **Disk**: 200MB free space
+- **Network**: Internet connection for tool downloads (first run)
+- **Privileges**: Administrator rights recommended for full functionality
 
-5. **Start the frontend server**:
-    ```sh
-    npm start
-    ```
+## 🔧 Configuration
 
-### Client Setup
+### Setup Wizard
+On first run, access `http://localhost:3001/setup` to configure:
+- Active Directory connection
+- Administrative credentials
+- Deployment mode (Local/Remote)
+- Database settings
 
-1. **Run the `Browser_Launcher_registry_Import.bat` script**:
-    ```sh
-    Tools/Browser_Launcher_registry_Import.bat
-    ```
+### Manual Configuration
+Create a `.env` file next to the executable:
+```env
+# Basic Configuration
+PORT=3001
+DEPLOYMENT_MODE=local
 
-2. **Move the `JarvisLauncher` folder to the `Program Files` directory**:
-    ```sh
-    move Tools/JarvisLauncher "C:\Program Files\JarvisLauncher"
-    ```
+# Active Directory (if using remote mode)
+LDAP_URL=ldap://your-domain-controller.com
+LDAP_BASE_DN=dc=yourdomain,dc=com
+LDAP_USERNAME=your-service-account
+LDAP_PASSWORD=your-password
 
-### Running the Project
+# Admin Credentials (local mode)
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=your-secure-password
+```
 
-1. **Navigate to the project root directory**:
-    ```sh
-    cd ..
-    ```
+## 🌐 Usage
 
-2. **Start both backend and frontend servers concurrently**:
-    ```sh
-    npm run start
-    ```
+### Web Interface
+- Navigate to `http://localhost:3001`
+- Login with your configured credentials
+- Access all features through the modern web interface
 
-The backend server will run on `http://localhost:3001` and the frontend server will run on `http://localhost:3000`.
+### Core Features
+- **Dashboard**: Overview of system status and locked users
+- **User Management**: Unlock accounts, reset passwords, view user info
+- **Computer Management**: System status, remote connections, logged-in users
+- **Active Directory**: Browse and manage AD objects
+- **External Tools**: Launch Remote Desktop, PowerShell sessions, PsExec
 
-## Usage
+### External Tool Integration
+Click computer names or use context menus to:
+- Launch Remote Desktop (`jarvis:cmrcvie`)
+- Start Remote Assistance (`jarvis:msraaaa`)
+- Open PowerShell sessions (`jarvis:powersh`)
+- Execute remote commands (`jarvis:cmdexec`)
 
-1. **Access the web-based GUI**:
-    Open your browser and navigate to `http://localhost:3000`.
+## 🔒 Security Features
 
-2. **Login**:
-    Use your credentials to log in.
+- **JWT Authentication**: Secure session management
+- **Active Directory Integration**: Use existing domain credentials
+- **Input Sanitization**: Protection against injection attacks
+- **Session Timeouts**: Automatic logout for security
+- **Audit Logging**: Track all administrative actions
 
-3. **Execute Scripts**:
-    Use the provided interface to execute various PowerShell scripts and manage helpdesk tasks.
+## 📁 File Structure
 
-## License
+```
+helpdesk-jarvis.exe           # Main executable (61MB)
+├── .env                      # Configuration file (created on first run)
+├── database.db               # SQLite database (created automatically)
+├── logs/                     # Application logs
+└── Tools/                    # External utilities (downloaded automatically)
+    ├── PsLoggedon.exe        # Show logged-in users
+    ├── PsInfo.exe            # System information
+    └── windirstat.exe        # Disk usage analyzer
+```
 
-This project is licensed under the GNU General Public License. See the [`LICENSE`](command:_github.copilot.openRelativePath?%5B%7B%22scheme%22%3A%22file%22%2C%22authority%22%3A%22%22%2C%22path%22%3A%22%2Fh%3A%2Fhelpdesk-GUI%2FLICENSE%22%2C%22query%22%3A%22%22%2C%22fragment%22%3A%22%22%7D%2C%22c819a34a-31cc-494a-963c-5d945048c05e%22%5D "h:\helpdesk-GUI\LICENSE") file for details.
+## 🔄 Updates
 
-## Contributing
+### Automatic Updates (Future)
+- Built-in update checker
+- One-click updates from GitHub releases
 
-Contributions are welcome! 
+### Manual Updates
+1. Download new `helpdesk-jarvis.exe`
+2. Stop current instance
+3. Replace executable
+4. Run new version (configuration preserved)
 
-## Contact
+## 🐛 Troubleshooting
 
-For any questions or issues, please open an issue on GitHub or contact the project maintainers.
+### Common Issues
+
+**External tools not working:**
+- Run as administrator to enable registry setup
+- Manually download tools to `Tools/` folder if auto-download fails
+
+**Can't access web interface:**
+- Check if port 3001 is available
+- Ensure Windows Firewall isn't blocking the application
+- Try accessing `http://127.0.0.1:3001` instead
+
+**Active Directory connection fails:**
+- Verify LDAP settings in configuration
+- Test network connectivity to domain controller
+- Check service account permissions
+
+### Logs
+Check the `logs/` folder for detailed error information and debugging data.
+
+## 🆚 vs Development Mode
+
+| Feature | Standalone Exe | Development Mode |
+|---------|----------------|------------------|
+| Installation | Single file | Node.js + npm install |
+| Size | 61MB | ~500MB+ (node_modules) |
+| Startup Time | ~3 seconds | ~10 seconds |
+| Updates | Replace exe | git pull + rebuild |
+| Dependencies | None | Node.js ecosystem |
+| Configuration | .env file | Multiple config files |
+
+## 📚 For Developers
+
+Want to contribute or modify the code? See [DEVELOPMENT.md](DEVELOPMENT.md) for:
+- Development environment setup
+- Building from source
+- Architecture documentation
+- Contributing guidelines
+
+## 📄 License
+
+This project is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE) file for details.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please see [DEVELOPMENT.md](DEVELOPMENT.md) for development setup and contribution guidelines.
+
+## 📞 Support
+
+- **Issues**: [GitHub Issues](https://github.com/your-repo/issues)
+- **Documentation**: [Wiki](https://github.com/your-repo/wiki)
+- **Discussions**: [GitHub Discussions](https://github.com/your-repo/discussions)
+
+---
+
+**Made with ❤️ for IT professionals who need reliable, portable tools.**

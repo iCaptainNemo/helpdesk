@@ -1,4 +1,0 @@
-node_modules
-npm-debug.log
-frontend/node_modules
-Backend/node_modules

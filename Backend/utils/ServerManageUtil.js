@@ -19,82 +19,61 @@ async function getServerStatuses() {
         // Ensure serverStatuses is an array
         const statusesArray = Array.isArray(serverStatuses) ? serverStatuses : [serverStatuses];
 
-        // Start a transaction
-        db.serialize(() => {
-            db.run('BEGIN TRANSACTION');
+        // Update server statuses using better-sqlite3 transaction
+        const transaction = db.transaction(() => {
+            try {
+                // Prepare the SQL statement for updating server statuses
+                const updateStmt = db.prepare(`
+                    UPDATE Servers
+                    SET Status = ?, FileShareService = ?, OnlineTime = ?, OfflineTime = ?
+                    WHERE ServerName = ?
+                `);
 
-            // Prepare the SQL statement for updating server statuses
-            const updateStmt = db.prepare(`
-                UPDATE Servers
-                SET Status = ?, FileShareService = ?, OnlineTime = ?, OfflineTime = ?
-                WHERE ServerName = ?
-            `);
+                const currentTime = new Date();
 
-            const currentTime = new Date();
+                // Process each server status update
+                for (const server of statusesArray) {
+                    const existingServer = await fetchServer(server.ServerName);
+                    
+                    let onlineTime = existingServer?.OnlineTime;
+                    let offlineTime = existingServer?.OfflineTime;
 
-            // Map through the server statuses and update the database
-            const updatePromises = statusesArray.map(async server => {
-                const existingServer = await fetchServer(server.ServerName);
-                
-                let onlineTime = existingServer?.OnlineTime;
-                let offlineTime = existingServer?.OfflineTime;
-
-                if (server.Status === 'Online') {
-                    // Server is online
-                    if (!onlineTime) {
-                        // Set OnlineTime to current time if it is null
-                        onlineTime = currentTime;
+                    if (server.Status === 'Online') {
+                        // Server is online
+                        if (!onlineTime) {
+                            // Set OnlineTime to current time if it is null
+                            onlineTime = currentTime;
+                        }
+                        // Nullify OfflineTime
+                        offlineTime = null;
+                    } else {
+                        // Server is offline
+                        if (!offlineTime) {
+                            // Set OfflineTime to current time if it is null
+                            offlineTime = currentTime;
+                        }
+                        // Nullify OnlineTime
+                        onlineTime = null;
                     }
-                    // Nullify OfflineTime
-                    offlineTime = null;
-                } else {
-                    // Server is offline
-                    if (!offlineTime) {
-                        // Set OfflineTime to current time if it is null
-                        offlineTime = currentTime;
-                    }
-                    // Nullify OnlineTime
-                    onlineTime = null;
-                }
 
-                // Update the server status in the database
-                return new Promise((resolve, reject) => {
+                    // Update the server status in the database
                     updateStmt.run(
                         server.Status,
                         server.FileShareService,
                         onlineTime,
                         offlineTime,
-                        server.ServerName,
-                        (err) => {
-                            if (err) {
-                                reject(err);
-                            } else {
-                                resolve();
-                            }
-                        }
+                        server.ServerName
                     );
-                });
-            });
+                }
 
-            // Execute all update promises
-            Promise.all(updatePromises)
-                .then(() => {
-                    updateStmt.finalize();
-
-                    // Commit the transaction
-                    db.run('COMMIT', (err) => {
-                        if (err) {
-                            logger.error('Failed to commit transaction:', err);
-                        } else {
-                            logger.info('Server statuses updated in the database.');
-                        }
-                    });
-                })
-                .catch((err) => {
-                    logger.error('Failed to update server statuses:', err);
-                    db.run('ROLLBACK');
-                });
+                logger.info('Server statuses updated in the database.');
+            } catch (err) {
+                logger.error('Failed to update server statuses:', err);
+                throw err;
+            }
         });
+        
+        transaction();
 
         return statusesArray;
     } catch (error) {

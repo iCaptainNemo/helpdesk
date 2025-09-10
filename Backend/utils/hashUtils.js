@@ -1,4 +1,6 @@
-const bcrypt = require('bcrypt');
+// Use custom bcrypt implementation that works with pkg
+const bcrypt = require('./bcryptPkg');
+
 const SALT_ROUNDS = 10;
 
 /**
