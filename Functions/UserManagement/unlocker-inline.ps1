@@ -93,15 +93,15 @@ function Get-OptimizedDCList {
     $optimizedDCs = @()
     
     if ([string]::IsNullOrEmpty($userOU)) {
-        Write-Debug "No OU specified, using essential DCs only"
-        # Return essential DCs - prioritize PowerShell-enabled DCs
+        Write-Debug "No OU specified, using comprehensive fallback (all available DCs)"
+        # Return ALL available DCs for comprehensive unlock (matches standalone behavior)
         if ($script:PSDomains.Count -gt 0) {
-            $optimizedDCs += $script:PSDomains[0..([Math]::Min(2, $script:PSDomains.Count - 1))]
+            $optimizedDCs += $script:PSDomains
         }
-        if ($optimizedDCs.Count -lt 3 -and $script:cmdDomains.Count -gt 0) {
-            $needed = 3 - $optimizedDCs.Count
-            $optimizedDCs += $script:cmdDomains[0..([Math]::Min($needed - 1, $script:cmdDomains.Count - 1))]
+        if ($script:cmdDomains.Count -gt 0) {
+            $optimizedDCs += $script:cmdDomains
         }
+        Write-Debug "Fallback DC list ($($optimizedDCs.Count) DCs): $($optimizedDCs -join ', ')"
         return $optimizedDCs
     }
     
@@ -172,10 +172,19 @@ function Unlock-UserAdvanced {
         }
     }
     
-    # Get domain root for LDAP operations
+    # Get domain root and role owners for LDAP operations
     try {
-        $domainRoot = (Get-ADDomain).DistinguishedName
+        $domainInfo = Get-ADDomain
+        $domainRoot = $domainInfo.DistinguishedName
+        
+        # Get PDC and DDC like the standalone version
+        $currentDomain = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain()
+        $PDC = $currentDomain.PdcRoleOwner.Name
+        $DDC = $currentDomain.RidRoleOwner.Name
+        
         Write-Debug "Domain root: $domainRoot"
+        Write-Debug "PDC: $PDC"
+        Write-Debug "DDC: $DDC"
     } catch {
         Write-Error "Failed to get domain information: $($_.Exception.Message)"
         return $false
@@ -187,6 +196,9 @@ function Unlock-UserAdvanced {
     # Create optimized DC list based on OU matching
     $targetDCs = Get-OptimizedDCList -userOU $userOU -domainRoot $domainRoot
     
+    # Check if we found a specific OU-matched DC (targeted approach) or using fallback (comprehensive)
+    $isTargetedUnlock = -not [string]::IsNullOrEmpty($userOU) -and $targetDCs.Count -le 3
+    
     if ($targetDCs.Count -eq 0) {
         Write-Warning "No optimized DCs found, falling back to essential DCs only"
         # Fallback to essential DCs (PDC + first available PowerShell DC)
@@ -196,6 +208,21 @@ function Unlock-UserAdvanced {
         } elseif ($script:cmdDomains.Count -gt 0) {
             $targetDCs += $script:cmdDomains[0]  # First command-line DC
         }
+        $isTargetedUnlock = $false
+    }
+    
+    # For targeted unlocks (specific OU match), add PDC and DDC like standalone version
+    if ($isTargetedUnlock -and -not [string]::IsNullOrEmpty($userOU)) {
+        Write-Debug "Targeted unlock detected - adding PDC and DDC to unlock list"
+        # Add PDC and DDC if they're not already in the list
+        if ($targetDCs -notcontains $PDC) {
+            $targetDCs += $PDC
+        }
+        if ($targetDCs -notcontains $DDC -and $DDC -ne $PDC) {
+            $targetDCs += $DDC
+        }
+        # Remove duplicates
+        $targetDCs = $targetDCs | Select-Object -Unique
     }
     
     if ($targetDCs.Count -eq 0) {
@@ -203,7 +230,11 @@ function Unlock-UserAdvanced {
         return $false
     }
     
-    Write-Debug "Optimized unlock: $userId on $($targetDCs.Count) targeted domain controllers"
+    if ($isTargetedUnlock) {
+        Write-Debug "Targeted unlock: $userId on $($targetDCs.Count) OU-specific domain controllers (includes PDC/DDC)"
+    } else {
+        Write-Debug "Comprehensive unlock: $userId on $($targetDCs.Count) domain controllers (fallback mode)"
+    }
     
     $unlockResults = @()
     $successCount = 0
@@ -272,7 +303,8 @@ function Unlock-UserAdvanced {
     
     # Summary output
     if ($stopLoop) {
-        Write-Host "Unlock Summary:" -ForegroundColor Cyan
+        $unlockType = if ($isTargetedUnlock) { "Targeted (OU-specific + PDC/DDC)" } else { "Comprehensive (All Available DCs)" }
+        Write-Host "Unlock Summary ($unlockType):" -ForegroundColor Cyan
         Write-Host "  Successful: $successCount DCs" -ForegroundColor Green
         if ($errorCount -gt 0) {
             Write-Host "  Errors: $errorCount DCs" -ForegroundColor Yellow
