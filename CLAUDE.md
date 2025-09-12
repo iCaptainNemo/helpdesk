@@ -17,8 +17,21 @@ Helpdesk Jarvis is a web-based helpdesk management system with a React frontend 
 - `npm run dev:frontend` - Frontend development server
 
 ### Building
+
+#### Development Building
 - `cd frontend && npm run build` - Build frontend for production
 - Backend runs directly with `node server.js`
+
+#### Standalone Executable Building
+- `npm run dist:win` - Build standalone executable for Windows (targets node18 for bcrypt compatibility)
+- `npm run release` - Alias for dist:win
+- **Output**: Executable is placed in `releases/helpdesk-jarvis.exe`
+- **Important**: Uses node18 target due to bcrypt native module requirements
+- **Note**: The executable is fully self-contained and can be run on machines without Node.js installed
+- **Automated Post-Build**: The build process automatically:
+  - Fixes CSP headers in index.html for Google Fonts support
+  - Updates server.js with the correct React bundle filename from asset-manifest.json
+  - No manual intervention needed for CI/CD pipelines
 
 ### Setup
 - `install-manual.cmd` - Automated Windows installation script
@@ -82,3 +95,13 @@ Helpdesk Jarvis is a web-based helpdesk management system with a React frontend 
 ## Testing
 
 The project uses GitHub Actions for PowerShell Script Analyzer on `.ps1` files. No specific test commands are configured - check individual package.json files for available test scripts.
+
+## Build Troubleshooting
+
+### Standalone Executable Issues
+- **Path Resolution**: The application uses `process.pkg` detection to handle path resolution differently in packaged vs development mode
+- **Database Location**: In standalone mode, database is created in `database/` folder relative to the executable
+- **Environment Files**: `.env` files are looked for in the current working directory when running as standalone
+- **Native Modules**: bcrypt and better-sqlite3 require node18 target for proper binary compatibility
+- **PowerShell Scripts**: Scripts are bundled in the executable but must be extracted to `functions/` folder for PowerShell to access them
+- **Tools Downloads**: External tools are downloaded from GitHub repository to `Tools/` folder on first run

@@ -3,7 +3,9 @@ const { serverPowerShellScript } = require('../powershell');
 const db = require('../db/init');
 const logger = require('../utils/logger');
 
-const scriptPath = path.join(__dirname, '../functions/LockedOutList.ps1');
+const scriptPath = process.pkg 
+    ? path.join(process.cwd(), 'functions', 'LockedOutList.ps1')
+    : path.join(__dirname, '../functions/LockedOutList.ps1');
 
 async function clearLockedOutUsers() {
     try {

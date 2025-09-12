@@ -14,9 +14,10 @@
     "dev:frontend": "cd frontend && npm start",
     "build:frontend": "cd frontend && npm run build",
     "build:backend": "echo 'Backend build complete (no build step needed)'",
-    "build": "npm run build:frontend && npm run build:backend",
+    "post-build": "node scripts/post-build.js",
+    "build": "npm run build:frontend && npm run build:backend && npm run post-build",
     "copy-native-binaries": "mkdir -p \"Backend/node_modules/better-sqlite3/lib/binding/node-v108-win32-x64\" 2>/dev/null || true && cp \"Backend/node_modules/better-sqlite3/build/Release/better_sqlite3.node\" \"Backend/node_modules/better-sqlite3/lib/binding/node-v108-win32-x64/better_sqlite3.node\" && echo 'SQLite binary copied' && mkdir -p \"dist/Backend/node_modules/bcrypt/lib/binding/napi-v3\" 2>/dev/null || true && cp \"Backend/node_modules/bcrypt/lib/binding/napi-v3/bcrypt_lib.node\" \"dist/Backend/node_modules/bcrypt/lib/binding/napi-v3/bcrypt_lib.node\" && echo 'bcrypt binary copied'",
-    "dist:win": "npm run build && npm run copy-native-binaries && pkg Backend/server.js --targets node18-win-x64 --output dist/helpdesk-jarvis.exe",
+    "dist:win": "npm run build && npm run copy-native-binaries && pkg Backend/server.js --targets node18-win-x64 --output releases/helpdesk-jarvis.exe",
     "install-deps": "npm install && cd Backend && npm install && cd ../frontend && npm install",
     "release": "npm run dist:win"
   },
@@ -35,7 +36,7 @@
     "targets": [
       "node18-win-x64"
     ],
-    "outputPath": "dist/"
+    "outputPath": "releases/"
   },
   "devDependencies": {
     "concurrently": "^9.0.1",

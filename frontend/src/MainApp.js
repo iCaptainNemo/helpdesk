@@ -53,12 +53,18 @@ function App() {
         if (response.ok) {
           const data = await response.json();
           setSetupComplete(data.configured);
+          // If setup is not complete, we don't need to check authentication
+          if (!data.configured) {
+            setInitialCheck(true);
+          }
         } else {
           setSetupComplete(false);
+          setInitialCheck(true);
         }
       } catch (error) {
         console.error('Error checking setup status:', error);
         setSetupComplete(false);
+        setInitialCheck(true);
       }
     };
 

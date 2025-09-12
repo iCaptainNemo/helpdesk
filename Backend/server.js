@@ -63,6 +63,10 @@ const verifyToken = require('./middleware/verifyToken');
 const verifyPermissions = require('./middleware/verifyPermissions');
 console.log('Middleware modules loaded');
 
+console.log('Extracting PowerShell scripts for pkg compatibility...');
+const { extractPowerShellScripts } = require('./utils/scriptExtractor');
+extractPowerShellScripts();
+
 console.log('Loading utility modules...');
 const { updateLockedOutUsers } = require('./utils/lockedOutUsersUtils');
 const { getServerStatuses } = require('./utils/ServerManageUtil');
@@ -119,10 +123,45 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Serve static files from the public directory
-app.use(express.static(path.join(__dirname, 'public')));
+const publicPath = path.join(__dirname, 'public');
+app.use(express.static(publicPath));
 
-// Serve React build files
-app.use(express.static(path.join(__dirname, '../frontend/build')));
+// Serve React build files  
+const frontendBuildPath = path.join(__dirname, '../frontend/build');
+
+// In pkg mode, manually serve critical static files since express.static may not work with bundled assets
+if (process.pkg) {
+    const fs = require('fs');
+    
+    // Serve main JS file
+    app.get('/static/js/main.52aabf04.js', (req, res) => {
+        try {
+            const jsPath = path.join(__dirname, '../frontend/build/static/js/main.52aabf04.js');
+            const content = fs.readFileSync(jsPath, 'utf8');
+            res.setHeader('Content-Type', 'application/javascript');
+            res.send(content);
+        } catch (err) {
+            console.log(`[DEBUG] Failed to serve JS file: ${err.message}`);
+            res.status(404).send('JS file not found');
+        }
+    });
+    
+    // Serve main CSS file
+    app.get('/static/css/main.4c4c95fc.css', (req, res) => {
+        try {
+            const cssPath = path.join(__dirname, '../frontend/build/static/css/main.4c4c95fc.css');
+            const content = fs.readFileSync(cssPath, 'utf8');
+            res.setHeader('Content-Type', 'text/css');
+            res.send(content);
+        } catch (err) {
+            console.log(`[DEBUG] Failed to serve CSS file: ${err.message}`);
+            res.status(404).send('CSS file not found');
+        }
+    });
+} else {
+    // Development mode - use normal static middleware
+    app.use(express.static(frontendBuildPath));
+}
 
 // Middleware to attach the database to requests
 app.use((req, res, next) => {
@@ -192,7 +231,8 @@ app.use('/api/remote', remoteApiRoute); // Register the remote API routes
 
 // Catch-all handler: send back React's index.html file for any non-API routes
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/build/index.html'));
+    const indexPath = path.join(__dirname, '../frontend/build/index.html');
+    res.sendFile(indexPath);
 });
 
 // Middleware to handle 403 Forbidden errors

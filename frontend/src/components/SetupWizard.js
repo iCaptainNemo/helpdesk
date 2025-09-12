@@ -128,7 +128,8 @@ const SetupWizard = () => {
 
       const result = await response.json();
       alert('Setup completed successfully!');
-      navigate('/login');
+      // Refresh the page to re-check setup status and show login screen
+      window.location.reload();
     } catch (error) {
       console.error('Setup error:', error);
       alert('Setup failed. Please check your configuration and try again.');

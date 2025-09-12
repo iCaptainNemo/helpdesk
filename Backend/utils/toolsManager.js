@@ -6,9 +6,9 @@ const logger = require('./logger');
 class ToolsManager {
     constructor() {
         // GitHub repository information
-        this.githubOwner = 'iCaptainNemo'; // Update with actual owner
-        this.githubRepo = 'helpdesk-GUI'; // Update with actual repo name
-        this.githubBranch = 'main'; // Update with actual branch name
+        this.githubOwner = 'iCaptainNemo'; 
+        this.githubRepo = 'helpdesk'; 
+        this.githubBranch = 'Jarvis-GUI';
         
         // Tools folder path (relative to exe location)
         this.toolsPath = process.pkg 

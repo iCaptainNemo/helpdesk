@@ -6,7 +6,9 @@ const path = require('path');
 require('dotenv').config(); // Load environment variables from .env file
 
 // Define the path to the PowerShell script
-const scriptPath = path.join(__dirname, '../functions/Get-Logs.ps1');
+const scriptPath = process.pkg 
+    ? path.join(process.cwd(), 'functions', 'Get-Logs.ps1')
+    : path.join(__dirname, '../functions/Get-Logs.ps1');
 
 // Hardcoded log file path for testing
 const logFilePath = '\\\\hssserver037\\login-tracking\\';

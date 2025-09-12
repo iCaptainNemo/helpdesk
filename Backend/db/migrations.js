@@ -19,6 +19,9 @@ class DatabaseMigrator {
     return new Promise((resolve, reject) => {
       if (!this.db) {
         // Use the existing better-sqlite3 connection from init.js
+        if (!db) {
+          return reject(new Error('Database connection is not available. Make sure better-sqlite3 is properly initialized.'));
+        }
         this.db = db;
         this.ensureMigrationTable()
           .then(() => resolve(this.db))
@@ -97,7 +100,12 @@ class DatabaseMigrator {
    * Run all pending migrations
    */
   async migrate() {
-    await this.connect();
+    try {
+      await this.connect();
+    } catch (error) {
+      logger.error('Failed to connect to database for migrations:', error.message);
+      throw error;
+    }
     
     const migrations = [
       {
@@ -166,7 +174,8 @@ class DatabaseMigrator {
           })();
 
           if (adminData.length > 0) {
-            const backupPath = path.join(__dirname, `admin_backup_${Date.now()}.json`);
+            const backupDir = process.pkg ? process.cwd() : __dirname;
+            const backupPath = path.join(backupDir, `admin_backup_${Date.now()}.json`);
             fs.writeFileSync(backupPath, JSON.stringify(adminData, null, 2));
             logger.info(`Admin data backed up to: ${backupPath}`);
           }
@@ -261,7 +270,14 @@ class DatabaseMigrator {
  * Factory function to create migrator instance
  */
 function createMigrator(dbPath = null) {
-  const targetPath = dbPath || path.resolve(__dirname, process.env.DB_PATH || 'database.db');
+  if (dbPath) {
+    return new DatabaseMigrator(dbPath);
+  }
+  
+  const defaultDbPath = process.env.DB_PATH || 'database.db';
+  const targetPath = process.pkg 
+    ? path.resolve(process.cwd(), defaultDbPath)
+    : path.resolve(__dirname, defaultDbPath);
   return new DatabaseMigrator(targetPath);
 }
 

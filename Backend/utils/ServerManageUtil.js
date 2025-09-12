@@ -4,7 +4,9 @@ const db = require('../db/init');
 const logger = require('../utils/logger'); // Import the logger module
 const { insertServer, updateServer, deleteServer, fetchServer, fetchAllServers } = require('../db/queries');
 
-const scriptPath = path.join(__dirname, '../functions/Get-ServerStatus.ps1');
+const scriptPath = process.pkg 
+    ? path.join(process.cwd(), 'functions', 'Get-ServerStatus.ps1')
+    : path.join(__dirname, '../functions/Get-ServerStatus.ps1');
 
 async function getServerStatuses() {
     try {
@@ -18,6 +20,18 @@ async function getServerStatuses() {
 
         // Ensure serverStatuses is an array
         const statusesArray = Array.isArray(serverStatuses) ? serverStatuses : [serverStatuses];
+
+        // Pre-fetch all existing server data before transaction
+        const existingServersMap = new Map();
+        for (const server of statusesArray) {
+            try {
+                const existingServer = await fetchServer(server.ServerName);
+                existingServersMap.set(server.ServerName, existingServer);
+            } catch (err) {
+                logger.warn(`Failed to fetch existing server data for ${server.ServerName}:`, err);
+                existingServersMap.set(server.ServerName, null);
+            }
+        }
 
         // Update server statuses using better-sqlite3 transaction
         const transaction = db.transaction(() => {
@@ -33,7 +47,7 @@ async function getServerStatuses() {
 
                 // Process each server status update
                 for (const server of statusesArray) {
-                    const existingServer = await fetchServer(server.ServerName);
+                    const existingServer = existingServersMap.get(server.ServerName);
                     
                     let onlineTime = existingServer?.OnlineTime;
                     let offlineTime = existingServer?.OfflineTime;
@@ -60,8 +74,8 @@ async function getServerStatuses() {
                     updateStmt.run(
                         server.Status,
                         server.FileShareService,
-                        onlineTime,
-                        offlineTime,
+                        onlineTime ? onlineTime.toISOString() : null,
+                        offlineTime ? offlineTime.toISOString() : null,
                         server.ServerName
                     );
                 }

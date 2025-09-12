@@ -2,8 +2,10 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
-// Configure dotenv with explicit path for Electron compatibility
-const envPath = path.join(__dirname, '..', '.env');
+// Configure dotenv with explicit path for pkg compatibility
+const envPath = process.pkg 
+    ? path.join(process.cwd(), '.env')
+    : path.join(__dirname, '..', '.env');
 require('dotenv').config({ path: envPath });
 
 const logger = require('../utils/logger'); // Import the logger module
@@ -30,7 +32,10 @@ function getDatabasePath() {
         return path.join(dbDir, 'database.db');
     } else {
         // Development mode - use local path
-        return path.resolve(__dirname, process.env.DB_PATH || 'database.db');
+        const dbPath = process.env.DB_PATH || 'database.db';
+        return process.pkg 
+            ? path.resolve(process.cwd(), dbPath)
+            : path.resolve(__dirname, dbPath);
     }
 }
 
@@ -98,13 +103,12 @@ const tables = [
         ]
     },
     {
-        name: 'UserRoles', // User-Role mapping
+        name: 'UserRoles', // User-Role mapping (now for environment-based admin users)
         columns: [
-            'AdminID TEXT',
+            'AdminUsername TEXT',
             'RoleID INTEGER',
-            'FOREIGN KEY (AdminID) REFERENCES Admin(AdminID)',
             'FOREIGN KEY (RoleID) REFERENCES Roles(RoleID)',
-            'PRIMARY KEY (AdminID, RoleID)'
+            'PRIMARY KEY (AdminUsername, RoleID)'
         ]
     },    
     {
@@ -133,6 +137,12 @@ let db;
 try {
     db = new Database(dbPath);
     dbLogger.info('Connected to the SQLite database.');
+    
+    // Ensure db is properly initialized before proceeding
+    if (!db || typeof db.prepare !== 'function') {
+        throw new Error('Database connection failed - prepare method not available');
+    }
+    
     // Initialize database tables and data
     initializeDatabase();
 } catch (err) {
@@ -143,6 +153,10 @@ try {
 
 // Initialize database tables and data
 function initializeDatabase() {
+    if (!db || typeof db.prepare !== 'function') {
+        throw new Error('Database connection is not available for initialization');
+    }
+    
     try {
         // Create tables
         tables.forEach(table => {
@@ -214,29 +228,36 @@ function initializeDatabase() {
             });
         });
 
-        // Assign the superadmin role to the first admin user
-        const checkSuperadminQuery = `
-            SELECT AdminID FROM UserRoles
-            JOIN Roles ON UserRoles.RoleID = Roles.RoleID
-            WHERE Roles.RoleName = 'superadmin'
-        `;
+        // Assign the superadmin role to the environment-based admin user
         try {
-            const existingSuperadmin = db.prepare(checkSuperadminQuery).get();
-            if (!existingSuperadmin) {
-                const assignRoleToUserQuery = `
-                    INSERT OR IGNORE INTO UserRoles (AdminID, RoleID)
-                    SELECT Admin.AdminID, Roles.RoleID
-                    FROM Admin, Roles
-                    WHERE Admin.AdminID = (SELECT AdminID FROM Admin ORDER BY ROWID LIMIT 1) AND Roles.RoleName = 'superadmin'
+            const adminUsername = process.env.ADMIN_USERNAME;
+            if (adminUsername && db && typeof db.prepare === 'function') {
+                const checkSuperadminQuery = `
+                    SELECT AdminUsername FROM UserRoles
+                    JOIN Roles ON UserRoles.RoleID = Roles.RoleID
+                    WHERE Roles.RoleName = 'superadmin' AND AdminUsername = ?
                 `;
-                try {
-                    db.prepare(assignRoleToUserQuery).run();
-                    dbLogger.info('Superadmin role assigned to the first admin user.');
-                } catch (err) {
-                    dbLogger.error('Error assigning superadmin role to the first admin user:', err.message);
+                const existingSuperadmin = db.prepare(checkSuperadminQuery).get(adminUsername);
+                if (!existingSuperadmin) {
+                    const assignRoleToUserQuery = `
+                        INSERT OR IGNORE INTO UserRoles (AdminUsername, RoleID)
+                        SELECT ?, Roles.RoleID
+                        FROM Roles
+                        WHERE Roles.RoleName = 'superadmin'
+                    `;
+                    try {
+                        db.prepare(assignRoleToUserQuery).run(adminUsername);
+                        dbLogger.info(`Superadmin role assigned to environment admin user: ${adminUsername}`);
+                    } catch (err) {
+                        dbLogger.error('Error assigning superadmin role to environment admin user:', err.message);
+                    }
+                } else {
+                    dbLogger.info('Superadmin role already assigned to environment admin user.');
                 }
+            } else if (!adminUsername) {
+                dbLogger.warn('No ADMIN_USERNAME found in environment variables. Superadmin role not assigned.');
             } else {
-                dbLogger.info('Superadmin role already assigned to an admin user.');
+                dbLogger.warn('Database not ready for superadmin assignment. This will be skipped.');
             }
         } catch (err) {
             dbLogger.error('Error checking for existing superadmin:', err.message);

@@ -5,7 +5,18 @@
       "Bash(npm run dev:*)",
       "Bash(npm install:*)",
       "Bash(npm ls:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(npm run release:*)",
+      "Bash(npm run dist:win:*)",
+      "Bash(start /wait helpdesk-jarvis.exe)",
+      "Bash(npm rebuild:*)",
+      "Bash(node:*)",
+      "Bash(npm run copy-sqlite-binary:*)",
+      "Bash(npx pkg:*)",
+      "Bash(npm view:*)",
+      "Bash(npm run copy-native-binaries:*)",
+      "Bash(pkg:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

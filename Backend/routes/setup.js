@@ -34,8 +34,12 @@ router.get('/status', (req, res) => {
   try {
     logger.info('Setup status check requested');
     
-    const envFilePath = path.join(__dirname, '../.env');
-    const setupConfigPath = path.join(__dirname, '../../setupConfig.js');
+    const envFilePath = process.pkg 
+      ? path.join(process.cwd(), '.env')
+      : path.join(__dirname, '../.env');
+    const setupConfigPath = process.pkg 
+      ? path.join(process.cwd(), 'setupConfig.js')
+      : path.join(__dirname, '../../setupConfig.js');
     
     // Check if essential files exist
     const envExists = fs.existsSync(envFilePath);
@@ -101,8 +105,12 @@ router.post('/wizard', async (req, res) => {
   try {
     const { mode, adminCredentials, remoteConnection, systemSettings } = req.body;
     
-    const envFilePath = path.join(__dirname, '../.env');
-    const setupConfigPath = path.join(__dirname, '../../setupConfig.js');
+    const envFilePath = process.pkg 
+      ? path.join(process.cwd(), '.env')
+      : path.join(__dirname, '../.env');
+    const setupConfigPath = process.pkg 
+      ? path.join(process.cwd(), 'setupConfig.js')
+      : path.join(__dirname, '../../setupConfig.js');
     
     // Read existing .env if it exists
     let existingEnv = {};
@@ -209,7 +217,9 @@ router.post('/wizard', async (req, res) => {
 
 // Original setup endpoint (kept for backward compatibility)
 router.post('/', async (req, res) => {
-  const envFilePath = path.join(__dirname, '../.env');
+  const envFilePath = process.pkg 
+    ? path.join(process.cwd(), '.env')
+    : path.join(__dirname, '../.env');
   const { SUPER_ADMIN_ID, SUPER_ADMIN_PASSWORD, ...envVars } = req.body;
 
   const envData = Object.entries(envVars)

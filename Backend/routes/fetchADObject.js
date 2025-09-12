@@ -1,11 +1,14 @@
 const express = require('express');
 const router = express.Router();
+const path = require('path');
 const { serverPowerShellScript } = require('../powershell');
 const sanitizeInput = require('../middleware/sanitizeInput');
 
 router.post('/', sanitizeInput, async (req, res) => {
     const adObjectID = req.body.adObjectID.toUpperCase();
-    const scriptPath = './functions/Get-ADObject.ps1';
+    const scriptPath = process.pkg 
+        ? path.join(process.cwd(), 'functions', 'Get-ADObject.ps1')
+        : path.join(__dirname, '../functions/Get-ADObject.ps1');
     const params = [adObjectID]; // Pass adObjectID as a positional argument
 
     try {

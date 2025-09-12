@@ -4,8 +4,15 @@ const db = require('./init');
 function executeQuery(query, params = []) {
     try {
         const stmt = db.prepare(query);
-        const rows = stmt.all(...params);
-        return Promise.resolve(rows);
+        // Use run() for non-SELECT queries (INSERT, UPDATE, DELETE)
+        // Use all() for SELECT queries
+        if (query.trim().toUpperCase().startsWith('SELECT')) {
+            const rows = stmt.all(...params);
+            return Promise.resolve(rows);
+        } else {
+            const result = stmt.run(...params);
+            return Promise.resolve(result);
+        }
     } catch (err) {
         return Promise.reject(err);
     }

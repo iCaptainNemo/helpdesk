@@ -81,7 +81,12 @@ async function executePowerShellScript(scriptPath, params = []) {
     }
 
     return new Promise((resolve, reject) => {
-        exec(command, (execError, stdout, stderr) => {
+        // Set working directory to avoid UNC path issues
+        const execOptions = {
+            cwd: process.env.WINDIR || 'C:\\Windows'
+        };
+        
+        exec(command, execOptions, (execError, stdout, stderr) => {
             if (execError) {
                 error(`Execution error: ${execError}`);
                 
@@ -184,7 +189,12 @@ async function executeLocalScript(scriptPath, params = []) {
     const command = `powershell.exe -File ${scriptPath} ${paramString}`;
     
     return new Promise((resolve, reject) => {
-        exec(command, (execError, stdout, stderr) => {
+        // Set working directory to avoid UNC path issues
+        const execOptions = {
+            cwd: process.env.WINDIR || 'C:\\Windows'
+        };
+        
+        exec(command, execOptions, (execError, stdout, stderr) => {
             if (execError) {
                 return reject(`Execution error: ${execError}\n${stderr}`);
             }
@@ -242,7 +252,12 @@ async function serverPowerShellScript(scriptPath, params = []) {
 
     // Return a promise that resolves with the script output
     return new Promise((resolve, reject) => {
-        exec(command, (execError, stdout, stderr) => {
+        // Set working directory to avoid UNC path issues
+        const execOptions = {
+            cwd: process.env.WINDIR || 'C:\\Windows'
+        };
+        
+        exec(command, execOptions, (execError, stdout, stderr) => {
             if (execError) {
                 error(`Execution error: ${execError}`);
                 return reject(`Execution error: ${execError}\n${stderr}`);
@@ -292,7 +307,12 @@ function executePowerShellCommand(command) {
 
     // Return a promise that resolves with the command output
     return new Promise((resolve, reject) => {
-        exec(`powershell.exe -Command "${modifiedCommand}"`, (execError, stdout, stderr) => {
+        // Set working directory to avoid UNC path issues
+        const execOptions = {
+            cwd: process.env.WINDIR || 'C:\\Windows'
+        };
+        
+        exec(`powershell.exe -Command "${modifiedCommand}"`, execOptions, (execError, stdout, stderr) => {
             if (execError) {
                 error(`Execution error: ${execError}`);
                 return reject(`Execution error: ${execError}\n${stderr}`);

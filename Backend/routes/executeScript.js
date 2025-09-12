@@ -1,12 +1,15 @@
 const express = require('express');
 const router = express.Router();
+const path = require('path');
 const { executePowerShellScript } = require('../powershell');
 const logger = require('../utils/logger'); // Import the logger module
 const verifyToken = require('../middleware/verifyToken');
 
 router.post('/', verifyToken, async (req, res) => {
     const { scriptName, params } = req.body;
-    const scriptPath = `./functions/${scriptName}.ps1`;
+    const scriptPath = process.pkg 
+        ? path.join(process.cwd(), 'functions', `${scriptName}.ps1`)
+        : path.join(__dirname, '../functions', `${scriptName}.ps1`);
 
     logger.verbose(`Received request to execute script: ${scriptName} with params: ${JSON.stringify(params)}`);
 

@@ -3,7 +3,9 @@ const { executePowerShellScript, executePowerShellCommand } = require('../powers
 const { log, info, warn, error, verbose, debug } = require('../utils/logger'); // Import the sanitized logger functions
 const { insertDomainController, insertCurrentDomain, executeQuery, updateDomainControllerStatus } = require('../db/queries');
 
-const scriptPath = path.join(__dirname, '../functions/Get-DomainControllers.ps1');
+const scriptPath = process.pkg 
+    ? path.join(process.cwd(), 'functions', 'Get-DomainControllers.ps1')
+    : path.join(__dirname, '../functions/Get-DomainControllers.ps1');
 
 async function updateDomainControllers() {
     try {

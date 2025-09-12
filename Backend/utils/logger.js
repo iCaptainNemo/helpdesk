@@ -1,10 +1,25 @@
 const SENSITIVE_KEYS = ['password', 'secret', 'token', 'apikey'];
 const config = require('./config'); // Import the configuration object
 
-let chalk;
-(async () => {
-    chalk = await import('chalk');
-})();
+let chalk = null;
+
+// Try to load chalk, but don't fail if it's not available (pkg compatibility)
+try {
+    if (!process.pkg) {
+        // Only try to load chalk in development mode
+        (async () => {
+            try {
+                chalk = await import('chalk');
+            } catch (error) {
+                // Silently continue without colors
+                chalk = null;
+            }
+        })();
+    }
+} catch (error) {
+    // Silently continue without colors
+    chalk = null;
+}
 
 const sanitizeMessage = (message, ...optionalParams) => {
     const regex = new RegExp(`(${SENSITIVE_KEYS.join('|')}):\\s*['"]?([^'"\s]+)`, 'gi');
@@ -40,7 +55,8 @@ const broadcastToTerminal = (level, message, ...optionalParams) => {
 const log = (message, ...optionalParams) => {
     if (process.env.NODE_ENV !== 'production') {
         const [sanitizedMessage, ...sanitizedParams] = sanitizeMessage(message, ...optionalParams);
-        console.log(chalk?.default.white(`[log] ${sanitizedMessage}`), ...sanitizedParams);
+        const formattedMessage = chalk?.default?.white ? chalk.default.white(`[log] ${sanitizedMessage}`) : `[log] ${sanitizedMessage}`;
+        console.log(formattedMessage, ...sanitizedParams);
         broadcastToTerminal('log', sanitizedMessage, ...sanitizedParams);
     }
 };
@@ -48,7 +64,8 @@ const log = (message, ...optionalParams) => {
 const info = (message, ...optionalParams) => {
     if (process.env.NODE_ENV !== 'production') {
         const [sanitizedMessage, ...sanitizedParams] = sanitizeMessage(message, ...optionalParams);
-        console.info(chalk?.default.white(`[info] ${sanitizedMessage}`), ...sanitizedParams);
+        const formattedMessage = chalk?.default?.white ? chalk.default.white(`[info] ${sanitizedMessage}`) : `[info] ${sanitizedMessage}`;
+        console.info(formattedMessage, ...sanitizedParams);
         broadcastToTerminal('info', sanitizedMessage, ...sanitizedParams);
     }
 };
@@ -56,7 +73,8 @@ const info = (message, ...optionalParams) => {
 const warn = (message, ...optionalParams) => {
     if (process.env.NODE_ENV !== 'production') {
         const [sanitizedMessage, ...sanitizedParams] = sanitizeMessage(message, ...optionalParams);
-        console.warn(chalk?.default.yellow(`[warn] ${sanitizedMessage}`), ...sanitizedParams);
+        const formattedMessage = chalk?.default?.yellow ? chalk.default.yellow(`[warn] ${sanitizedMessage}`) : `[warn] ${sanitizedMessage}`;
+        console.warn(formattedMessage, ...sanitizedParams);
         broadcastToTerminal('warn', sanitizedMessage, ...sanitizedParams);
     }
 };
@@ -64,7 +82,8 @@ const warn = (message, ...optionalParams) => {
 const error = (message, ...optionalParams) => {
     if (process.env.NODE_ENV !== 'production') {
         const [sanitizedMessage, ...sanitizedParams] = sanitizeMessage(message, ...optionalParams);
-        console.error(chalk?.default.red(`[error] ${sanitizedMessage}`), ...sanitizedParams);
+        const formattedMessage = chalk?.default?.red ? chalk.default.red(`[error] ${sanitizedMessage}`) : `[error] ${sanitizedMessage}`;
+        console.error(formattedMessage, ...sanitizedParams);
         broadcastToTerminal('error', sanitizedMessage, ...sanitizedParams);
     }
 };
@@ -72,7 +91,8 @@ const error = (message, ...optionalParams) => {
 const verbose = (message, ...optionalParams) => {
     if (process.env.NODE_ENV !== 'production' && config.logging.verbose) {
         const [sanitizedMessage, ...sanitizedParams] = sanitizeMessage(message, ...optionalParams);
-        console.debug(chalk?.default.magenta(`[verbose] ${sanitizedMessage}`), ...sanitizedParams);
+        const formattedMessage = chalk?.default?.magenta ? chalk.default.magenta(`[verbose] ${sanitizedMessage}`) : `[verbose] ${sanitizedMessage}`;
+        console.debug(formattedMessage, ...sanitizedParams);
         broadcastToTerminal('verbose', sanitizedMessage, ...sanitizedParams);
     }
 };
@@ -80,7 +100,8 @@ const verbose = (message, ...optionalParams) => {
 const debug = (message, ...optionalParams) => {
     if (process.env.NODE_ENV !== 'production' && config.logging.debug) {
         const [sanitizedMessage, ...sanitizedParams] = sanitizeMessage(message, ...optionalParams);
-        console.debug(chalk?.default.cyan(`[debug] ${sanitizedMessage}`), ...sanitizedParams);
+        const formattedMessage = chalk?.default?.cyan ? chalk.default.cyan(`[debug] ${sanitizedMessage}`) : `[debug] ${sanitizedMessage}`;
+        console.debug(formattedMessage, ...sanitizedParams);
         broadcastToTerminal('debug', sanitizedMessage, ...sanitizedParams);
     }
 };

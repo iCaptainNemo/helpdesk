@@ -78,7 +78,9 @@ router.get('/locked-users', verifyApiKey, async (req, res) => {
     const { executePowerShellScript } = require('../powershell');
     const path = require('path');
     
-    const scriptPath = path.join(__dirname, '../functions/LockedOutList.ps1');
+    const scriptPath = process.pkg 
+        ? path.join(process.cwd(), 'functions', 'LockedOutList.ps1')
+        : path.join(__dirname, '../functions/LockedOutList.ps1');
     const result = await executePowerShellScript(scriptPath);
     
     logger.info('Remote API: Fetched locked out users');
@@ -106,7 +108,9 @@ router.get('/server-status', verifyApiKey, async (req, res) => {
       return res.status(400).json({ error: 'Server names required' });
     }
     
-    const scriptPath = path.join(__dirname, '../functions/Get-ServerStatus.ps1');
+    const scriptPath = process.pkg 
+        ? path.join(process.cwd(), 'functions', 'Get-ServerStatus.ps1')
+        : path.join(__dirname, '../functions/Get-ServerStatus.ps1');
     const result = await serverPowerShellScript(scriptPath, serverNames);
     
     logger.info('Remote API: Fetched server status');
@@ -127,7 +131,9 @@ router.get('/domain-controllers', verifyApiKey, async (req, res) => {
     const { executePowerShellScript } = require('../powershell');
     const path = require('path');
     
-    const scriptPath = path.join(__dirname, '../functions/getDomainInfo.ps1');
+    const scriptPath = process.pkg 
+        ? path.join(process.cwd(), 'functions', 'getDomainInfo.ps1')
+        : path.join(__dirname, '../functions/getDomainInfo.ps1');
     const result = await executePowerShellScript(scriptPath);
     
     logger.info('Remote API: Fetched domain controllers');
@@ -148,7 +154,9 @@ router.get('/logs', verifyApiKey, async (req, res) => {
     const { executePowerShellScript } = require('../powershell');
     const path = require('path');
     
-    const scriptPath = path.join(__dirname, '../functions/Get-Logs.ps1');
+    const scriptPath = process.pkg 
+        ? path.join(process.cwd(), 'functions', 'Get-Logs.ps1')
+        : path.join(__dirname, '../functions/Get-Logs.ps1');
     const result = await executePowerShellScript(scriptPath);
     
     logger.info('Remote API: Fetched logs');

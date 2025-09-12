@@ -1,10 +1,13 @@
 const express = require('express');
 const router = express.Router();
+const path = require('path');
 const { serverPowerShellScript } = require('../powershell');
 const logger = require('../utils/logger'); // Import the logger module
 
 // Define the path to the PowerShell script
-const scriptPath = './functions/Get-ADObjects.ps1';
+const scriptPath = process.pkg 
+    ? path.join(process.cwd(), 'functions', 'Get-ADObjects.ps1')
+    : path.join(__dirname, '../functions/Get-ADObjects.ps1');
 
 router.post('/', async (req, res) => {
     const { adObjectIDs } = req.body; // Expecting an array of AD object IDs
