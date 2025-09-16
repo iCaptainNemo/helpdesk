@@ -13,27 +13,54 @@ async function updateDomainControllers() {
 
         const { DcList, PDC, DDC, DomainName } = result;
 
+        info('PowerShell result:', JSON.stringify({ 
+            DcListKeys: Object.keys(DcList), 
+            PDCName: PDC?.Name, 
+            DDCName: DDC?.Name, 
+            DomainName 
+        }, null, 2));
+
+        // Temporarily disable foreign key constraints
+        await executeQuery('PRAGMA foreign_keys = OFF');
+        
         await executeQuery('DELETE FROM DomainControllers');
         await executeQuery('DELETE FROM CurrentDomain');
+        
+        // Re-enable foreign key constraints  
+        await executeQuery('PRAGMA foreign_keys = ON');
 
-        Object.keys(DcList).forEach((dcName) => {
+        const insertPromises = Object.keys(DcList).map((dcName) => {
             const details = DcList[dcName];
             const role = (dcName === PDC.Name) ? 'PDC' : (dcName === DDC.Name) ? 'DDC' : 'Other';
-            insertDomainController(dcName, JSON.stringify(details), role, (err) => {
-                if (err) {
-                    error(`Error inserting domain controller ${dcName}:`, err.message);
-                } else {
-                    info(`Domain controller ${dcName} inserted.`);
-                }
+            return new Promise((resolve, reject) => {
+                insertDomainController(dcName, JSON.stringify(details), role, (err, result) => {
+                    if (err) {
+                        error(`Error inserting domain controller ${dcName}:`, err.message);
+                        reject(err);
+                    } else {
+                        info(`Domain controller ${dcName} inserted.`);
+                        resolve(result);
+                    }
+                });
             });
         });
 
-        insertCurrentDomain(DomainName, PDC.Name, DDC.Name, (err) => {
-            if (err) {
-                error('Error inserting current domain:', err.message);
-            } else {
-                info('Current domain inserted.');
-            }
+        await Promise.all(insertPromises);
+
+        info(`Attempting to insert CurrentDomain with PDC: ${PDC?.Name}, DDC: ${DDC?.Name}`);
+        
+        await new Promise((resolve, reject) => {
+            insertCurrentDomain(DomainName, PDC.Name, DDC.Name, (err, result) => {
+                if (err) {
+                    error('Error inserting current domain:', err.message);
+                    error('PDC Name:', PDC?.Name);
+                    error('DDC Name:', DDC?.Name);
+                    reject(err);
+                } else {
+                    info('Current domain inserted.');
+                    resolve(result);
+                }
+            });
         });
     } catch (err) {
         error(`Error updating domain controllers: ${err}`);

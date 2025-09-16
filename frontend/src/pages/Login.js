@@ -18,10 +18,10 @@ const Login = ({ onLogin }) => {
   }, []);
 
   const handleLogin = async () => {
-    const upperCaseAdminID = AdminID.toUpperCase(); // Convert to uppercase
-    console.log(`Attempting login with AdminID: ${upperCaseAdminID}`); // Debug log
+    const normalizedAdminID = AdminID.toLowerCase(); // Convert to lowercase
+    console.log(`Attempting login with AdminID: ${normalizedAdminID}`); // Debug log
 
-    if (!upperCaseAdminID) {
+    if (!normalizedAdminID) {
       console.error('Empty AdminID provided');
       return;
     }
@@ -33,7 +33,7 @@ const Login = ({ onLogin }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          AdminID: upperCaseAdminID, // Use uppercase AdminID
+          AdminID: normalizedAdminID, // Use lowercase AdminID
           password
         })
       });
@@ -52,7 +52,7 @@ const Login = ({ onLogin }) => {
         console.log('Token stored in local storage:', localStorage.getItem('token')); // Debug log
 
         if (rememberMe) {
-          localStorage.setItem('AdminID', upperCaseAdminID); // Store uppercase username
+          localStorage.setItem('AdminID', normalizedAdminID); // Store lowercase username
         } else {
           localStorage.removeItem('AdminID');
         }

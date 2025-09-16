@@ -226,7 +226,7 @@ const LockedOutUsers = () => {
                                 {permissions.includes('execute_script') && (
                                     <td>
                                         <ScriptButton
-                                            scriptName="unlocker"
+                                            scriptName="Unlocker"
                                             params={{ userID: user.UserID }}
                                             buttonText="Unlock"
                                             onSuccess={(result) => handleUnlockSuccess(result, user.UserID)}

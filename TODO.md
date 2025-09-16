@@ -1,10 +1,10 @@
-# Helpdesk Jarvis Production Conversion TODO
+# Helpdesk Jarvis Production TODO
 
 ## Project Overview
 
-**Goal**: Transform the helpdesk application into a distributable PKG-based desktop application with local/remote database modes.
+**Goal**: Maintain and enhance the distributable PKG-based desktop application with continuous improvements.
 
-**Current Status**: Successfully transitioned from Electron to PKG distribution model with standalone exe.
+**Current Status**: ✅ **FULLY FUNCTIONAL** - Complete dev-production parity achieved with 62MB standalone exe.
 
 ---
 
@@ -111,37 +111,36 @@ try {
 
 ---
 
-## 📋 PENDING PHASES (7-9)
+## 🔄 ACTIVE IMPROVEMENT PHASES
 
-### Phase 7: Distribution Strategy
+### Phase 7: Auto-Update System Implementation
+**Status**: 🎯 **DECISION NEEDED**
+- **Option 1**: Squirrel.Windows - Delta updates, professional UX like Discord
+- **Option 2**: GitHub Releases + Simple Updater - Full download approach
+- **Recommendation**: Squirrel.Windows for efficient PowerShell/frontend updates
+
+### Phase 8: Bug Fixes & Optimization  
+**Status**: 🔧 **IN PROGRESS**
+- ✅ Fixed PowerShell script path resolution
+- ✅ Fixed database query methods (run vs all)
+- ✅ Fixed authentication case-sensitivity
+- ⚠️ **CURRENT ISSUE**: PowerShell script case mismatch (unlocker.ps1 vs Unlocker.ps1)
+
+### Phase 9: Production Hardening
 **Status**: Pending
-- GitHub Actions workflow for automated pkg builds
-- Version checking and update notifications
 - Code signing for Windows distribution
-
-### Phase 8: Legacy Code Cleanup  
-**Status**: Pending
-- Remove unused authentication code
-- Clean up old setup system references
-- Remove Electron dependencies from package.json
-- Code optimization and documentation updates
-
-### Phase 9: Testing & Documentation
-**Status**: Pending  
-- End-to-end testing (local and remote modes)
-- Update README.md and CLAUDE.md for pkg architecture
-- Performance testing and validation
+- Enhanced error handling and logging
+- Performance optimization and validation
 
 ---
 
 ## 🎯 IMMEDIATE NEXT STEPS
 
-1. ✅ **Complete sqlite3 migration** - ~~Convert remaining 5 files to better-sqlite3~~ **COMPLETED**
-2. ✅ **Deep linking integration** - ~~Automatic registry setup for external tools~~ **COMPLETED**
-3. ✅ **Tools download system** - ~~Automatic GitHub tool downloads~~ **COMPLETED**
-4. ✅ **Documentation overhaul** - ~~README.md and DEVELOPMENT.md created~~ **COMPLETED**
-5. **Test current exe** - Final validation of all functionality including admin features
-6. **Distribution setup** - GitHub Actions for automated builds
+1. 🔧 **Fix PowerShell Script Case Issue** - Resolve unlocker.ps1 vs Unlocker.ps1 mismatch
+2. 🎯 **Choose Auto-Update Strategy** - Decide between Squirrel.Windows vs GitHub Releases  
+3. 🧪 **Comprehensive Testing** - Validate all PowerShell scripts and database operations
+4. 🚀 **Implement Auto-Updates** - Based on chosen strategy from step 2
+5. 📋 **Production Hardening** - Code signing, enhanced logging, performance optimization
 
 ---
 

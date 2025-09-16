@@ -74,8 +74,8 @@ async function getServerStatuses() {
                     updateStmt.run(
                         server.Status,
                         server.FileShareService,
-                        onlineTime ? onlineTime.toISOString() : null,
-                        offlineTime ? offlineTime.toISOString() : null,
+                        onlineTime ? (onlineTime instanceof Date ? onlineTime.toISOString() : onlineTime) : null,
+                        offlineTime ? (offlineTime instanceof Date ? offlineTime.toISOString() : offlineTime) : null,
                         server.ServerName
                     );
                 }

@@ -16,7 +16,9 @@
       "Bash(npm view:*)",
       "Bash(npm run copy-native-binaries:*)",
       "Bash(pkg:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(npm run post-build:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

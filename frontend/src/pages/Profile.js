@@ -78,7 +78,7 @@ const Profile = ({ permissions }) => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}` // Include token in Authorization header
                 },
-                body: JSON.stringify({ AdminID: profile.AdminID, tempPassword })
+                body: JSON.stringify({ tempPassword })
             });
 
             if (!response.ok) {

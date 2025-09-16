@@ -177,7 +177,7 @@ function App() {
             <>
               {isAuthenticated ? (
                 <>
-                  <Route path="/" element={<Navigate to="/dashboard" />} />
+                  <Route path="/" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Dashboard /></AuthenticatedLayout>} />
                   <Route path="/dashboard" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Dashboard /></AuthenticatedLayout>} />
                   <Route path="/ad-object/:adObjectID?" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ADProperties permissions={permissions} /></AuthenticatedLayout>} />
                   <Route path="/Profile" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Profile permissions={permissions} /></AuthenticatedLayout>} />

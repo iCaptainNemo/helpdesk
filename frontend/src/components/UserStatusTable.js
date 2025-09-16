@@ -185,7 +185,7 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
             {value ? (
               permissions.includes('execute_script') ? (
                 <ScriptButton
-                  scriptName="unlocker"
+                  scriptName="Unlocker"
                   params={{ userID: adObjectID }}
                   buttonText="Locked"
                   onSuccess={handleUnlockSuccess}

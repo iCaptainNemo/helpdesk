@@ -132,32 +132,55 @@ const frontendBuildPath = path.join(__dirname, '../frontend/build');
 // In pkg mode, manually serve critical static files since express.static may not work with bundled assets
 if (process.pkg) {
     const fs = require('fs');
+    let assetManifest = null;
     
-    // Serve main JS file
-    app.get('/static/js/main.52aabf04.js', (req, res) => {
-        try {
-            const jsPath = path.join(__dirname, '../frontend/build/static/js/main.52aabf04.js');
-            const content = fs.readFileSync(jsPath, 'utf8');
-            res.setHeader('Content-Type', 'application/javascript');
-            res.send(content);
-        } catch (err) {
-            console.log(`[DEBUG] Failed to serve JS file: ${err.message}`);
-            res.status(404).send('JS file not found');
-        }
-    });
+    // Load asset manifest to get dynamic filenames
+    try {
+        const manifestPath = path.join(__dirname, '../frontend/build/asset-manifest.json');
+        const manifestContent = fs.readFileSync(manifestPath, 'utf8');
+        assetManifest = JSON.parse(manifestContent);
+        console.log('Asset manifest loaded successfully');
+    } catch (err) {
+        console.error('Failed to load asset manifest:', err.message);
+    }
     
-    // Serve main CSS file
-    app.get('/static/css/main.4c4c95fc.css', (req, res) => {
-        try {
-            const cssPath = path.join(__dirname, '../frontend/build/static/css/main.4c4c95fc.css');
-            const content = fs.readFileSync(cssPath, 'utf8');
-            res.setHeader('Content-Type', 'text/css');
-            res.send(content);
-        } catch (err) {
-            console.log(`[DEBUG] Failed to serve CSS file: ${err.message}`);
-            res.status(404).send('CSS file not found');
+    // Dynamically serve JS and CSS files based on asset manifest
+    if (assetManifest && assetManifest.files) {
+        const mainJsFile = assetManifest.files['main.js'];
+        const mainCssFile = assetManifest.files['main.css'];
+        
+        if (mainJsFile) {
+            app.get(mainJsFile, (req, res) => {
+                try {
+                    const jsPath = path.join(__dirname, '../frontend/build', mainJsFile);
+                    const content = fs.readFileSync(jsPath, 'utf8');
+                    res.setHeader('Content-Type', 'application/javascript');
+                    res.send(content);
+                } catch (err) {
+                    console.log(`[DEBUG] Failed to serve JS file: ${err.message}`);
+                    res.status(404).send('JS file not found');
+                }
+            });
         }
-    });
+        
+        if (mainCssFile) {
+            app.get(mainCssFile, (req, res) => {
+                try {
+                    const cssPath = path.join(__dirname, '../frontend/build', mainCssFile);
+                    const content = fs.readFileSync(cssPath, 'utf8');
+                    res.setHeader('Content-Type', 'text/css');
+                    res.send(content);
+                } catch (err) {
+                    console.log(`[DEBUG] Failed to serve CSS file: ${err.message}`);
+                    res.status(404).send('CSS file not found');
+                }
+            });
+        }
+        
+        console.log(`[INFO] Dynamic routes created for: ${mainJsFile}, ${mainCssFile}`);
+    } else {
+        console.error('[ERROR] Asset manifest not available - static files may not load correctly');
+    }
 } else {
     // Development mode - use normal static middleware
     app.use(express.static(frontendBuildPath));

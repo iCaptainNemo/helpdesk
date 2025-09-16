@@ -99,7 +99,7 @@ endlocal`;
             `reg add "${this.registryKey}" /v "URL Protocol" /d "" /f`,
             `reg add "${this.registryKey}\\shell" /f`,
             `reg add "${this.registryKey}\\shell\\open" /f`,
-            `reg add "${this.registryKey}\\shell\\open\\command" /ve /d "\\"${this.jarvisLauncherBat}\\" %%1" /f`
+            `reg add "${this.registryKey}\\shell\\open\\command" /ve /d "\\"${this.jarvisLauncherBat}\\" \\"%%1\\"" /f`
         ];
 
         for (const command of commands) {

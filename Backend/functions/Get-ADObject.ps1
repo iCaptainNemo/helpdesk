@@ -14,10 +14,18 @@ function Get-ADObjectType {
 
     try {
         # Retrieve the objects from Active Directory with all properties
-        $adObject = Get-ADObject -Filter "Name -like '$object' -or SamAccountName -like '$object*' -or (objectClass -eq 'printQueue' -and Name -like '*$object')" -Properties *
+        $adObjects = Get-ADObject -Filter "Name -like '$object' -or SamAccountName -like '$object*' -or (objectClass -eq 'printQueue' -and Name -like '*$object')" -Properties *
 
-        if ($null -eq $adObject) {
+        if ($null -eq $adObjects) {
             throw "No objects found matching: $object"
+        }
+
+        # If multiple objects are found, take the first exact match or the first result
+        if ($adObjects -is [array]) {
+            $exactMatch = $adObjects | Where-Object { $_.Name -eq $object -or $_.SamAccountName -eq $object }
+            $adObject = if ($exactMatch) { $exactMatch[0] } else { $adObjects[0] }
+        } else {
+            $adObject = $adObjects
         }
 
         # Manually construct the JSON output

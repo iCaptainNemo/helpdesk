@@ -124,13 +124,29 @@ const ADProperties = ({ permissions }) => {
     }
   
     const data = await fetchADObjectData(adObjectID);
-    const allProperties = Object.keys(data); // Get all properties
-    const selectedProperties = getDefaultProperties(data.ObjectClass, allProperties);
-  
-    setTabs((prevTabs) => [
-      ...prevTabs,
-      { name: adObjectID, data, selectedProperties },
-    ]);
+    
+    // Debug: Check if data is an array instead of an object
+    if (Array.isArray(data)) {
+      console.error('AD Object data is unexpectedly an array:', data);
+      // Take the first item if it's an array
+      const actualData = data.length > 0 ? data[0] : {};
+      const allProperties = Object.keys(actualData);
+      const selectedProperties = getDefaultProperties(actualData.ObjectClass, allProperties);
+      
+      setTabs((prevTabs) => [
+        ...prevTabs,
+        { name: adObjectID, data: actualData, selectedProperties },
+      ]);
+    } else {
+      const allProperties = Object.keys(data); // Get all properties
+      const selectedProperties = getDefaultProperties(data.ObjectClass, allProperties);
+    
+      setTabs((prevTabs) => [
+        ...prevTabs,
+        { name: adObjectID, data, selectedProperties },
+      ]);
+    }
+    
     setActiveTab(tabs.length);
     navigate(`/ad-object/${adObjectID}`); // Update the URL
   }, [fetchADObjectData, navigate, tabs, getDefaultProperties]);
@@ -365,11 +381,13 @@ const ADProperties = ({ permissions }) => {
           </button>
         </div>
       )}
-      <div className="button-container">
-        <button onClick={() => setModalIsOpen(true)} className="settings-button">
-          ⚙️
-        </button>
-      </div>
+      {tabs[activeTab]?.data.ObjectClass === 'user' && (
+        <div className="button-container">
+          <button onClick={() => setModalIsOpen(true)} className="settings-button" title="User Settings">
+            ⚙️
+          </button>
+        </div>
+      )}
       <div className="tables-container">
         <div className="logs-table-container" ref={logsTableRef}>
           <Logs adObjectID={tabs[activeTab]?.name} />
@@ -385,7 +403,7 @@ const ADProperties = ({ permissions }) => {
               {tabs[activeTab]?.selectedProperties.map((key) => (
                 <tr key={key}>
                   <td>{key}</td>
-                  <td onClick={() => copyToClipboard(formatValue(key, tabs[activeTab].data[key]))} className="clickable-cell">
+                  <td onClick={() => copyToClipboard(formatValue(key, tabs[activeTab].data[key]))} className="clickable-cell" title="Click to copy">
                     {formatValue(key, tabs[activeTab].data[key])}
                   </td>
                 </tr>

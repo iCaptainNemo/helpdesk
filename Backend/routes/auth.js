@@ -52,6 +52,7 @@ function verifyToken(req, res, next) {
 // Login route with support for both local .env and database authentication
 router.post('/login', sanitizeInput, async (req, res) => {
   const { AdminID, password } = req.body;
+  const normalizedAdminID = AdminID.toLowerCase();
   logger.info('Received login request for AdminID:', AdminID);
 
   try {
@@ -64,33 +65,33 @@ router.post('/login', sanitizeInput, async (req, res) => {
       return res.status(500).json({ error: 'Authentication not configured' });
     }
     
-    if (AdminID.toLowerCase() !== envUsername.toLowerCase()) {
+    if (normalizedAdminID !== envUsername.toLowerCase()) {
       logger.warn(`Invalid username: ${AdminID}, expected: ${envUsername}`);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
     const bcrypt = require('bcrypt');
     const isPasswordValid = await bcrypt.compare(password, envPasswordHash);
-    logger.info(`Password verification result for AdminID ${AdminID}: ${isPasswordValid}`);
+    logger.info(`Password verification result for AdminID ${normalizedAdminID}: ${isPasswordValid}`);
     
     if (!isPasswordValid) {
-      logger.warn('Invalid password for AdminID:', AdminID);
+      logger.warn('Invalid password for AdminID:', normalizedAdminID);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
     // Generate JWT token
-    const token = jwt.sign({ AdminID, sessionID: req.sessionID }, SECRET_KEY, { expiresIn: JWT_EXPIRATION });
-    logger.info(`JWT token generated for AdminID: ${AdminID}, SessionID: ${req.sessionID}`);
+    const token = jwt.sign({ AdminID: normalizedAdminID, sessionID: req.sessionID }, SECRET_KEY, { expiresIn: JWT_EXPIRATION });
+    logger.info(`JWT token generated for AdminID: ${normalizedAdminID}, SessionID: ${req.sessionID}`);
 
     // Store session information
-    req.session.AdminID = AdminID;
+    req.session.AdminID = normalizedAdminID;
     req.session.adminComputer = process.env.COMPUTERNAME || 'localhost';
-    logger.info(`Session created for AdminID: ${AdminID}`);
+    logger.info(`Session created for AdminID: ${normalizedAdminID}`);
 
     // Return response
     res.json({ 
       token, 
-      AdminID, 
+      AdminID: normalizedAdminID, 
       adminComputer: process.env.COMPUTERNAME || 'localhost', 
       sessionID: req.sessionID
     });
@@ -101,18 +102,38 @@ router.post('/login', sanitizeInput, async (req, res) => {
 });
 
 // Route to update password
-router.post('/update-password', sanitizeInput, async (req, res) => {
-  const { AdminID, newPassword } = req.body;
-  logger.info('Received password update request for AdminID:', AdminID);
+router.post('/update-password', verifyToken, sanitizeInput, async (req, res) => {
+  const { newPassword } = req.body;
+  const normalizedAdminID = req.AdminID.toLowerCase(); // Get AdminID from JWT token
+  logger.info('Received password update request for AdminID:', normalizedAdminID);
 
   try {
+    const envUsername = process.env.ADMIN_USERNAME;
+    
+    if (normalizedAdminID !== envUsername.toLowerCase()) {
+      logger.warn(`Unauthorized password update attempt for AdminID: ${normalizedAdminID}`);
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     // Hash the new password
-    const hashedPassword = await hashPassword(newPassword);
+    const bcrypt = require('bcrypt');
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // Update the password in the database
-    await insertOrUpdateAdminUser({ AdminID, password: hashedPassword });
-    logger.info(`Password updated for AdminID: ${AdminID}`);
-
+    // Update the .env file
+    const fs = require('fs');
+    const path = require('path');
+    const envPath = process.pkg 
+      ? path.join(process.cwd(), '.env')
+      : path.join(__dirname, '..', '.env');
+    
+    let envContent = fs.readFileSync(envPath, 'utf8');
+    envContent = envContent.replace(/^ADMIN_PASSWORD=.*$/m, `ADMIN_PASSWORD=${hashedPassword}`);
+    fs.writeFileSync(envPath, envContent);
+    
+    // Update the environment variable in memory
+    process.env.ADMIN_PASSWORD = hashedPassword;
+    
+    logger.info(`Password updated for AdminID: ${normalizedAdminID}`);
     res.status(200).json({ message: 'Password updated successfully' });
   } catch (error) {
     logger.error('Password update failed:', error);
@@ -121,15 +142,34 @@ router.post('/update-password', sanitizeInput, async (req, res) => {
 });
 
 // Route to update temporary password
-router.post('/update-temp-password', sanitizeInput, async (req, res) => {
-  const { AdminID, tempPassword } = req.body;
-  logger.info('Received temporary password update request for AdminID:', AdminID);
+router.post('/update-temp-password', verifyToken, sanitizeInput, async (req, res) => {
+  const { tempPassword } = req.body;
+  const normalizedAdminID = req.AdminID.toLowerCase(); // Get AdminID from JWT token
+  logger.info('Received temporary password update request for AdminID:', normalizedAdminID);
 
   try {
-    // Update the temporary password in the database
-    await insertOrUpdateAdminUser({ AdminID, temppassword: tempPassword });
-    logger.info(`Temporary password updated for AdminID: ${AdminID}`);
+    const envUsername = process.env.ADMIN_USERNAME;
+    
+    if (normalizedAdminID !== envUsername.toLowerCase()) {
+      logger.warn(`Unauthorized temp password update attempt for AdminID: ${normalizedAdminID}`);
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
 
+    // Update the .env file
+    const fs = require('fs');
+    const path = require('path');
+    const envPath = process.pkg 
+      ? path.join(process.cwd(), '.env')
+      : path.join(__dirname, '..', '.env');
+    
+    let envContent = fs.readFileSync(envPath, 'utf8');
+    envContent = envContent.replace(/^TEMP_PASSWORD=.*$/m, `TEMP_PASSWORD=${tempPassword}`);
+    fs.writeFileSync(envPath, envContent);
+    
+    // Update the environment variable in memory
+    process.env.TEMP_PASSWORD = tempPassword;
+    
+    logger.info(`Temporary password updated for AdminID: ${normalizedAdminID}`);
     res.status(200).json({ message: 'Temporary password updated successfully' });
   } catch (error) {
     logger.error('Temporary password update failed:', error);
