@@ -112,44 +112,9 @@ function incrementUserPasswordResetCount(userID, adminID) {
 }
 
 async function insertOrUpdateAdminUser(adminUser) {
-    const fetchQuery = `SELECT * FROM Admin WHERE AdminID = ?;`;
-    const existingUser = await executeQuery(fetchQuery, [adminUser.AdminID]);
-
-    if (existingUser.length === 0) {
-        const insertQuery = `
-            INSERT INTO Admin (AdminID, AdminComputer, password, temppassword)
-            VALUES (?, ?, ?, ?);
-        `;
-        const params = [
-            adminUser.AdminID, adminUser.AdminComputer, adminUser.password, adminUser.temppassword
-        ];
-        await executeQuery(insertQuery, params);
-    } else {
-        const fieldsToUpdate = {};
-
-        // Check if AdminComputer needs to be updated
-        if (adminUser.AdminComputer && adminUser.AdminComputer !== existingUser[0].AdminComputer) {
-            fieldsToUpdate.AdminComputer = adminUser.AdminComputer;
-        }
-
-        // Check if password needs to be updated
-        if (adminUser.password) {
-            fieldsToUpdate.password = adminUser.password;
-        }
-
-        // Check if temppassword needs to be updated
-        if (adminUser.temppassword) {
-            fieldsToUpdate.temppassword = adminUser.temppassword;
-        }
-
-        // If there are fields to update, construct and execute the update query
-        if (Object.keys(fieldsToUpdate).length > 0) {
-            const setClause = Object.keys(fieldsToUpdate).map(field => `${field} = ?`).join(', ');
-            const updateQuery = `UPDATE Admin SET ${setClause} WHERE AdminID = ?;`;
-            const params = [...Object.values(fieldsToUpdate), adminUser.AdminID];
-            await executeQuery(updateQuery, params);
-        }
-    }
+    // Admin table no longer exists - this function is deprecated
+    console.warn('insertOrUpdateAdminUser is deprecated - Admin table no longer exists');
+    return { success: false, message: 'Admin table no longer exists' };
 }
 
 function fetchAdminUser(adminID) {
@@ -172,15 +137,9 @@ function fetchAdminUser(adminID) {
         return Promise.resolve(mockAdmin);
     }
     
-    // Legacy database mode
-    const query = `SELECT * FROM Admin WHERE AdminID = ?;`;
-    try {
-        const stmt = db.prepare(query);
-        const row = stmt.get(adminID);
-        return Promise.resolve(row);
-    } catch (err) {
-        return Promise.reject(err);
-    }
+    // Legacy database mode - Admin table no longer exists, return null
+    console.warn('fetchAdminUser: Admin table no longer exists, returning null');
+    return Promise.resolve(null);
 }
 
 function fetchAllAdminUsers() {
@@ -203,15 +162,9 @@ function fetchAllAdminUsers() {
         return Promise.resolve(mockAdmins);
     }
     
-    // Legacy database mode
-    const query = `SELECT * FROM Admin;`;
-    try {
-        const stmt = db.prepare(query);
-        const rows = stmt.all();
-        return Promise.resolve(rows);
-    } catch (err) {
-        return Promise.reject(err);
-    }
+    // Legacy database mode - Admin table no longer exists, return empty array
+    console.warn('fetchAllAdminUsers: Admin table no longer exists, returning empty array');
+    return Promise.resolve([]);
 }
 
 // New functions for managing servers

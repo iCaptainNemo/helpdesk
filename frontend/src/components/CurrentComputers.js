@@ -84,7 +84,7 @@ const CurrentComputersTable = ({ adObjectID }) => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No token found');
 
-      const command = `../../../Tools/PsLoggedon.exe -l -x \\\\${computer} | ConvertTo-Json -Compress`;
+      const command = `PsLoggedon.exe -l -x \\\\${computer} | ConvertTo-Json -Compress`;
       const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
         method: 'POST',
         headers: {

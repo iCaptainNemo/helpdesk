@@ -22,6 +22,7 @@ const verifyToken = (req, res, next) => {
 
     req.AdminID = decoded.AdminID;
     req.sessionID = decoded.sessionID; // Attach sessionID to the request object if needed
+    req.user = { AdminID: decoded.AdminID, sessionID: decoded.sessionID }; // Also set user object for consistency
 
     logger.verbose('Token verified, AdminID:', req.AdminID, 'SessionID:', req.sessionID);
     next();

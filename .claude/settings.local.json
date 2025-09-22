@@ -18,7 +18,9 @@
       "Bash(pkg:*)",
       "Bash(npm run build:*)",
       "Bash(npm run post-build:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npm start)",
+      "Bash(netstat:*)"
     ],
     "deny": [],
     "ask": []

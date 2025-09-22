@@ -8,24 +8,39 @@
     overflow-y: auto; /* Ensure vertical scrolling within the table container */
 }
 
-.logs-table {
+/* Use more specific selectors to override ADProperties.css */
+.logs-container.theme-modern .logs-table {
     width: 100%;
     table-layout: auto;
-    min-width: 100%; 
+    min-width: 100%;
+    background-color: var(--bg-card) !important;
+    border-collapse: collapse;
 }
 
-.logs-table th, .logs-table td {
-    border: 1px solid #ddd;
-    padding: 8px;
+.logs-container.theme-modern .logs-table th, 
+.logs-container.theme-modern .logs-table td {
+    border: 1px solid var(--border-primary) !important;
+    padding: var(--spacing-sm) !important;
+    text-align: left;
     white-space: nowrap; /* Prevent text from wrapping */
 }
 
-.logs-table th {
-    background-color: #f2f2f2;
-    text-align: left;
+.logs-container.theme-modern .logs-table th {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    font-weight: var(--font-weight-semibold);
     position: sticky;
     top: 0;
     z-index: 1;
+}
+
+.logs-container.theme-modern .logs-table td {
+    background-color: var(--bg-card) !important;
+    color: var(--text-primary) !important;
+}
+
+.logs-container.theme-modern .logs-table tbody tr:hover {
+    background-color: var(--bg-card-hover) !important;
 }
 
 .clickable-cell {
@@ -34,8 +49,8 @@
 }
 
 .clickable-cell:hover {
-    background-color: #f0f0f0;
-    color: rgb(0, 0, 0);
+    background-color: var(--bg-card-hover);
+    color: var(--text-primary);
 }
 
 .clickable-cell::after {
@@ -43,8 +58,8 @@
     position: absolute;
     bottom: -20px;
     left: 0;
-    background-color: rgb(246, 255, 115);
-    color: rgb(0, 0, 0);
+    background-color: var(--accent-blue);
+    color: var(--text-primary);
     padding: 2px 5px;
     border-radius: 3px;
     font-size: 12px;
@@ -60,10 +75,10 @@
     bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
-    background-color: rgb(125, 250, 132);
-    color: white;
+    background-color: var(--status-success);
+    color: var(--text-primary);
     padding: 10px;
     border-radius: 5px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-lg);
     z-index: 1000;
 }

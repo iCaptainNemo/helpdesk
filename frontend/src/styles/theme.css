@@ -347,6 +347,60 @@ input:checked + .slider:before {
 .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
 .animate-spin { animation: spin 1s linear infinite; }
 
+/* Navigation hover effects */
+.nav-link {
+  transition: all 0.2s ease;
+}
+
+.nav-link:not(.active):hover {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  transform: translateY(-1px);
+}
+
+.nav-link.active {
+  background-color: var(--accent-blue) !important;
+  color: white !important;
+  font-weight: var(--font-weight-semibold) !important;
+}
+
+/* App Layout Scaling */
+.app-main-content {
+  zoom: 0.8; /* Scale down the main app content by 20%, excluding terminal */
+}
+
+/* Dashboard Table Styles */
+.dashboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--bg-card);
+}
+
+.dashboard-table th,
+.dashboard-table td {
+  border: 1px solid var(--border-primary);
+  padding: var(--spacing-sm);
+  text-align: left;
+}
+
+.dashboard-table th {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-weight: var(--font-weight-semibold);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.dashboard-table td {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.dashboard-table tbody tr:hover {
+  background-color: var(--bg-card-hover);
+}
+
 /* Print Styles */
 @media print {
   * {

@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import '../styles/UserStatusTable.css';
+import '../styles/theme.css'; // Import modern theme
 import ScriptButton from './ScriptButton'; // Import the ScriptButton component
 import CurrentComputers from './CurrentComputers'; // Import the CurrentComputers component
 
-const UserStatusTable = ({ adObjectID, permissions }) => {
+const UserStatusTable = ({ adObjectID, permissions, endpoint }) => {
   const [userAccountStatus, setUserAccountStatus] = useState({});
   const [additionalFields, setAdditionalFields] = useState({
     LastHelped: null,
@@ -26,7 +27,7 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
   useEffect(() => {
     const fetchPDC = async () => {
       try {
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/domain-controllers/pdc`);
+        const response = await fetch(`${endpoint}/api/domain-controllers/pdc`);
         if (!response.ok) throw new Error('Network response was not ok');
         const data = await response.text(); // Fetch as plain text
         setPDC(data);
@@ -50,7 +51,7 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
 
         // Fetch Active Directory properties
         const command = `Get-ADUser -Identity ${adObjectID} -Server ${PDC} -Properties ${userAccountStatusProperties.join(',')} | ConvertTo-Json -Compress`;
-        const adResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
+        const adResponse = await fetch(`${endpoint}/api/execute-command`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -80,11 +81,8 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
     
         if (!adObjectID) throw new Error('adObjectID is not defined');
     
-        const backendUrl = process.env.REACT_APP_BACKEND_URL;
-        if (!backendUrl) throw new Error('Backend URL is not defined');
-    
         // Fetch additional fields from the database
-        const dbResponse = await fetch(`${backendUrl}/api/fetch-user`, {
+        const dbResponse = await fetch(`${endpoint}/api/fetch-user`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -150,10 +148,7 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
         const token = localStorage.getItem('token');
         if (!token) throw new Error('No token found');
 
-        const backendUrl = process.env.REACT_APP_BACKEND_URL;
-        if (!backendUrl) throw new Error('Backend URL is not defined');
-
-        const response = await fetch(`${backendUrl}/api/fetch-user/update`, {
+        const response = await fetch(`${endpoint}/api/fetch-user/update`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -244,7 +239,7 @@ const UserStatusTable = ({ adObjectID, permissions }) => {
   };
 
   return (
-    <div className="user-status-table-container">
+    <div className="user-status-table-container theme-modern">
       <table className="user-account-status-table">
         <thead>
           <tr>

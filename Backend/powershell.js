@@ -1,4 +1,5 @@
 const { exec } = require('child_process');
+const path = require('path');
 const { log, info, warn, error, verbose, debug } = require('./utils/logger');
 
 // List of scripts where stdout logging should be suppressed
@@ -307,11 +308,19 @@ function executePowerShellCommand(command) {
 
     // Return a promise that resolves with the command output
     return new Promise((resolve, reject) => {
-        // Set working directory to avoid UNC path issues
+        // Set working directory to avoid UNC path issues and add Tools to PATH
+        const toolsPath = process.pkg
+            ? path.join(process.cwd(), 'Tools')
+            : path.join(__dirname, '../Tools');
+
         const execOptions = {
-            cwd: process.env.WINDIR || 'C:\\Windows'
+            cwd: process.env.WINDIR || 'C:\\Windows',
+            env: {
+                ...process.env,
+                PATH: `${toolsPath};${process.env.PATH}`
+            }
         };
-        
+
         exec(`powershell.exe -Command "${modifiedCommand}"`, execOptions, (execError, stdout, stderr) => {
             if (execError) {
                 error(`Execution error: ${execError}`);

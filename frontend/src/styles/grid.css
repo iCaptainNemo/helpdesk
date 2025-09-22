@@ -12,11 +12,11 @@
 /* Main Dashboard Layout - 4 Column Responsive Grid */
 .dashboard-main {
   grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: auto auto auto auto;
+  grid-template-rows: auto auto auto auto auto;
   grid-template-areas:
     "metrics-1 metrics-2 metrics-3 metrics-4"
     "chart-timeline chart-timeline chart-pie chart-pie"
-    "active-issues active-issues quick-actions quick-actions"
+    "active-issues active-issues domain-controllers domain-controllers"
     "system-status system-status recent-activity recent-activity";
 }
 
@@ -28,7 +28,7 @@
 .grid-chart-timeline { grid-area: chart-timeline; }
 .grid-chart-pie { grid-area: chart-pie; }
 .grid-active-issues { grid-area: active-issues; }
-.grid-quick-actions { grid-area: quick-actions; }
+.grid-domain-controllers { grid-area: domain-controllers; }
 .grid-system-status { grid-area: system-status; }
 .grid-recent-activity { grid-area: recent-activity; }
 
@@ -322,7 +322,7 @@
     grid-template-areas:
       "metrics-1 metrics-2 metrics-3 metrics-4"
       "chart-timeline chart-timeline chart-pie chart-pie"
-      "active-issues active-issues quick-actions quick-actions"
+      "active-issues active-issues domain-controllers domain-controllers"
       "system-status system-status recent-activity recent-activity";
   }
 }
@@ -337,7 +337,7 @@
       "chart-timeline chart-timeline"
       "chart-pie chart-pie"
       "active-issues active-issues"
-      "quick-actions quick-actions"
+      "domain-controllers domain-controllers"
       "system-status system-status"
       "recent-activity recent-activity";
   }
@@ -368,7 +368,7 @@
       "chart-timeline"
       "chart-pie"
       "active-issues"
-      "quick-actions"
+      "domain-controllers"
       "system-status"
       "recent-activity";
   }

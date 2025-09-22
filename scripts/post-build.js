@@ -13,7 +13,7 @@ if (fs.existsSync(indexHtmlPath)) {
   let indexContent = fs.readFileSync(indexHtmlPath, 'utf8');
   
   // Replace any existing CSP with the updated one
-  const targetCSP = 'default-src \'self\' \'unsafe-inline\' \'unsafe-eval\' data: blob:; connect-src \'self\' http://localhost:* ws://localhost:* http://172.25.129.95:* ws://172.25.129.95:*; img-src \'self\' data: blob:; style-src \'self\' \'unsafe-inline\' https://fonts.googleapis.com; style-src-elem \'self\' \'unsafe-inline\' https://fonts.googleapis.com; font-src \'self\' https://fonts.gstatic.com;';
+  const targetCSP = 'default-src \'self\' \'unsafe-inline\' \'unsafe-eval\' data: blob: https://fonts.googleapis.com https://fonts.gstatic.com; connect-src \'self\' http://localhost:* ws://localhost:* http://172.25.129.95:* ws://172.25.129.95:*; img-src \'self\' data: blob:; style-src \'self\' \'unsafe-inline\' https://fonts.googleapis.com; style-src-elem \'self\' \'unsafe-inline\' https://fonts.googleapis.com; font-src \'self\' https://fonts.gstatic.com;';
   
   // Find and replace the entire Content-Security-Policy content
   indexContent = indexContent.replace(

@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, forwardRef } from 'react';
 import '../styles/Logs.css'; // Import the CSS file
+import '../styles/theme.css'; // Import modern theme
 
-const Logs = ({ adObjectID }) => {
+const Logs = forwardRef(({ adObjectID }, ref) => {
   const [logs, setLogs] = useState([]);
   const [error, setError] = useState(null);
   const [tooltip, setTooltip] = useState({ visible: false, message: '' });
@@ -75,7 +76,7 @@ const Logs = ({ adObjectID }) => {
   };
 
   return (
-    <div className="logs-container">
+    <div ref={ref} className="logs-container theme-modern">
       <div className="table-container">
         <table className="logs-table">
           <thead>
@@ -113,6 +114,8 @@ const Logs = ({ adObjectID }) => {
       {tooltip.visible && <div className="tooltip">{tooltip.message}</div>}
     </div>
   );
-};
+});
+
+Logs.displayName = 'Logs';
 
 export default Logs;

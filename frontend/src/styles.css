@@ -29,6 +29,40 @@
   background: #1e1e1e;
 }
 
+.app-terminal-section.minimized {
+  flex: 0;
+  min-height: 40px;
+  max-height: 40px;
+}
+
+.terminal-minimized-bar {
+  height: 40px;
+  background: #333;
+  border-top: 2px solid #555;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 15px;
+  cursor: pointer;
+  color: #fff;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+}
+
+.terminal-minimized-bar:hover {
+  background: #444;
+}
+
+.terminal-minimized-bar .terminal-icon {
+  color: #4CAF50;
+  margin-right: 8px;
+}
+
+.terminal-minimized-bar .expand-icon {
+  color: #ccc;
+  font-size: 12px;
+}
+
 /* Responsive adjustments for mobile */
 @media (max-height: 600px) {
   .app-terminal-section {

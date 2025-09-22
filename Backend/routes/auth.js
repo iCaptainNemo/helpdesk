@@ -190,7 +190,8 @@ router.get('/profile', verifyToken, async (req, res) => {
         profile: {
           AdminID: adminID,
           AdminComputer: process.env.COMPUTERNAME || 'localhost',
-          mode: 'local'
+          mode: 'local',
+          temppassword: process.env.TEMP_PASSWORD || ''
         },
         roles: [{ RoleID: 'local-admin', RoleName: 'Local Administrator' }],
         permissions: localPermissions
@@ -202,7 +203,8 @@ router.get('/profile', verifyToken, async (req, res) => {
         profile: {
           AdminID: adminID,
           AdminComputer: process.env.COMPUTERNAME || 'localhost',
-          mode: 'remote'
+          mode: 'remote',
+          temppassword: process.env.TEMP_PASSWORD || ''
         },
         roles: [{ RoleID: 'remote-agent', RoleName: 'Remote Agent' }],
         permissions: remotePermissions

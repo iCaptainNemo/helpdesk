@@ -1,17 +1,55 @@
+/* Container-level spacing optimization */
+.user-status-table-container {
+  margin: 0;
+  padding: 0;
+}
+
 .user-status-table-container .user-account-status-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed; /* Enable better column control */
+  margin-bottom: 8px; /* Reduced spacing between tables */
 }
 
 .user-status-table-container .user-account-status-table th,
 .user-status-table-container .user-account-status-table td {
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-primary);
 }
 
 .user-status-table-container .user-account-status-table th {
-  background-color: #9b9999;
-  padding: 7px;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 4px 6px; /* Reduced header padding */
   position: relative; /* Add relative positioning for the toggle switch */
+}
+
+.user-status-table-container .user-account-status-table td {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  padding: 3px 6px; /* Reduced cell padding */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Responsive column widths */
+.user-status-table-container .property-cell {
+  width: 30%;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-status-table-container .value-cell {
+  width: 70%;
+  text-align: left;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+.user-status-table-container .user-account-status-table {
+  background-color: var(--bg-card);
 }
 
 .user-status-table-container .boolean-value {

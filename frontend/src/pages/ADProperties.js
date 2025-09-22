@@ -2,10 +2,12 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom';
 import Modal from 'react-modal';
 import Logs from '../components/Logs';
-import UserStatusTable from '../components/UserStatusTable'; // Import the UserStatusTable component
-import ComputerStatusTable from '../components/ComputerStatusTable'; // Import the ComputerStatusTable component
-import '../styles/Tabs.css'; // Import the CSS file for styling the tabs
+import UserStatusTable from '../components/UserStatusTable';
+import ComputerStatusTable from '../components/ComputerStatusTable';
+import ModernADProperties from './ModernADProperties';
+import '../styles/Tabs.css';
 import '../styles/ADProperties.css';
+import '../styles/theme.css';
 
 Modal.setAppElement('#root');
 
@@ -39,6 +41,7 @@ const Tabs = ({ tabs, activeTab, onTabClick, onCloseTab }) => {
 const ADProperties = ({ permissions }) => {
   const { adObjectID } = useParams(); // Get adObjectID from URL parameters
   const navigate = useNavigate();
+  const [isModernView, setIsModernView] = useState(true);
   const defaultUserProperties = useMemo(() => [
     'sAMAccountName',
     'ObjectClass',
@@ -342,6 +345,32 @@ const ADProperties = ({ permissions }) => {
 
         // If both commands were successful, show success message
         if (resetPasswordSuccess && changePasswordAtLogonSuccess) {
+            // Log the password reset action to Recent Actions
+            try {
+                const token = localStorage.getItem('token');
+                await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/actions/log`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({
+                        activity: `Reset password for user: ${adObjectID}`,
+                        target: adObjectID,
+                        action_type: 'password_reset',
+                        details: {
+                            userID: adObjectID,
+                            forceChangePassword: forceChangePassword,
+                            newPassword: '[REDACTED]' // Don't log the actual password
+                        },
+                        result: 'success'
+                    }),
+                });
+            } catch (logError) {
+                console.warn('Failed to log password reset action:', logError);
+                // Don't fail the main operation if logging fails
+            }
+
             alert('Password reset successfully');
             setModalIsOpen(false);
         }
@@ -350,8 +379,74 @@ const ADProperties = ({ permissions }) => {
         alert('Failed to reset password');
     }
 };
+  const toggleView = () => {
+    setIsModernView(!isModernView);
+  };
+
+  // Modern View
+  if (isModernView) {
+    return (
+      <>
+        {/* View Toggle Button */}
+        <button
+          onClick={toggleView}
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            background: 'var(--primary-gradient)',
+            color: 'white',
+            border: 'none',
+            borderRadius: 'var(--border-radius-md)',
+            padding: 'var(--spacing-sm) var(--spacing-md)',
+            fontSize: 'var(--font-size-sm)',
+            cursor: 'pointer',
+            boxShadow: 'var(--shadow-md)',
+            zIndex: 'var(--z-fixed)',
+            transition: 'var(--transition-fast)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--spacing-xs)'
+          }}
+          title="Switch to Legacy View"
+        >
+          🔄 Legacy View
+        </button>
+        <ModernADProperties permissions={permissions} />
+      </>
+    );
+  }
+
+  // Legacy View
   return (
-    <div className="ad-properties-container">
+    <>
+      {/* View Toggle Button */}
+      <button
+        onClick={toggleView}
+        style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          background: 'var(--primary-gradient)',
+          color: 'white',
+          border: 'none',
+          borderRadius: 'var(--border-radius-md)',
+          padding: 'var(--spacing-sm) var(--spacing-md)',
+          fontSize: 'var(--font-size-sm)',
+          cursor: 'pointer',
+          boxShadow: 'var(--shadow-md)',
+          zIndex: 'var(--z-fixed)',
+          transition: 'var(--transition-fast)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'var(--spacing-xs)'
+        }}
+        title="Switch to Modern View"
+      >
+        ✨ Modern View
+      </button>
+      
+      <div className="ad-properties-container">
       <Tabs
         tabs={tabs}
         activeTab={activeTab}
@@ -417,6 +512,7 @@ const ADProperties = ({ permissions }) => {
               key={tabs[activeTab]?.name} // Add key prop
               adObjectID={tabs[activeTab]?.name} // Pass adObjectID to UserStatusTable
               permissions={permissions} // Pass permissions to UserStatusTable
+              endpoint={ENDPOINT} // Pass endpoint to UserStatusTable
             />
           </div>
         )}
@@ -469,7 +565,8 @@ const ADProperties = ({ permissions }) => {
           </div>
         </form>
       </Modal>
-    </div>
+      </div>
+    </>
   );
 };
 

@@ -5,14 +5,13 @@ import '@xterm/xterm/css/xterm.css';
 import '../styles/Terminal.css';
 import io from 'socket.io-client';
 
-const TerminalComponent = () => {
+const TerminalComponent = ({ onToggle }) => {
     const terminalRef = useRef(null);
     const terminalInstance = useRef(null);
     const fitAddon = useRef(null);
     const socket = useRef(null);
     const [isConnected, setIsConnected] = useState(false);
     const [deploymentMode, setDeploymentMode] = useState('unknown');
-    const [showTerminal, setShowTerminal] = useState(true);
 
     useEffect(() => {
         // Initialize terminal
@@ -73,7 +72,7 @@ const TerminalComponent = () => {
 
         // Handle window resize
         const handleResize = () => {
-            if (fitAddon.current && showTerminal) {
+            if (fitAddon.current) {
                 setTimeout(() => {
                     fitAddon.current.fit();
                 }, 100);
@@ -93,14 +92,6 @@ const TerminalComponent = () => {
         };
     }, []);
 
-    useEffect(() => {
-        // Fit terminal when visibility changes
-        if (showTerminal && fitAddon.current) {
-            setTimeout(() => {
-                fitAddon.current.fit();
-            }, 300);
-        }
-    }, [showTerminal]);
 
     const connectToBackend = async () => {
         try {
@@ -202,7 +193,9 @@ const TerminalComponent = () => {
     };
 
     const toggleTerminal = () => {
-        setShowTerminal(!showTerminal);
+        if (onToggle) {
+            onToggle();
+        }
     };
 
     return (
@@ -227,21 +220,19 @@ const TerminalComponent = () => {
                     <button 
                         className="terminal-btn toggle-btn" 
                         onClick={toggleTerminal}
-                        title={showTerminal ? 'Hide terminal' : 'Show terminal'}
+                        title="Hide terminal"
                     >
-                        {showTerminal ? '▼' : '▲'}
+                        ▼
                     </button>
                 </div>
             </div>
             
-            {showTerminal && (
-                <div className="terminal-content">
-                    <div 
-                        ref={terminalRef} 
-                        className="xterm-container"
-                    />
-                </div>
-            )}
+            <div className="terminal-content">
+                <div 
+                    ref={terminalRef} 
+                    className="xterm-container"
+                />
+            </div>
         </div>
     );
 };

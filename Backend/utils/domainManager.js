@@ -76,9 +76,20 @@ async function DomainControllerStatus() {
                 verbose(`Executing command: ${statusCommand}`);
                 const statusResponse = await executePowerShellCommand(statusCommand);
                 verbose(`Command response: ${statusResponse}`);
-                const status = statusResponse === true ? 'Online' : 'Offline';
+                
+                // Parse the JSON response and check if it's true
+                let isOnline = false;
+                try {
+                    const parsedResponse = JSON.parse(statusResponse);
+                    isOnline = parsedResponse === true;
+                } catch (parseError) {
+                    // If JSON parsing fails, try direct comparison with string values
+                    isOnline = statusResponse === 'true' || statusResponse === true || statusResponse.toString().toLowerCase() === 'true';
+                }
+                
+                const status = isOnline ? 'Online' : 'Offline';
                 await updateDomainControllerStatus(controller.ControllerName, status);
-                info(`Updated status for ${controller.ControllerName} to ${status}`);
+                info(`Updated status for ${controller.ControllerName} to ${status} (raw response: ${statusResponse})`);
             } catch (err) {
                 error(`Error checking status for ${controller.ControllerName}: ${err}`);
                 await updateDomainControllerStatus(controller.ControllerName, 'Offline');

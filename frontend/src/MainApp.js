@@ -2,13 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, useNavigate } from 'react-router-dom';
 import socketIOClient from 'socket.io-client';
 import './styles.css'; // Import the CSS file
+import './styles/theme.css'; // Import the new theme
+import './styles/grid.css'; // Import the grid system
 import Header from './Header';
 import Navbar from './Navbar';
 import Dashboard from './pages/Dashboard';
-import ADProperties from './pages/ADProperties'; // Update import
+import ModernDashboard from './pages/ModernDashboard'; // Import the new modern dashboard
+import ADProperties from './pages/ADProperties'; // Legacy AD Properties
+import ModernADProperties from './pages/ModernADProperties'; // Modern AD Properties
 import Profile from './pages/Profile';
 import Login from './pages/Login';
-import Configure from './pages/Configure'; // Import the Configure page
+import ModernConfigure from './pages/ModernConfigure'; // Import the Modern Configure page
 import Setup from './pages/Setup'; // Import the Setup page
 import SplashScreen from './components/SplashScreen'; // Import the Splash Screen
 import SetupWizard from './components/SetupWizard'; // Import the Setup Wizard
@@ -20,6 +24,7 @@ const ENDPOINT = process.env.REACT_APP_BACKEND_URL;
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false); // Track authentication status
   const [AdminID, setAdminID] = useState(''); // Store AdminID from the server
+  const [adminComputer, setAdminComputer] = useState(''); // Store AdminComputer from the server
   const [permissions, setPermissions] = useState([]); // Store permissions
   const [initialCheck, setInitialCheck] = useState(false); // Track the first authentication check
   const [setupComplete, setSetupComplete] = useState(null); // Track setup status
@@ -119,9 +124,10 @@ function App() {
   }, [setupComplete]);
 
   // Handle login
-  const handleLogin = (AdminID, token) => {
+  const handleLogin = (AdminID, token, adminComputer = '') => {
     setIsAuthenticated(true);
     setAdminID(AdminID);
+    setAdminComputer(adminComputer);
     localStorage.setItem('token', token); // Store token in local storage
     console.log(`${AdminID} Logged in successfully`);
   };
@@ -145,6 +151,7 @@ function App() {
         localStorage.removeItem('token');
         setIsAuthenticated(false);
         setAdminID('');
+        setAdminComputer('');
         console.log('Successfully logged out and session destroyed.');
       } else {
         console.error('Logout failed: Network response was not ok');
@@ -155,7 +162,7 @@ function App() {
   };
 
   // Show loading screen until setup status and initial authentication check is complete
-  if (setupComplete === null || (!setupComplete && !initialCheck)) {
+  if (setupComplete === null || !initialCheck) {
     return <div>Loading...</div>;
   }
 
@@ -177,11 +184,14 @@ function App() {
             <>
               {isAuthenticated ? (
                 <>
-                  <Route path="/" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Dashboard /></AuthenticatedLayout>} />
-                  <Route path="/dashboard" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Dashboard /></AuthenticatedLayout>} />
-                  <Route path="/ad-object/:adObjectID?" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ADProperties permissions={permissions} /></AuthenticatedLayout>} />
+                  <Route path="/" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ModernDashboard permissions={permissions} adminID={AdminID} adminComputer={adminComputer} /></AuthenticatedLayout>} />
+                  <Route path="/dashboard" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ModernDashboard permissions={permissions} adminID={AdminID} adminComputer={adminComputer} /></AuthenticatedLayout>} />
+                  <Route path="/dashboard-legacy" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Dashboard /></AuthenticatedLayout>} />
+                  <Route path="/ad-object" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ModernADProperties permissions={permissions} /></AuthenticatedLayout>} />
+                  <Route path="/ad-object/:adObjectID" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ModernADProperties permissions={permissions} /></AuthenticatedLayout>} />
+                  <Route path="/ad-object-legacy/:adObjectID?" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ADProperties permissions={permissions} /></AuthenticatedLayout>} />
                   <Route path="/Profile" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Profile permissions={permissions} /></AuthenticatedLayout>} />
-                  <Route path="/configure" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Configure permissions={permissions} /></AuthenticatedLayout>} />
+                  <Route path="/configure" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ModernConfigure permissions={permissions} /></AuthenticatedLayout>} />
                   <Route path="/setup" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Setup /></AuthenticatedLayout>} />
                   <Route path="*" element={<Navigate to="/dashboard" />} />
                 </>
@@ -229,6 +239,12 @@ function HeaderWrapper({ AdminID, onLogout }) {
 }
 
 function AuthenticatedLayout({ AdminID, onLogout, permissions, children }) {
+  const [isTerminalMinimized, setIsTerminalMinimized] = useState(false);
+
+  const toggleTerminal = () => {
+    setIsTerminalMinimized(!isTerminalMinimized);
+  };
+
   return (
     <div className="app-layout">
       <div className="app-main-content">
@@ -238,8 +254,16 @@ function AuthenticatedLayout({ AdminID, onLogout, permissions, children }) {
           {children}
         </div>
       </div>
-      <div className="app-terminal-section">
-        <Terminal />
+      <div className={`app-terminal-section ${isTerminalMinimized ? 'minimized' : ''}`}>
+        {isTerminalMinimized ? (
+          <div className="terminal-minimized-bar" onClick={toggleTerminal}>
+            <span className="terminal-icon">⚡</span>
+            <span>Live Terminal (Click to expand)</span>
+            <span className="expand-icon">▲</span>
+          </div>
+        ) : (
+          <Terminal onToggle={toggleTerminal} />
+        )}
       </div>
     </div>
   );

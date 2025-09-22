@@ -226,6 +226,10 @@ const serverManagerRoute = require('./routes/serverManager'); // Import the serv
 const setupRoute = require('./routes/setup'); // Import the setup route
 const domainControllersRouter = require('./routes/domainControllers'); // Import the domainControllers route
 const remoteApiRoute = require('./routes/remoteApi'); // Import the remote API route
+const testDataRoute = require('./routes/testData'); // Import test data routes
+const ledgerRoute = require('./routes/ledger'); // Import ledger routes
+const actionsRoute = require('./routes/actions'); // Import actions routes
+const { startLedgerService } = require('./services/ledgerService'); // Import ledger service
 
 // Use routes and pass db to them
 app.use('/api/fetch-adobject', fetchADObjectRoute);
@@ -251,6 +255,9 @@ app.use('/api/setup', setupRoute); // Register the setup route
 app.use('/api/updates', updatesRoute); // Update checking routes
 app.use('/api/domain-controllers', domainControllersRouter); // Use the domainControllers route
 app.use('/api/remote', remoteApiRoute); // Register the remote API routes
+app.use('/api/test-data', testDataRoute); // Register test data routes
+app.use('/api/ledger', ledgerRoute); // Register ledger routes
+app.use('/api/actions', actionsRoute); // Register actions routes
 
 // Catch-all handler: send back React's index.html file for any non-API routes
 app.get('*', (req, res) => {
@@ -332,6 +339,10 @@ server.listen(PORT, HOST, async () => {
         logger.info('Running database migrations...');
         await runMigrations();
         logger.info('Database migrations completed successfully');
+        
+        // Start ledger service after database is ready
+        startLedgerService();
+        logger.info('Ledger service started');
     } catch (error) {
         logger.error('Database migration failed:', error);
         // Continue startup even if migrations fail to maintain compatibility
@@ -417,6 +428,42 @@ server.listen(PORT, HOST, async () => {
     // Set up the refresh interval for domain controller statuses
     const domainControllerStatusRefreshInterval = 600000; // Default to 10 minutes
     setInterval(DomainControllerStatus, domainControllerStatusRefreshInterval);
+
+    // Set up daily cleanup for recent actions at startup and then daily at midnight
+    const performDailyActionsCleanup = async () => {
+        try {
+            const response = await fetch(`http://localhost:${process.env.PORT || 3001}/api/actions/cleanup-daily`, {
+                method: 'DELETE'
+            });
+            const result = await response.json();
+            console.log('[Daily Cleanup] Actions cleanup completed:', result);
+        } catch (error) {
+            console.error('[Daily Cleanup] Failed to cleanup actions:', error);
+        }
+    };
+
+    // Don't run cleanup on startup - only at scheduled midnight time
+    // performDailyActionsCleanup(); // Commented out to preserve actions during development
+
+    // Schedule daily cleanup at midnight
+    const scheduleNextCleanup = () => {
+        const now = new Date();
+        const tomorrow = new Date(now);
+        tomorrow.setDate(now.getDate() + 1);
+        tomorrow.setHours(0, 0, 0, 0); // Set to midnight
+        
+        const msUntilMidnight = tomorrow.getTime() - now.getTime();
+        
+        setTimeout(() => {
+            performDailyActionsCleanup();
+            // After first cleanup, schedule it to run every 24 hours
+            setInterval(performDailyActionsCleanup, 24 * 60 * 60 * 1000);
+        }, msUntilMidnight);
+        
+        console.log(`[Daily Cleanup] Next cleanup scheduled for: ${tomorrow.toLocaleString()}`);
+    };
+
+    scheduleNextCleanup();
 });
 
 // Graceful shutdown handling

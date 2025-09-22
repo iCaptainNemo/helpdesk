@@ -129,6 +129,43 @@ const tables = [
             'FOREIGN KEY (PDC) REFERENCES DomainControllers(ControllerName)',
             'FOREIGN KEY (DDC) REFERENCES DomainControllers(ControllerName)'
         ]
+    },
+    {
+        name: 'LockedUsersLedger',
+        columns: [
+            'ID INTEGER PRIMARY KEY AUTOINCREMENT',
+            'timestamp DATETIME NOT NULL',
+            'UserID TEXT NOT NULL',
+            'name TEXT',
+            'department TEXT',
+            'AccountLockoutTime DATETIME',
+            'status TEXT DEFAULT "locked"', // locked, unlocked
+            'snapshot_interval INTEGER DEFAULT 300' // 5 minutes in seconds
+        ]
+    },
+    {
+        name: 'DepartmentLedger',
+        columns: [
+            'ID INTEGER PRIMARY KEY AUTOINCREMENT',
+            'timestamp DATETIME NOT NULL',
+            'department TEXT NOT NULL',
+            'locked_count INTEGER DEFAULT 0',
+            'total_users INTEGER DEFAULT 0',
+            'snapshot_interval INTEGER DEFAULT 300' // 5 minutes in seconds
+        ]
+    },
+    {
+        name: 'RecentActions',
+        columns: [
+            'ID INTEGER PRIMARY KEY AUTOINCREMENT',
+            'timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+            'adminID TEXT NOT NULL',
+            'activity TEXT NOT NULL',
+            'target TEXT', // User ID or object that was acted upon
+            'action_type TEXT', // unlock, reset_password, system_check, etc.
+            'details TEXT', // Additional details in JSON format
+            'result TEXT' // success, error, etc.
+        ]
     }
 ];
 
