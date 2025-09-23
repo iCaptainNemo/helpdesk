@@ -4,6 +4,7 @@ import Modal from 'react-modal';
 import Logs from '../components/Logs';
 import UserStatusTable from '../components/UserStatusTable';
 import ComputerStatusTable from '../components/ComputerStatusTable';
+import TickerTape from '../components/TickerTape';
 import '../styles/theme.css';
 import '../styles/grid.css';
 import '../styles/Logs.css';
@@ -123,6 +124,7 @@ const ModernADProperties = ({ permissions }) => {
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [forceChangePassword, setForceChangePassword] = useState(true);
+  const [showPropertyColumn, setShowPropertyColumn] = useState(true);
   const [tooltip, setTooltip] = useState({ visible: false, message: '' });
   const [additionalFields, setAdditionalFields] = useState({
     LastHelped: null,
@@ -454,6 +456,9 @@ const ModernADProperties = ({ permissions }) => {
   return (
     <div className="theme-modern min-h-screen" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column' }}>
 
+      {/* Ticker Tape - Real-time System Status */}
+      <TickerTape />
+
       {/* Tabs */}
       {tabs.length > 0 && (
         <ModernTabs
@@ -539,6 +544,19 @@ const ModernADProperties = ({ permissions }) => {
                       }}
                     />
                     <span style={{ color: 'var(--text-secondary)' }}>Show All Properties</span>
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', fontSize: 'var(--font-size-sm)', marginLeft: 'var(--spacing-md)' }}>
+                    <input
+                      type="checkbox"
+                      checked={showPropertyColumn}
+                      onChange={(e) => setShowPropertyColumn(e.target.checked)}
+                      style={{
+                        accentColor: 'var(--accent-blue)',
+                        marginRight: 'var(--spacing-xs)'
+                      }}
+                    />
+                    <span style={{ color: 'var(--text-secondary)' }}>Show Property Names</span>
                   </label>
                 </div>
                 
@@ -644,16 +662,18 @@ const ModernADProperties = ({ permissions }) => {
                   <table className="logs-table" style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: 'var(--bg-card)' }}>
                     <thead>
                       <tr>
-                        <th style={{
-                          backgroundColor: 'var(--bg-secondary)',
-                          color: 'var(--text-primary)',
-                          border: '1px solid var(--border-primary)',
-                          padding: 'var(--spacing-sm)',
-                          fontWeight: 'var(--font-weight-semibold)',
-                          position: 'sticky',
-                          top: 0,
-                          zIndex: 1
-                        }}>Property</th>
+                        {showPropertyColumn && (
+                          <th style={{
+                            backgroundColor: 'var(--bg-secondary)',
+                            color: 'var(--text-primary)',
+                            border: '1px solid var(--border-primary)',
+                            padding: 'var(--spacing-sm)',
+                            fontWeight: 'var(--font-weight-semibold)',
+                            position: 'sticky',
+                            top: 0,
+                            zIndex: 1
+                          }}>Property</th>
+                        )}
                         <th style={{
                           backgroundColor: 'var(--bg-secondary)',
                           color: 'var(--text-primary)',
@@ -696,16 +716,18 @@ const ModernADProperties = ({ permissions }) => {
 
                         return (
                           <tr key={index} style={{ ':hover': { backgroundColor: 'var(--bg-card-hover)' } }}>
-                            <td style={{
-                              backgroundColor: 'var(--bg-card)',
-                              color: 'var(--text-primary)',
-                              border: '1px solid var(--border-primary)',
-                              padding: 'var(--spacing-sm)',
-                              textAlign: 'left',
-                              whiteSpace: 'nowrap'
-                            }}>
-                              {property}
-                            </td>
+                            {showPropertyColumn && (
+                              <td style={{
+                                backgroundColor: 'var(--bg-card)',
+                                color: 'var(--text-primary)',
+                                border: '1px solid var(--border-primary)',
+                                padding: 'var(--spacing-sm)',
+                                textAlign: 'left',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                {property}
+                              </td>
+                            )}
                             <td
                               onClick={() => copyToClipboard(String(value))}
                               style={{

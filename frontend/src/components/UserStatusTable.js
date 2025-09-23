@@ -170,7 +170,7 @@ const UserStatusTable = ({ adObjectID, permissions, endpoint }) => {
     }
   };
 
-  const formatValue = (key, value) => {
+  const formatValue = (key, value, inline = false) => {
     if (typeof value === 'boolean') {
       let backgroundColor;
       if (key === 'LockedOut') {

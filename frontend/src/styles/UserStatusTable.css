@@ -48,6 +48,13 @@
   white-space: pre-wrap;
 }
 
+.user-status-table-container .value-cell-full {
+  width: 100%;
+  text-align: left;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
 .user-status-table-container .user-account-status-table {
   background-color: var(--bg-card);
 }

@@ -117,6 +117,7 @@ const LockedUsersTimeChart = ({
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    devicePixelRatio: window.devicePixelRatio || 1,
     plugins: {
       legend: {
         position: 'bottom',
@@ -135,8 +136,9 @@ const LockedUsersTimeChart = ({
         display: false
       },
       tooltip: {
-        mode: 'index',
+        mode: 'point',
         intersect: false,
+        position: 'nearest',
         backgroundColor: '#242b3d',
         titleColor: '#ffffff',
         bodyColor: '#b8c5d1',
@@ -144,6 +146,10 @@ const LockedUsersTimeChart = ({
         borderWidth: 1,
         cornerRadius: 8,
         displayColors: true,
+        xAlign: 'right',
+        yAlign: 'top',
+        caretPadding: 20,
+        caretSize: 8,
         callbacks: {
           title: (context) => {
             return `Time: ${context[0].label}`;
@@ -157,9 +163,13 @@ const LockedUsersTimeChart = ({
       }
     },
     interaction: {
-      mode: 'nearest',
-      axis: 'x',
+      mode: 'point',
       intersect: false
+    },
+    hover: {
+      mode: 'point',
+      intersect: false,
+      animationDuration: 0
     },
     scales: {
       x: {
@@ -216,7 +226,9 @@ const LockedUsersTimeChart = ({
     },
     elements: {
       point: {
-        hoverBackgroundColor: '#ffffff'
+        hoverBackgroundColor: '#ffffff',
+        hoverRadius: 8,
+        hoverBorderWidth: 2
       }
     }
   };
