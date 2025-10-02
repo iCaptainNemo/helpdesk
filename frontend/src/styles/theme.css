@@ -401,6 +401,37 @@ input:checked + .slider:before {
   background-color: var(--bg-card-hover);
 }
 
+/* Recent Lockout Highlighting */
+.dashboard-table tbody tr.recent-lockout {
+  background-color: #ffeb3b !important;
+  color: #000000 !important;
+  font-weight: 500 !important;
+  animation: pulse-recent-lockout 2s ease-in-out infinite;
+}
+
+.dashboard-table tbody tr.recent-lockout:hover {
+  background-color: #fdd835 !important;
+}
+
+.dashboard-table tbody tr.recent-lockout td {
+  background-color: transparent !important;
+  color: #000000 !important;
+}
+
+.dashboard-table tbody tr.recent-lockout .text-sm {
+  color: #000000 !important;
+}
+
+/* Subtle animation for recent lockouts */
+@keyframes pulse-recent-lockout {
+  0%, 100% {
+    background-color: #ffeb3b;
+  }
+  50% {
+    background-color: #fff59d;
+  }
+}
+
 /* Print Styles */
 @media print {
   * {

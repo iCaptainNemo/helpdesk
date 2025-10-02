@@ -521,18 +521,18 @@ const ModernADProperties = ({ permissions }) => {
               <div className="card-header" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
                 {/* Title Row */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-sm)' }}>
-                  <h3 className="card-title">{currentData.ObjectClass === 'user' ? 'User' : 'Computer'} Properties</h3>
+                  <h3 className="card-title">{currentData.ObjectClass === 'user' ? 'User' : 'Computer'} Properties: {currentTab?.name}</h3>
                 </div>
                 
                 {/* Checkbox Row */}
-                <div style={{ marginBottom: 'var(--spacing-sm)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-sm)' }}>
                   {/* Advanced Properties Toggle */}
-                  <label className="flex items-center gap-xs text-sm">
+                  <label style={{ display: 'flex', alignItems: 'center', fontSize: 'var(--font-size-sm)' }}>
                     <input
                       type="checkbox"
                       checked={currentTab?.showAdvanced || false}
                       onChange={(e) => {
-                        const updatedTabs = tabs.map((tab, index) => 
+                        const updatedTabs = tabs.map((tab, index) =>
                           index === activeTab ? { ...tab, showAdvanced: e.target.checked } : tab
                         );
                         setTabs(updatedTabs);
@@ -543,10 +543,10 @@ const ModernADProperties = ({ permissions }) => {
                         marginRight: 'var(--spacing-xs)'
                       }}
                     />
-                    <span style={{ color: 'var(--text-secondary)' }}>Show All Properties</span>
+                    <span style={{ color: 'var(--text-secondary)' }}>All Properties</span>
                   </label>
 
-                  <label style={{ display: 'flex', alignItems: 'center', fontSize: 'var(--font-size-sm)', marginLeft: 'var(--spacing-md)' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', fontSize: 'var(--font-size-sm)' }}>
                     <input
                       type="checkbox"
                       checked={showPropertyColumn}
@@ -556,7 +556,7 @@ const ModernADProperties = ({ permissions }) => {
                         marginRight: 'var(--spacing-xs)'
                       }}
                     />
-                    <span style={{ color: 'var(--text-secondary)' }}>Show Property Names</span>
+                    <span style={{ color: 'var(--text-secondary)' }}>Property Names</span>
                   </label>
                 </div>
                 
@@ -694,7 +694,20 @@ const ModernADProperties = ({ permissions }) => {
                         if (value === null || value === undefined) {
                           value = 'N/A';
                         } else if (Array.isArray(value)) {
-                          value = value.join(', ');
+                          // For memberOf and similar fields, extract only CN (Common Name) values
+                          if (property === 'memberOf') {
+                            value = value.map(dn => {
+                              if (typeof dn === 'string') {
+                                const cnParts = dn.split(',').filter(part => part.trim().startsWith('CN='));
+                                if (cnParts.length > 0) {
+                                  return cnParts[0].replace('CN=', '').trim();
+                                }
+                              }
+                              return dn;
+                            }).join(', ');
+                          } else {
+                            value = value.join(', ');
+                          }
                         } else if (typeof value === 'boolean') {
                           value = value ? 'True' : 'False';
                         } else if (property.toLowerCase().includes('date') || property.toLowerCase().includes('time')) {

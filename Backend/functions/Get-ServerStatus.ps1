@@ -24,6 +24,15 @@ class ServerManager {
             return $false
         }
     }
+
+    [bool]CheckPrintSpoolerService([string]$serverName) {
+        try {
+            $serviceStatus = Get-Service -ComputerName $serverName -Name "Spooler" -ErrorAction Stop
+            return $serviceStatus.Status -eq 'Running'
+        } catch {
+            return $false
+        }
+    }
 }
 
 # Main script logic
@@ -37,10 +46,12 @@ $serverStatuses = @()
 foreach ($server in $ServersArray) {
     $status = $serverManager.CheckServerStatus($server)
     $fileShareStatus = $serverManager.CheckFileShareService($server)
+    $printSpoolerStatus = $serverManager.CheckPrintSpoolerService($server)
     $serverStatuses += [PSCustomObject]@{
         ServerName = $server
         Status     = if ($status) { "Online" } else { "Offline" }
         FileShareService = if ($fileShareStatus) { "Running" } else { "Not Running" }
+        PrintSpoolerService = if ($printSpoolerStatus) { "Running" } else { "Not Running" }
     }
 }
 

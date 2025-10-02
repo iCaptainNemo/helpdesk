@@ -184,7 +184,13 @@ const ADProperties = ({ permissions }) => {
 
   const stripDistinguishedName = (dn) => {
     if (typeof dn !== 'string') return dn;
-    return dn.split(',').filter(part => part.startsWith('CN=')).map(part => part.replace('CN=', '')).join(', ');
+    // For memberOf, extract only the first CN (Common Name) which is the group name
+    const cnParts = dn.split(',').filter(part => part.trim().startsWith('CN='));
+    if (cnParts.length > 0) {
+      // Return only the first CN which is the actual group/object name
+      return cnParts[0].replace('CN=', '').trim();
+    }
+    return dn; // Fallback to original if no CN found
   };
 
   const formatDate = (unixTime) => {

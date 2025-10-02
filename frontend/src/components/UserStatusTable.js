@@ -8,9 +8,19 @@ const UserStatusTable = ({ adObjectID, permissions, endpoint }) => {
   const [userAccountStatus, setUserAccountStatus] = useState({});
   const [additionalFields, setAdditionalFields] = useState({
     LastHelped: null,
+    LastAdminHelped: null,
     TimesUnlocked: null,
     PasswordResets: null,
     TimesHelped: null
+  });
+  const [securityQuestions, setSecurityQuestions] = useState({
+    SecurityQuestion: null,
+    SecurityAnswer: null
+  });
+  const [editingSecurityQuestion, setEditingSecurityQuestion] = useState(false);
+  const [securityQuestionForm, setSecurityQuestionForm] = useState({
+    SecurityQuestion: '',
+    SecurityAnswer: ''
   });
   const [autoRefresh, setAutoRefresh] = useState(false); // State to control auto-refresh
   const [PDC, setPDC] = useState(''); // State to store the PDC
@@ -78,9 +88,9 @@ const UserStatusTable = ({ adObjectID, permissions, endpoint }) => {
       try {
         const token = localStorage.getItem('token');
         if (!token) throw new Error('No token found');
-    
+
         if (!adObjectID) throw new Error('adObjectID is not defined');
-    
+
         // Fetch additional fields from the database
         const dbResponse = await fetch(`${endpoint}/api/fetch-user`, {
           method: 'POST',
@@ -90,11 +100,11 @@ const UserStatusTable = ({ adObjectID, permissions, endpoint }) => {
           },
           body: JSON.stringify({ adObjectID }),
         });
-    
+
         if (!dbResponse.ok) throw new Error('Network response was not ok');
-    
+
         const dbData = await dbResponse.json();
-    
+
         if (isMounted) {
           setAdditionalFields((prevFields) => ({
             ...prevFields,
@@ -108,8 +118,43 @@ const UserStatusTable = ({ adObjectID, permissions, endpoint }) => {
       }
     };
 
+    const fetchSecurityQuestions = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('No token found');
+
+        if (!adObjectID) throw new Error('adObjectID is not defined');
+
+        // Fetch security questions from the database
+        const sqResponse = await fetch(`${endpoint}/api/fetch-user/security-question/${adObjectID}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (!sqResponse.ok) throw new Error('Network response was not ok');
+
+        const sqData = await sqResponse.json();
+
+        if (isMounted) {
+          setSecurityQuestions(sqData);
+          setSecurityQuestionForm({
+            SecurityQuestion: sqData.SecurityQuestion || '',
+            SecurityAnswer: sqData.SecurityAnswer || ''
+          });
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('Error fetching security questions:', error);
+        }
+      }
+    };
+
     fetchUserAccountStatus();
     fetchAdditionalFields();
+    fetchSecurityQuestions();
 
     let interval;
     if (autoRefresh) {
@@ -124,50 +169,114 @@ const UserStatusTable = ({ adObjectID, permissions, endpoint }) => {
 
   const handleUnlockSuccess = async (result) => {
     if (result.message.includes('Unlocked')) {
+      // Update the UI to show unlocked status immediately
       setUserAccountStatus((prevStatus) => ({
         ...prevStatus,
         LockedOut: false,
       }));
 
-      // Update user stats
-      const updates = {
-        LastHelped: new Date().toLocaleString('en-US', {
-          month: '2-digit',
-          day: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: true,
-        }),
-        TimesHelped: (additionalFields.TimesHelped || 0) + 1,
-        TimesUnlocked: (additionalFields.TimesUnlocked || 0) + 1
-      };
-
+      // Refresh user data from database to get the updated stats (LastHelped, LastAdminHelped, etc.)
+      // The backend executeScript route has already updated these in the database
       try {
         const token = localStorage.getItem('token');
         if (!token) throw new Error('No token found');
 
-        const response = await fetch(`${endpoint}/api/fetch-user/update`, {
-          method: 'PUT',
+        const response = await fetch(`${endpoint}/api/fetch-user`, {
+          method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
           },
-          body: JSON.stringify({ adObjectID, updates }),
+          body: JSON.stringify({ adObjectID }),
         });
 
         if (!response.ok) throw new Error('Network response was not ok');
 
-        const updatedUser = await response.json();
-        setAdditionalFields((prevFields) => ({
-          ...prevFields,
-          ...updatedUser
-        }));
+        const userData = await response.json();
+        if (userData && userData.length > 0) {
+          setAdditionalFields((prevFields) => ({
+            ...prevFields,
+            ...userData[0] // Update with fresh data from database
+          }));
+        }
       } catch (error) {
-        console.error('Error updating user stats:', error);
+        console.error('Error refreshing user data:', error);
       }
     }
+  };
+
+  const handleSaveSecurityQuestion = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No token found');
+
+      const response = await fetch(`${endpoint}/api/fetch-user/security-question`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          userID: adObjectID,
+          securityQuestion: securityQuestionForm.SecurityQuestion,
+          securityAnswer: securityQuestionForm.SecurityAnswer
+        }),
+      });
+
+      if (!response.ok) throw new Error('Network response was not ok');
+
+      const updatedData = await response.json();
+      setSecurityQuestions(updatedData);
+      setEditingSecurityQuestion(false);
+    } catch (error) {
+      console.error('Error saving security question:', error);
+    }
+  };
+
+  const handleCancelSecurityQuestion = () => {
+    setSecurityQuestionForm({
+      SecurityQuestion: securityQuestions.SecurityQuestion || '',
+      SecurityAnswer: securityQuestions.SecurityAnswer || ''
+    });
+    setEditingSecurityQuestion(false);
+  };
+
+  const handleClearSecurityQuestion = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No token found');
+
+      const response = await fetch(`${endpoint}/api/fetch-user/security-question/${adObjectID}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) throw new Error('Network response was not ok');
+
+      const clearedData = await response.json();
+      setSecurityQuestions(clearedData);
+      setSecurityQuestionForm({
+        SecurityQuestion: '',
+        SecurityAnswer: ''
+      });
+      setEditingSecurityQuestion(false);
+    } catch (error) {
+      console.error('Error clearing security question:', error);
+    }
+  };
+
+  const formatPropertyName = (key) => {
+    const propertyMap = {
+      'LastHelped': 'Last Helped',
+      'LastAdminHelped': 'Last Helped By',
+      'TimesUnlocked': 'Times Unlocked',
+      'PasswordResets': 'Password Resets',
+      'TimesHelped': 'Times Helped'
+    };
+    return propertyMap[key] || key;
   };
 
   const formatValue = (key, value, inline = false) => {
@@ -277,13 +386,102 @@ const UserStatusTable = ({ adObjectID, permissions, endpoint }) => {
       <table className="user-account-status-table">
         <thead>
           <tr>
+            <th colSpan="2" style={{ position: 'relative' }}>
+              Security Questions
+              <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
+                {editingSecurityQuestion ? (
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button
+                      onClick={handleSaveSecurityQuestion}
+                      className="script-button save"
+                      style={{ fontSize: '12px', padding: '2px 6px' }}
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={handleCancelSecurityQuestion}
+                      className="script-button cancel"
+                      style={{ fontSize: '12px', padding: '2px 6px' }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button
+                      onClick={() => setEditingSecurityQuestion(true)}
+                      className="script-button edit"
+                      style={{ fontSize: '12px', padding: '2px 6px' }}
+                    >
+                      Edit
+                    </button>
+                    {(securityQuestions.SecurityQuestion || securityQuestions.SecurityAnswer) && (
+                      <button
+                        onClick={handleClearSecurityQuestion}
+                        className="script-button clear"
+                        style={{ fontSize: '12px', padding: '2px 6px' }}
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td className="property-cell">Question</td>
+            <td className="value-cell">
+              {editingSecurityQuestion ? (
+                <input
+                  type="text"
+                  value={securityQuestionForm.SecurityQuestion}
+                  onChange={(e) => setSecurityQuestionForm(prev => ({
+                    ...prev,
+                    SecurityQuestion: e.target.value
+                  }))}
+                  placeholder="Enter security question"
+                  style={{ width: '100%', padding: '4px' }}
+                />
+              ) : (
+                securityQuestions.SecurityQuestion || 'Not set'
+              )}
+            </td>
+          </tr>
+          <tr>
+            <td className="property-cell">Answer</td>
+            <td className="value-cell">
+              {editingSecurityQuestion ? (
+                <input
+                  type="text"
+                  value={securityQuestionForm.SecurityAnswer}
+                  onChange={(e) => setSecurityQuestionForm(prev => ({
+                    ...prev,
+                    SecurityAnswer: e.target.value
+                  }))}
+                  placeholder="Enter security answer"
+                  style={{ width: '100%', padding: '4px' }}
+                />
+              ) : (
+                securityQuestions.SecurityAnswer || 'Not set'
+              )}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <table className="user-account-status-table">
+        <thead>
+          <tr>
             <th colSpan="2">User Stats</th>
           </tr>
         </thead>
         <tbody>
-          {['LastHelped', 'TimesUnlocked', 'PasswordResets', 'TimesHelped'].map((key) => (
+          {['LastHelped', 'LastAdminHelped', 'TimesUnlocked', 'PasswordResets', 'TimesHelped'].map((key) => (
             <tr key={key}>
-              <td className="property-cell">{key}</td>
+              <td className="property-cell">{formatPropertyName(key)}</td>
               <td className="value-cell">
                 {formatValue(key, additionalFields[key])}
               </td>

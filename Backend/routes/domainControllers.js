@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { fetchDomainControllers, fetchPDC } = require('../db/queries'); // Import the fetchPDC function
+const { cacheMiddleware } = require('../middleware/cache');
 
-router.get('/', (req, res) => {
+router.get('/', cacheMiddleware(60), (req, res) => {
   fetchDomainControllers((err, result) => {
     if (err) {
       console.error('Failed to fetch domain controllers:', err);
@@ -12,7 +13,7 @@ router.get('/', (req, res) => {
   });
 });
 
-router.get('/pdc', (req, res) => {
+router.get('/pdc', cacheMiddleware(60), (req, res) => {
     fetchPDC((err, result) => {
       if (err) {
         console.error('Failed to fetch PDC:', err);

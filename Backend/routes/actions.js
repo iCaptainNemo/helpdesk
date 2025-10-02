@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../db/init');
 const logger = require('../utils/logger');
 const verifyToken = require('../middleware/verifyToken');
+const { cacheMiddleware } = require('../middleware/cache');
 
 // Log a new action
 router.post('/log', verifyToken, (req, res) => {
@@ -43,7 +44,7 @@ router.post('/log', verifyToken, (req, res) => {
 });
 
 // Get recent actions (last N actions, no date filtering for now)
-router.get('/recent/:limit?', (req, res) => {
+router.get('/recent/:limit?', cacheMiddleware(60), (req, res) => {
     try {
         const limit = parseInt(req.params.limit) || 10;
         
@@ -84,7 +85,7 @@ router.get('/recent/:limit?', (req, res) => {
 });
 
 // Get actions by admin
-router.get('/by-admin/:adminID/:limit?', (req, res) => {
+router.get('/by-admin/:adminID/:limit?', cacheMiddleware(60), (req, res) => {
     try {
         const { adminID } = req.params;
         const limit = parseInt(req.params.limit) || 10;

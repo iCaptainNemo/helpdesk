@@ -54,7 +54,9 @@ const tables = [
             'LastAdminHelped TEXT', // Track which admin last helped this user
             'TimesUnlocked INT',
             'PasswordResets INT',
-            'TimesHelped INT'
+            'TimesHelped INT',
+            'SecurityQuestion TEXT', // Custom security question
+            'SecurityAnswer TEXT' // Custom security answer
         ]
     },
     {
@@ -73,8 +75,9 @@ const tables = [
             'Description TEXT',
             'Status TEXT',
             'FileShareService TEXT',
+            'PrintSpoolerService TEXT',
             'Location TEXT',
-            'OnlineTime DATETIME', 
+            'OnlineTime DATETIME',
             'OfflineTime DATETIME'
         ]
     },

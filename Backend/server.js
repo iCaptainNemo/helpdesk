@@ -69,7 +69,7 @@ extractPowerShellScripts();
 
 console.log('Loading utility modules...');
 const { updateLockedOutUsers } = require('./utils/lockedOutUsersUtils');
-const { getServerStatuses } = require('./utils/ServerManageUtil');
+const { getServerStatuses, getFrequentServerHealth } = require('./utils/ServerManageUtil');
 const { updateDomainControllers, DomainControllerStatus  } = require('./utils/domainManager');
 const logger = require('./utils/logger');
 const sessionStore = require('./utils/sessionStore');
@@ -258,6 +258,7 @@ app.use('/api/remote', remoteApiRoute); // Register the remote API routes
 app.use('/api/test-data', testDataRoute); // Register test data routes
 app.use('/api/ledger', ledgerRoute); // Register ledger routes
 app.use('/api/actions', actionsRoute); // Register actions routes
+app.use('/api/cache', require('./routes/cacheInfo')); // Cache monitoring and management routes
 
 // Catch-all handler: send back React's index.html file for any non-API routes
 app.get('*', (req, res) => {
@@ -390,6 +391,7 @@ server.listen(PORT, HOST, async () => {
     
     updateLockedOutUsers(); // Initial call to populate the table
     getServerStatuses(); // Initial call to populate the server statuses
+    getFrequentServerHealth(); // Initial call to check servers with issues
     updateDomainControllers(); // Initial call to update domain controllers
     DomainControllerStatus(); // Initial call to update domain controller statuses
 
@@ -424,6 +426,10 @@ server.listen(PORT, HOST, async () => {
     // Set up the refresh interval for server statuses
     const serverStatusRefreshInterval = parseInterval(process.env.SERVER_STATUS_REFRESH_INTERVAL);
     setInterval(getServerStatuses, serverStatusRefreshInterval);
+
+    // Set up the frequent health check interval for servers with issues (2 minutes)
+    const frequentHealthCheckInterval = 2 * 60 * 1000; // 2 minutes in milliseconds
+    setInterval(getFrequentServerHealth, frequentHealthCheckInterval);
 
     // Set up the refresh interval for domain controller statuses
     const domainControllerStatusRefreshInterval = 600000; // Default to 10 minutes

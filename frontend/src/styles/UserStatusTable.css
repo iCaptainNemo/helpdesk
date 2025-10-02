@@ -179,3 +179,67 @@
   color: white;
   cursor: not-allowed;
 }
+
+/* Security Questions table specific styles */
+.user-status-table-container .action-cell {
+  width: 120px;
+  text-align: center;
+  padding: 4px;
+  white-space: nowrap;
+}
+
+.user-status-table-container .script-button.save {
+  background-color: #28a745;
+  color: white;
+  width: auto;
+  height: auto;
+  font-size: 12px;
+  padding: 4px 8px;
+  margin: 0 2px;
+}
+
+.user-status-table-container .script-button.cancel {
+  background-color: #6c757d;
+  color: white;
+  width: auto;
+  height: auto;
+  font-size: 12px;
+  padding: 4px 8px;
+  margin: 0 2px;
+}
+
+.user-status-table-container .script-button.edit {
+  background-color: #007bff;
+  color: white;
+  width: auto;
+  height: auto;
+  font-size: 12px;
+  padding: 4px 8px;
+  margin: 0 2px;
+}
+
+.user-status-table-container .script-button.clear {
+  background-color: #dc3545;
+  color: white;
+  width: auto;
+  height: auto;
+  font-size: 12px;
+  padding: 4px 8px;
+  margin: 0 2px;
+}
+
+.user-status-table-container .script-button.save:hover {
+  background-color: #218838;
+}
+
+.user-status-table-container .script-button.cancel:hover {
+  background-color: #5a6268;
+}
+
+.user-status-table-container .script-button.edit:hover {
+  background-color: #0056b3;
+}
+
+.user-status-table-container .script-button.clear:hover {
+  background-color: #c82333;
+}

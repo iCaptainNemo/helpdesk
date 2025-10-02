@@ -1,8 +1,6 @@
-import React from 'react';
-import '../styles/theme.css';
-import '../styles/grid.css';
+import React, { memo } from 'react';
 
-const MetricsCard = ({ 
+const MetricsCard = memo(({ 
   title, 
   value, 
   change, 
@@ -93,10 +91,10 @@ const MetricsCard = ({
       {change !== undefined && !loading && formatChange(change)}
     </div>
   );
-};
+});
 
 // Status-specific metric cards
-export const StatusMetricsCard = ({ 
+export const StatusMetricsCard = memo(({ 
   title, 
   value, 
   status = 'normal', // 'normal', 'warning', 'critical'
@@ -134,10 +132,10 @@ export const StatusMetricsCard = ({
       className={className}
     />
   );
-};
+});
 
 // Time-based metric card (for response times, durations, etc.)
-export const TimeMetricsCard = ({ 
+export const TimeMetricsCard = memo(({ 
   title, 
   seconds, 
   target,
@@ -189,10 +187,10 @@ export const TimeMetricsCard = ({
       className={className}
     />
   );
-};
+});
 
 // Percentage-based metric card
-export const PercentageMetricsCard = ({ 
+export const PercentageMetricsCard = memo(({ 
   title, 
   percentage, 
   target,
@@ -233,6 +231,6 @@ export const PercentageMetricsCard = ({
       className={className}
     />
   );
-};
+});
 
 export default MetricsCard;

@@ -428,6 +428,86 @@
   100% { background-position: -200% 0; }
 }
 
+/* Dashboard Animations */
+.dashboard-content {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+
+.dashboard-content.dashboard-loaded {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Dashboard Card Animations */
+.dashboard-card {
+  transition: all 0.3s ease;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Metrics Cards Bounce Animation */
+@keyframes metricsBounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-8px);
+  }
+  60% {
+    transform: translateY(-4px);
+  }
+}
+
+.metrics-card-refresh {
+  animation: metricsBounce 0.6s ease-in-out;
+}
+
+/* Chart Loading Animation */
+@keyframes chartSlideIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.chart-card .chart-container {
+  animation: chartSlideIn 0.5s ease-out;
+}
+
+/* Staggered Animation for Dashboard Grid Items */
+.dashboard-grid > * {
+  animation: dashboardItemSlideIn 0.6s ease-out both;
+}
+
+.dashboard-grid > *:nth-child(1) { animation-delay: 0.1s; }
+.dashboard-grid > *:nth-child(2) { animation-delay: 0.2s; }
+.dashboard-grid > *:nth-child(3) { animation-delay: 0.3s; }
+.dashboard-grid > *:nth-child(4) { animation-delay: 0.4s; }
+.dashboard-grid > *:nth-child(5) { animation-delay: 0.5s; }
+.dashboard-grid > *:nth-child(6) { animation-delay: 0.6s; }
+.dashboard-grid > *:nth-child(7) { animation-delay: 0.7s; }
+.dashboard-grid > *:nth-child(8) { animation-delay: 0.8s; }
+
+@keyframes dashboardItemSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .skeleton-text {
   height: 1em;
   border-radius: var(--border-radius-sm);

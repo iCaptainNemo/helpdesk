@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MetricsCard, { StatusMetricsCard, TimeMetricsCard, PercentageMetricsCard } from '../components/MetricsCard';
-import LockedUsersTimeChart from '../components/charts/LockedUsersTimeChart';
-import LockedUsersPieChart from '../components/charts/LockedUsersPieChart';
 import { executePowerShellScript } from '../utils/apiUtils';
 import { ActionLogger } from '../utils/actionLogger';
-import '../styles/theme.css';
-import '../styles/grid.css';
+
+// Lazy load chart components to reduce initial bundle size
+const LockedUsersTimeChart = React.lazy(() => import('../components/charts/LockedUsersTimeChart'));
+const LockedUsersPieChart = React.lazy(() => import('../components/charts/LockedUsersPieChart'));
 
 const ModernDashboard = ({ 
   permissions = [], 
@@ -15,6 +15,7 @@ const ModernDashboard = ({
 }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
   const [showAllServers, setShowAllServers] = useState(false);
   const [showAllLockedUsers, setShowAllLockedUsers] = useState(false);
   const [dashboardData, setDashboardData] = useState({
@@ -31,14 +32,25 @@ const ModernDashboard = ({
   });
 
   // Fetch dashboard data
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (showFullLoading = false) => {
+    let hasCachedData = false;
+
     try {
-      setLoading(true);
-      
+      // Only show loading if it's the first load or explicitly requested
+      if (showFullLoading || initialLoad) {
+        setLoading(true);
+      }
+
       // Fetch actual data from endpoints (following original component patterns)
-      
+
       // Fetch locked out users from ledger (optimized) - use same endpoint as pie chart for consistency
       const lockedUsersRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/ledger/current-locked-users`);
+
+      // Check if this response came from cache
+      if (lockedUsersRes.headers.get('X-Cache') === 'HIT') {
+        hasCachedData = true;
+      }
+
       const lockedUsersData = await lockedUsersRes.json();
       // Ensure locked users is an array (following LockedOutUsers component pattern)
       const lockedUsers = Array.isArray(lockedUsersData) ? lockedUsersData : [];
@@ -137,7 +149,12 @@ const ModernDashboard = ({
       const systemStatus = servers.map(server => ({
         name: server.ServerName,
         status: server.Status ? server.Status.toLowerCase() : 'unknown',
-        type: server.Description || 'Server'
+        type: server.Description || 'Server',
+        fileShareService: server.FileShareService || 'Unknown',
+        printSpoolerService: server.PrintSpoolerService || 'Unknown',
+        onlineTime: server.OnlineTime,
+        offlineTime: server.OfflineTime,
+        location: server.Location
       }));
 
       // Fetch recent actions from database
@@ -190,16 +207,28 @@ const ModernDashboard = ({
         recentActivity: []
       });
     } finally {
-      setLoading(false);
+      // If data came from cache, don't show loading skeleton
+      if (hasCachedData && !initialLoad) {
+        setLoading(false);
+      } else {
+        // For fresh data or initial load, show loading briefly to prevent flashing
+        setTimeout(() => {
+          setLoading(false);
+        }, initialLoad ? 0 : 150);
+      }
+
+      if (initialLoad) {
+        setInitialLoad(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchDashboardData();
-    
+    fetchDashboardData(true); // Show full loading on initial mount
+
     // Set up real-time updates (matching original component intervals)
-    const interval = setInterval(fetchDashboardData, 60000); // 60 seconds
-    
+    const interval = setInterval(() => fetchDashboardData(false), 60000); // 60 seconds, no loading skeleton
+
     return () => clearInterval(interval);
   }, []);
 
@@ -221,6 +250,35 @@ const ModernDashboard = ({
       case 'password_reset': return 'reset password for';
       default: return 'acted on';
     }
+  };
+
+  const calculateUpDowntime = (onlineTime, offlineTime) => {
+    const currentTime = new Date();
+    let diffTime;
+
+    if (onlineTime) {
+      diffTime = Math.abs(currentTime - new Date(onlineTime));
+    } else if (offlineTime) {
+      diffTime = Math.abs(currentTime - new Date(offlineTime));
+    } else {
+      return 'N/A';
+    }
+
+    const diffMinutes = Math.floor(diffTime / (1000 * 60));
+    const days = Math.floor(diffMinutes / 1440); // 1440 minutes in a day
+    const hours = Math.floor((diffMinutes % 1440) / 60);
+    const remainingMinutes = diffMinutes % 60;
+
+    let formattedTime = '';
+    if (days > 0) {
+      formattedTime += `${days} days `;
+    }
+    if (hours > 0) {
+      formattedTime += `${hours} hours `;
+    }
+    formattedTime += `${remainingMinutes} minutes`;
+
+    return formattedTime;
   };
 
   const handleDepartmentClick = (department) => {
@@ -254,37 +312,18 @@ const ModernDashboard = ({
         try {
           const token = localStorage.getItem('token');
           if (token) {
-            // Check if user exists
-            const checkResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/fetch-user`, {
-              method: 'POST',
+            // Update user stats using the correct endpoint
+            await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/fetch-user/update`, {
+              method: 'PUT',
               headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
               },
-              body: JSON.stringify({ adObjectID: userID }),
+              body: JSON.stringify({
+                adObjectID: userID,
+                updates: updates
+              }),
             });
-
-            if (checkResponse.ok) {
-              // Update existing user
-              await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/users/${encodeURIComponent(userID)}`, {
-                method: 'PATCH',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify(updates),
-              });
-            } else {
-              // Create new user record
-              await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/users`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify({ UserID: userID, ...updates }),
-              });
-            }
           }
         } catch (dbError) {
           console.warn('Error updating user stats in database:', dbError);
@@ -310,7 +349,7 @@ const ModernDashboard = ({
 
 
   return (
-    <div className="dashboard-content" style={{ background: 'var(--bg-primary)', minHeight: '100%' }}>
+    <div className={`dashboard-content ${!initialLoad ? 'dashboard-loaded' : ''}`} style={{ background: 'var(--bg-primary)', minHeight: '100%' }}>
       {/* Dashboard Grid */}
       <main className="dashboard-grid dashboard-main">
           {/* Metrics Cards Row */}
@@ -354,16 +393,20 @@ const ModernDashboard = ({
           />
 
           {/* Charts Row */}
-          <LockedUsersTimeChart
-            className="grid-chart-timeline"
-            data={dashboardData.lockedUsers}
-          />
+          <Suspense fallback={<div className="grid-chart-timeline dashboard-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading Timeline Chart...</div>}>
+            <LockedUsersTimeChart
+              className="grid-chart-timeline"
+              data={dashboardData.lockedUsers}
+            />
+          </Suspense>
 
-          <LockedUsersPieChart
-            className="grid-chart-pie"
-            data={dashboardData.lockedUsers}
-            onDepartmentClick={handleDepartmentClick}
-          />
+          <Suspense fallback={<div className="grid-chart-pie dashboard-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading Pie Chart...</div>}>
+            <LockedUsersPieChart
+              className="grid-chart-pie"
+              data={dashboardData.lockedUsers}
+              onDepartmentClick={handleDepartmentClick}
+            />
+          </Suspense>
 
           {/* Active Issues & Quick Actions Row */}
           <div className="dashboard-card grid-active-issues">
@@ -407,30 +450,44 @@ const ModernDashboard = ({
                           new Date(b.AccountLockoutTime) - new Date(a.AccountLockoutTime)
                         );
                         const displayUsers = showAllLockedUsers ? sortedUsers : sortedUsers.slice(0, 6);
-                        return displayUsers.map(user => (
-                        <tr key={user.UserID}>
+                        return displayUsers.map(user => {
+                          // Check if lockout occurred within last 5 minutes
+                          const lockoutTime = new Date(user.AccountLockoutTime);
+                          const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+                          const isRecentLockout = lockoutTime > fiveMinutesAgo;
+
+                          return (
+                        <tr
+                          key={user.UserID}
+                          className={isRecentLockout ? 'recent-lockout' : ''}
+                          style={isRecentLockout ? {
+                            backgroundColor: '#ffeb3b',
+                            color: '#000000',
+                            fontWeight: '500'
+                          } : {}}
+                        >
                           <td>
-                            <span className="text-sm text-primary">
+                            <span className="text-sm" style={isRecentLockout ? {color: '#000000'} : {color: 'var(--text-primary)'}}>
                               {user.UserID}
                             </span>
                           </td>
                           <td>
-                            <span className="text-sm text-primary">
+                            <span className="text-sm" style={isRecentLockout ? {color: '#000000'} : {color: 'var(--text-primary)'}}>
                               {user.name || 'N/A'}
                             </span>
                           </td>
                           <td>
-                            <span className="text-sm text-secondary">
+                            <span className="text-sm" style={isRecentLockout ? {color: '#000000'} : {color: 'var(--text-secondary)'}}>
                               {user.department || 'Unknown Dept'}
                             </span>
                           </td>
                           <td>
-                            <span className="text-sm text-muted">
+                            <span className="text-sm" style={isRecentLockout ? {color: '#000000'} : {color: 'var(--text-muted)'}}>
                               {new Date(user.AccountLockoutTime).toLocaleString()}
                             </span>
                           </td>
                           <td>
-                            <button 
+                            <button
                               className="px-sm py-xs bg-accent-blue text-white rounded-sm text-xs hover-lift transition"
                               onClick={() => handleUnlockUser(user.UserID)}
                             >
@@ -438,7 +495,8 @@ const ModernDashboard = ({
                             </button>
                           </td>
                         </tr>
-                        ));
+                        );
+                        });
                       })()}
                     </tbody>
                   </table>
@@ -545,30 +603,47 @@ const ModernDashboard = ({
               ) : dashboardData.systemStatus.length > 0 ? (
                 <div className="table-responsive">
                   <table className="dashboard-table">
+                    <thead>
+                      <tr>
+                        <th>Server Name</th>
+                        <th>Status</th>
+                        <th>File Share</th>
+                        <th>Print Spooler</th>
+                        <th>Up/Downtime</th>
+                        <th>Online Time</th>
+                        <th>Offline Time</th>
+                      </tr>
+                    </thead>
                     <tbody>
                       {(() => {
-                        // Filter servers based on toggle - show only offline/warning servers when collapsed
-                        const filteredServers = showAllServers 
-                          ? dashboardData.systemStatus 
-                          : dashboardData.systemStatus.filter(server => 
-                              server.status !== 'online'
+                        // Filter servers based on toggle - show only servers with issues when collapsed
+                        const filteredServers = showAllServers
+                          ? dashboardData.systemStatus
+                          : dashboardData.systemStatus.filter(server =>
+                              server.status !== 'online' ||
+                              server.fileShareService !== 'Running' ||
+                              server.printSpoolerService !== 'Running'
                             );
-                        
+
                         // Show "All servers online" message when no issues and collapsed
-                        const allServersHealthy = dashboardData.systemStatus.every(server => server.status === 'online');
+                        const allServersHealthy = dashboardData.systemStatus.every(server =>
+                          server.status === 'online' &&
+                          server.fileShareService === 'Running' &&
+                          server.printSpoolerService === 'Running'
+                        );
                         
                         if (!showAllServers && allServersHealthy) {
                           return (
                             <tr className="all-servers-online">
-                              <td colSpan="3" className="text-center text-status-success">
-                                All Servers Are Online
+                              <td colSpan="7" className="text-center text-status-success">
+                                All Servers Are Online and All Services Running
                               </td>
                             </tr>
                           );
                         }
                         
                         return filteredServers.map(server => (
-                        <tr key={server.name}>
+                        <tr key={server.name} title={`Location: ${server.location || 'N/A'}\nType: ${server.type || 'N/A'}`}>
                           <td>
                             <span className="font-medium text-primary">
                               {server.name}
@@ -577,14 +652,46 @@ const ModernDashboard = ({
                           <td>
                             <div className="flex items-center gap-sm">
                               <div className={`status-indicator ${server.status}`}></div>
-                              <span className="text-sm text-secondary capitalize">
+                              <span className={`text-sm capitalize ${server.status === 'online' ? 'text-status-success' : 'text-status-error'}`}>
                                 {server.status}
                               </span>
                             </div>
                           </td>
                           <td>
+                            <span className={`text-sm ${
+                              server.fileShareService === 'Running'
+                                ? 'text-status-success'
+                                : server.status === 'online'
+                                  ? 'text-status-warning'
+                                  : 'text-status-error'
+                            }`}>
+                              {server.fileShareService}
+                            </span>
+                          </td>
+                          <td>
+                            <span className={`text-sm ${
+                              server.printSpoolerService === 'Running'
+                                ? 'text-status-success'
+                                : server.status === 'online'
+                                  ? 'text-status-warning'
+                                  : 'text-status-error'
+                            }`}>
+                              {server.printSpoolerService}
+                            </span>
+                          </td>
+                          <td>
                             <span className="text-sm text-muted">
-                              {server.type}
+                              {calculateUpDowntime(server.onlineTime, server.offlineTime)}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="text-sm text-muted">
+                              {server.onlineTime ? new Date(server.onlineTime).toLocaleString() : 'N/A'}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="text-sm text-muted">
+                              {server.offlineTime ? new Date(server.offlineTime).toLocaleString() : 'N/A'}
                             </span>
                           </td>
                         </tr>

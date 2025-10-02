@@ -11,8 +11,6 @@ import {
   Filler
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import '../../styles/theme.css';
-import '../../styles/grid.css';
 
 // Register Chart.js components
 ChartJS.register(

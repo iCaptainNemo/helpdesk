@@ -112,6 +112,16 @@ class DatabaseMigrator {
         version: '2024-01-01-remove-admin-table',
         description: 'Remove Admin table and add LastAdminHelped to Users table',
         up: this.migration_removeAdminTable.bind(this)
+      },
+      {
+        version: '2024-01-02-add-security-questions',
+        description: 'Add SecurityQuestion and SecurityAnswer columns to Users table',
+        up: this.migration_addSecurityQuestions.bind(this)
+      },
+      {
+        version: '2025-01-01-add-print-spooler-service',
+        description: 'Add PrintSpoolerService column to Servers table',
+        up: this.migration_addPrintSpoolerService.bind(this)
       }
     ];
 
@@ -211,6 +221,95 @@ class DatabaseMigrator {
           }
         } else {
           logger.info('Users table already has LastAdminHelped column');
+        }
+
+        resolve();
+      } catch (error) {
+        logger.error('Migration error:', error);
+        reject(error);
+      }
+    });
+  }
+
+  /**
+   * Migration: Add SecurityQuestion and SecurityAnswer columns to Users table
+   */
+  migration_addSecurityQuestions() {
+    return new Promise(async (resolve, reject) => {
+      try {
+        // Check if Users table exists
+        const userTableInfo = (() => {
+          try {
+            const stmt = this.db.prepare(`PRAGMA table_info(Users)`);
+            return stmt.all();
+          } catch (err) {
+            throw err;
+          }
+        })();
+
+        const hasSecurityQuestion = userTableInfo.some(col => col.name === 'SecurityQuestion');
+        const hasSecurityAnswer = userTableInfo.some(col => col.name === 'SecurityAnswer');
+
+        if (!hasSecurityQuestion) {
+          logger.info('Adding SecurityQuestion column to Users table');
+          try {
+            this.db.exec('ALTER TABLE Users ADD COLUMN SecurityQuestion TEXT');
+            logger.info('SecurityQuestion column added successfully');
+          } catch (err) {
+            throw err;
+          }
+        } else {
+          logger.info('Users table already has SecurityQuestion column');
+        }
+
+        if (!hasSecurityAnswer) {
+          logger.info('Adding SecurityAnswer column to Users table');
+          try {
+            this.db.exec('ALTER TABLE Users ADD COLUMN SecurityAnswer TEXT');
+            logger.info('SecurityAnswer column added successfully');
+          } catch (err) {
+            throw err;
+          }
+        } else {
+          logger.info('Users table already has SecurityAnswer column');
+        }
+
+        resolve();
+      } catch (error) {
+        logger.error('Migration error:', error);
+        reject(error);
+      }
+    });
+  }
+
+  /**
+   * Migration: Add PrintSpoolerService column to Servers table
+   */
+  migration_addPrintSpoolerService() {
+    return new Promise(async (resolve, reject) => {
+      try {
+        // Check if Servers table exists and get its structure
+        const serverTableInfo = (() => {
+          try {
+            const stmt = this.db.prepare(`PRAGMA table_info(Servers)`);
+            return stmt.all();
+          } catch (err) {
+            throw err;
+          }
+        })();
+
+        const hasPrintSpoolerService = serverTableInfo.some(col => col.name === 'PrintSpoolerService');
+
+        if (!hasPrintSpoolerService) {
+          logger.info('Adding PrintSpoolerService column to Servers table');
+          try {
+            this.db.exec('ALTER TABLE Servers ADD COLUMN PrintSpoolerService TEXT');
+            logger.info('PrintSpoolerService column added successfully');
+          } catch (err) {
+            throw err;
+          }
+        } else {
+          logger.info('Servers table already has PrintSpoolerService column');
         }
 
         resolve();

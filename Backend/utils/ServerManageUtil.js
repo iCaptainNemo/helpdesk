@@ -39,7 +39,7 @@ async function getServerStatuses() {
                 // Prepare the SQL statement for updating server statuses
                 const updateStmt = db.prepare(`
                     UPDATE Servers
-                    SET Status = ?, FileShareService = ?, OnlineTime = ?, OfflineTime = ?
+                    SET Status = ?, FileShareService = ?, PrintSpoolerService = ?, OnlineTime = ?, OfflineTime = ?
                     WHERE ServerName = ?
                 `);
 
@@ -74,6 +74,7 @@ async function getServerStatuses() {
                     updateStmt.run(
                         server.Status,
                         server.FileShareService,
+                        server.PrintSpoolerService,
                         onlineTime ? (onlineTime instanceof Date ? onlineTime.toISOString() : onlineTime) : null,
                         offlineTime ? (offlineTime instanceof Date ? offlineTime.toISOString() : offlineTime) : null,
                         server.ServerName
@@ -96,11 +97,93 @@ async function getServerStatuses() {
     }
 }
 
+async function getFrequentServerHealth() {
+    try {
+        // Get servers that need frequent monitoring (have issues)
+        const serversWithIssues = await getServersNeedingFrequentCheck();
+
+        if (serversWithIssues.length === 0) {
+            logger.info('No servers requiring frequent health checks.');
+            return [];
+        }
+
+        const serverNames = serversWithIssues.map(server => server.ServerName);
+        logger.info(`Performing frequent health check on ${serverNames.length} servers: ${serverNames.join(', ')}`);
+
+        const scriptPath = process.pkg
+            ? path.join(process.cwd(), 'functions', 'Get-ServerHealth-Frequent.ps1')
+            : path.join(__dirname, '../functions/Get-ServerHealth-Frequent.ps1');
+
+        // Execute the frequent health check PowerShell script
+        const healthResults = await serverPowerShellScript(scriptPath, serverNames);
+        logger.info('Frequent server health check completed.');
+
+        // Ensure healthResults is an array
+        const resultsArray = Array.isArray(healthResults) ? healthResults : [healthResults];
+
+        // Update server statuses with frequent check results
+        const transaction = db.transaction(() => {
+            try {
+                const updateStmt = db.prepare(`
+                    UPDATE Servers
+                    SET Status = ?, FileShareService = ?, PrintSpoolerService = ?
+                    WHERE ServerName = ?
+                `);
+
+                for (const result of resultsArray) {
+                    updateStmt.run(
+                        result.Status,
+                        result.FileShareService,
+                        result.PrintSpoolerService,
+                        result.ServerName
+                    );
+                }
+
+                logger.info('Frequent server health check results updated in database.');
+            } catch (err) {
+                logger.error('Failed to update frequent health check results:', err);
+                throw err;
+            }
+        });
+
+        transaction();
+        return resultsArray;
+
+    } catch (error) {
+        logger.error(`Failed to perform frequent server health check: ${error.message}`);
+        throw error;
+    }
+}
+
+async function getServersNeedingFrequentCheck() {
+    try {
+        // Query for servers that have issues and need frequent monitoring
+        const query = `
+            SELECT ServerName, Status, FileShareService, PrintSpoolerService, OfflineTime
+            FROM Servers
+            WHERE Status = 'Offline'
+               OR FileShareService = 'Not Running'
+               OR PrintSpoolerService = 'Not Running'
+            ORDER BY ServerName
+        `;
+
+        const serversWithIssues = db.prepare(query).all();
+        logger.info(`Found ${serversWithIssues.length} servers needing frequent monitoring.`);
+
+        return serversWithIssues;
+    } catch (error) {
+        logger.error(`Failed to get servers needing frequent check: ${error.message}`);
+        return [];
+    }
+}
+
 module.exports = {
     insertServer,
     updateServer,
     deleteServer,
     fetchServer,
     fetchAllServers,
-    getServerStatuses
+    getServerStatuses,
+    getFrequentServerHealth,
+    getServersNeedingFrequentCheck
 };

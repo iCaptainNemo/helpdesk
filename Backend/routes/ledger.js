@@ -2,9 +2,10 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/init');
 const logger = require('../utils/logger');
+const { cacheMiddleware } = require('../middleware/cache');
 
 // Get locked users over time from ledger
-router.get('/locked-users-timeline/:hours', (req, res) => {
+router.get('/locked-users-timeline/:hours', cacheMiddleware(60), (req, res) => {
     try {
         const hours = parseInt(req.params.hours) || 3;
         const timeLimit = new Date(Date.now() - (hours * 60 * 60 * 1000)).toISOString();
@@ -84,7 +85,7 @@ router.get('/locked-users-timeline/:hours', (req, res) => {
 });
 
 // Get locked users by department from ledger
-router.get('/locked-users-by-department', (req, res) => {
+router.get('/locked-users-by-department', cacheMiddleware(60), (req, res) => {
     try {
         // Get the single most recent snapshot timestamp (same as current-locked-users)
         const latestTimestampQuery = `
@@ -123,7 +124,7 @@ router.get('/locked-users-by-department', (req, res) => {
 });
 
 // Get current locked users from ledger (most recent snapshot)
-router.get('/current-locked-users', (req, res) => {
+router.get('/current-locked-users', cacheMiddleware(60), (req, res) => {
     try {
         // Get the most recent snapshot
         const latestTimestampQuery = `

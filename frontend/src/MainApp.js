@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, useNavigate } from 'react-router-dom';
 import socketIOClient from 'socket.io-client';
 import './styles.css'; // Import the CSS file
@@ -6,17 +6,19 @@ import './styles/theme.css'; // Import the new theme
 import './styles/grid.css'; // Import the grid system
 import Header from './Header';
 import Navbar from './Navbar';
-import Dashboard from './pages/Dashboard';
-import ModernDashboard from './pages/ModernDashboard'; // Import the new modern dashboard
-import ADProperties from './pages/ADProperties'; // Legacy AD Properties
-import ModernADProperties from './pages/ModernADProperties'; // Modern AD Properties
-import Profile from './pages/Profile';
 import Login from './pages/Login';
-import ModernConfigure from './pages/ModernConfigure'; // Import the Modern Configure page
-import Setup from './pages/Setup'; // Import the Setup page
-import SplashScreen from './components/SplashScreen'; // Import the Splash Screen
-import SetupWizard from './components/SetupWizard'; // Import the Setup Wizard
-import Terminal from './components/Terminal'; // Import the Terminal component
+import SplashScreen from './components/SplashScreen';
+import SetupWizard from './components/SetupWizard';
+
+// Lazy load heavy components
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const ModernDashboard = React.lazy(() => import('./pages/ModernDashboard'));
+const ADProperties = React.lazy(() => import('./pages/ADProperties'));
+const ModernADProperties = React.lazy(() => import('./pages/ModernADProperties'));
+const Profile = React.lazy(() => import('./pages/Profile'));
+const ModernConfigure = React.lazy(() => import('./pages/ModernConfigure'));
+const Setup = React.lazy(() => import('./pages/Setup'));
+const Terminal = React.lazy(() => import('./components/Terminal'));
 
 // Always use the backend server IP address
 const ENDPOINT = process.env.REACT_APP_BACKEND_URL;
@@ -184,15 +186,15 @@ function App() {
             <>
               {isAuthenticated ? (
                 <>
-                  <Route path="/" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ModernDashboard permissions={permissions} adminID={AdminID} adminComputer={adminComputer} /></AuthenticatedLayout>} />
-                  <Route path="/dashboard" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ModernDashboard permissions={permissions} adminID={AdminID} adminComputer={adminComputer} /></AuthenticatedLayout>} />
-                  <Route path="/dashboard-legacy" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Dashboard /></AuthenticatedLayout>} />
-                  <Route path="/ad-object" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ModernADProperties permissions={permissions} /></AuthenticatedLayout>} />
-                  <Route path="/ad-object/:adObjectID" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ModernADProperties permissions={permissions} /></AuthenticatedLayout>} />
-                  <Route path="/ad-object-legacy/:adObjectID?" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ADProperties permissions={permissions} /></AuthenticatedLayout>} />
-                  <Route path="/Profile" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Profile permissions={permissions} /></AuthenticatedLayout>} />
-                  <Route path="/configure" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ModernConfigure permissions={permissions} /></AuthenticatedLayout>} />
-                  <Route path="/setup" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Setup /></AuthenticatedLayout>} />
+                  <Route path="/" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Suspense fallback={<div className="loading-spinner">Loading Dashboard...</div>}><ModernDashboard permissions={permissions} adminID={AdminID} adminComputer={adminComputer} /></Suspense></AuthenticatedLayout>} />
+                  <Route path="/dashboard" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Suspense fallback={<div className="loading-spinner">Loading Dashboard...</div>}><ModernDashboard permissions={permissions} adminID={AdminID} adminComputer={adminComputer} /></Suspense></AuthenticatedLayout>} />
+                  <Route path="/dashboard-legacy" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Suspense fallback={<div className="loading-spinner">Loading Legacy Dashboard...</div>}><Dashboard /></Suspense></AuthenticatedLayout>} />
+                  <Route path="/ad-object" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Suspense fallback={<div className="loading-spinner">Loading AD Properties...</div>}><ModernADProperties permissions={permissions} /></Suspense></AuthenticatedLayout>} />
+                  <Route path="/ad-object/:adObjectID" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Suspense fallback={<div className="loading-spinner">Loading AD Properties...</div>}><ModernADProperties permissions={permissions} /></Suspense></AuthenticatedLayout>} />
+                  <Route path="/ad-object-legacy/:adObjectID?" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Suspense fallback={<div className="loading-spinner">Loading Legacy AD Properties...</div>}><ADProperties permissions={permissions} /></Suspense></AuthenticatedLayout>} />
+                  <Route path="/Profile" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Suspense fallback={<div className="loading-spinner">Loading Profile...</div>}><Profile permissions={permissions} /></Suspense></AuthenticatedLayout>} />
+                  <Route path="/configure" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Suspense fallback={<div className="loading-spinner">Loading Configuration...</div>}><ModernConfigure permissions={permissions} /></Suspense></AuthenticatedLayout>} />
+                  <Route path="/setup" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Suspense fallback={<div className="loading-spinner">Loading Setup...</div>}><Setup /></Suspense></AuthenticatedLayout>} />
                   <Route path="*" element={<Navigate to="/dashboard" />} />
                 </>
               ) : (

@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db/init');
+const { cacheMiddleware } = require('../middleware/cache');
 
-router.get('/status', (req, res) => {
+router.get('/status', cacheMiddleware(60), (req, res) => {
     try {
         const stmt = db.prepare('SELECT * FROM Servers');
         const rows = stmt.all();

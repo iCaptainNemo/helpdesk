@@ -170,11 +170,11 @@ function fetchAllAdminUsers() {
 // New functions for managing servers
 function insertServer(server) {
     const query = `
-        INSERT INTO Servers (ServerName, Description, Status, Location, FileShareService, OnlineTime, OfflineTime)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO Servers (ServerName, Description, Status, Location, FileShareService, PrintSpoolerService, OnlineTime, OfflineTime)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const params = [
-        server.ServerName, server.Description, server.Status, server.Location, server.FileShareService, server.OnlineTime, server.OfflineTime
+        server.ServerName, server.Description, server.Status, server.Location, server.FileShareService, server.PrintSpoolerService, server.OnlineTime, server.OfflineTime
     ];
     return executeQuery(query, params);
 }
@@ -182,11 +182,11 @@ function insertServer(server) {
 function updateServer(server) {
     const query = `
         UPDATE Servers
-        SET Description = ?, Status = ?, Location = ?, FileShareService = ?, OnlineTime = ?, OfflineTime = ?
+        SET Description = ?, Status = ?, Location = ?, FileShareService = ?, PrintSpoolerService = ?, OnlineTime = ?, OfflineTime = ?
         WHERE ServerName = ?
     `;
     const params = [
-        server.Description, server.Status, server.Location, server.FileShareService, server.OnlineTime, server.OfflineTime, server.ServerName
+        server.Description, server.Status, server.Location, server.FileShareService, server.PrintSpoolerService, server.OnlineTime, server.OfflineTime, server.ServerName
     ];
     return executeQuery(query, params);
 }
@@ -348,6 +348,52 @@ function fetchDomainControllers(callback) {
     }
 }
 
+// Security Question Functions
+function updateUserSecurityQuestion(userID, securityQuestion, securityAnswer) {
+    try {
+        const query = `
+            UPDATE Users
+            SET SecurityQuestion = ?, SecurityAnswer = ?
+            WHERE UserID = ?
+        `;
+        const stmt = db.prepare(query);
+        const result = stmt.run(securityQuestion, securityAnswer, userID);
+        return Promise.resolve(result);
+    } catch (err) {
+        return Promise.reject(err);
+    }
+}
+
+function fetchUserSecurityQuestion(userID) {
+    try {
+        const query = `
+            SELECT SecurityQuestion, SecurityAnswer
+            FROM Users
+            WHERE UserID = ?
+        `;
+        const stmt = db.prepare(query);
+        const row = stmt.get(userID);
+        return Promise.resolve(row || { SecurityQuestion: null, SecurityAnswer: null });
+    } catch (err) {
+        return Promise.reject(err);
+    }
+}
+
+function clearUserSecurityQuestion(userID) {
+    try {
+        const query = `
+            UPDATE Users
+            SET SecurityQuestion = NULL, SecurityAnswer = NULL
+            WHERE UserID = ?
+        `;
+        const stmt = db.prepare(query);
+        const result = stmt.run(userID);
+        return Promise.resolve(result);
+    } catch (err) {
+        return Promise.reject(err);
+    }
+}
+
 module.exports = {
     insertDomainController,
     insertCurrentDomain,
@@ -375,5 +421,8 @@ module.exports = {
     removeRoleFromUser,
     assignPermissionToRole,
     fetchRolesForUser,
-    fetchPermissionsForRoles
+    fetchPermissionsForRoles,
+    updateUserSecurityQuestion,
+    fetchUserSecurityQuestion,
+    clearUserSecurityQuestion
 };
