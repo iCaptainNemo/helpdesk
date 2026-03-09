@@ -152,36 +152,38 @@ function Show-ADUserProperties {
         # Build display properties dynamically from YAML config
         $properties = [ordered]@{}
         
-        # Define display property mapping (friendly name -> AD property name)
-        $displayMapping = @{
-            'User ID'                   = 'SamAccountName'
-            'Given Name'                = 'GivenName' 
-            'Display Name'              = 'DisplayName'
-            'Title'                     = 'Title'
-            'HomeShare'                 = 'HomeDirectory'
-            'Email'                     = 'EmailAddress'
-            'Department'                = 'Department'
-            'Telephone'                 = 'telephoneNumber'
-            'Account Lockout Time'      = 'AccountLockoutTime'
-            'Last Bad Password Attempt' = 'LastBadPasswordAttempt'
-            'Bad Logon Count'           = 'BadLogonCount'
-            'Bad Password Count'        = 'badPwdCount'
-        }
+        # Define display property mapping in desired display order (friendly name -> AD property name)
+        $displayMappingOrder = @(
+            @{ DisplayName = 'User ID'; PropertyName = 'SamAccountName' }
+            @{ DisplayName = 'Given Name'; PropertyName = 'GivenName' }
+            @{ DisplayName = 'Display Name'; PropertyName = 'DisplayName' }
+            @{ DisplayName = 'Title'; PropertyName = 'Title' }
+            @{ DisplayName = 'HomeShare'; PropertyName = 'HomeDirectory' }
+            @{ DisplayName = 'Email'; PropertyName = 'EmailAddress' }
+            @{ DisplayName = 'Department'; PropertyName = 'Department' }
+            @{ DisplayName = 'Telephone'; PropertyName = 'telephoneNumber' }
+            @{ DisplayName = 'Account Lockout Time'; PropertyName = 'AccountLockoutTime' }
+            @{ DisplayName = 'Last Bad Password Attempt'; PropertyName = 'LastBadPasswordAttempt' }
+            @{ DisplayName = 'Bad Logon Count'; PropertyName = 'BadLogonCount' }
+            @{ DisplayName = 'Bad Password Count'; PropertyName = 'badPwdCount' }
+        )
         
         # Get the properties that were actually retrieved based on YAML config
         if ($adPropsConfig.PowerShellAD.UserProperties.UseAllProperties -eq $true) {
-            # If using all properties, show all mapped display properties
-            foreach ($displayName in $displayMapping.Keys) {
-                $adProperty = $displayMapping[$displayName]
+            # If using all properties, show all mapped display properties in order
+            foreach ($mapping in $displayMappingOrder) {
+                $displayName = $mapping.DisplayName
+                $adProperty = $mapping.PropertyName
                 if ($adUser.PSObject.Properties[$adProperty]) {
                     $properties[$displayName] = $adUser.$adProperty
                 }
             }
         } else {
-            # Only show properties that were configured to be retrieved
+            # Only show properties that were configured to be retrieved, in order
             $retrievedProperties = $adPropsConfig.PowerShellAD.UserProperties.Core + $adPropsConfig.PowerShellAD.UserProperties.Extended
-            foreach ($displayName in $displayMapping.Keys) {
-                $adProperty = $displayMapping[$displayName]
+            foreach ($mapping in $displayMappingOrder) {
+                $displayName = $mapping.DisplayName
+                $adProperty = $mapping.PropertyName
                 if ($retrievedProperties -contains $adProperty -and $adUser.PSObject.Properties[$adProperty]) {
                     $properties[$displayName] = $adUser.$adProperty
                 }
@@ -244,42 +246,43 @@ function Show-ADUserProperties {
     elseif ($adUser -is [System.DirectoryServices.DirectoryEntry]) {
         # Process $adUser as System.DirectoryServices.DirectoryEntry
         
-        # Define display property mapping for DirectorySearcher (friendly name -> LDAP attribute)
-        $dsDisplayMapping = @{
-            'User ID'                   = 'sAMAccountName'
-            'Full Name'                 = 'cn'
-            'Display Name'              = 'displayName'
-            'Given Name'                = 'givenName'
-            'Surname'                   = 'sn'
-            'Title'                     = 'title'
-            'Email'                     = 'mail'
-            'Department'                = 'department'
-            'Telephone'                 = 'telephoneNumber'
-            'Home Directory'            = 'homeDirectory'
-            'User Principal Name'       = 'userPrincipalName'
-            'Distinguished Name'        = 'distinguishedName'
-            'Lockout Time'              = 'lockoutTime'
-            'Password Last Set'         = 'pwdLastSet'
-            'User Account Control'      = 'userAccountControl'
-        }
+        # Define display property mapping for DirectorySearcher in desired order (friendly name -> LDAP attribute)
+        $dsDisplayMappingOrder = @(
+            @{ DisplayName = 'User ID'; PropertyName = 'sAMAccountName' }
+            @{ DisplayName = 'Given Name'; PropertyName = 'givenName' }
+            @{ DisplayName = 'Display Name'; PropertyName = 'displayName' }
+            @{ DisplayName = 'Full Name'; PropertyName = 'cn' }
+            @{ DisplayName = 'Surname'; PropertyName = 'sn' }
+            @{ DisplayName = 'Title'; PropertyName = 'title' }
+            @{ DisplayName = 'Email'; PropertyName = 'mail' }
+            @{ DisplayName = 'Department'; PropertyName = 'department' }
+            @{ DisplayName = 'Telephone'; PropertyName = 'telephoneNumber' }
+            @{ DisplayName = 'Home Directory'; PropertyName = 'homeDirectory' }
+            @{ DisplayName = 'User Principal Name'; PropertyName = 'userPrincipalName' }
+            @{ DisplayName = 'Distinguished Name'; PropertyName = 'distinguishedName' }
+            @{ DisplayName = 'Lockout Time'; PropertyName = 'lockoutTime' }
+            @{ DisplayName = 'Password Last Set'; PropertyName = 'pwdLastSet' }
+            @{ DisplayName = 'User Account Control'; PropertyName = 'userAccountControl' }
+        )
         
-        # Build display object dynamically from YAML config
-        $customUser = New-Object PSObject
+        # Build display object dynamically from YAML config, maintaining order
+        $customUser = [ordered]@{}
         $retrievedProperties = $adPropsConfig.DirectorySearcher.UserProperties.All
         
-        # Only add properties that were configured to be retrieved and have values
-        foreach ($displayName in $dsDisplayMapping.Keys) {
-            $ldapAttribute = $dsDisplayMapping[$displayName]
+        # Only add properties that were configured to be retrieved and have values, in order
+        foreach ($mapping in $dsDisplayMappingOrder) {
+            $displayName = $mapping.DisplayName
+            $ldapAttribute = $mapping.PropertyName
             if ($retrievedProperties -contains $ldapAttribute) {
                 $propertyValue = $adUser.Properties[$ldapAttribute].Value
                 if ($null -ne $propertyValue -and $propertyValue -ne "") {
-                    $customUser | Add-Member -MemberType NoteProperty -Name $displayName -Value $propertyValue
+                    $customUser[$displayName] = $propertyValue
                 }
             }
         }
 
         # Display properties in a table
-        $customUser | Format-List
+        $customUser.GetEnumerator() | Format-Table Name, Value -AutoSize
     } else {
         Write-Host "Unsupported type for adUser"
     }

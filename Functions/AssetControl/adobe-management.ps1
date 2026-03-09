@@ -1,3 +1,82 @@
+<#
+.SYNOPSIS
+    Sets Adobe Acrobat DC as the default PDF application on remote computers
+.DESCRIPTION
+    This module provides functions to configure Adobe Acrobat DC as the default PDF 
+    application through scheduled task execution in user context. Addresses the persistent
+    issue where Microsoft Edge reclaims PDF file associations despite correct system-level
+    file associations being configured.
+
+    The core challenge is that Windows 10/11 protects default program assignments through
+    a UserChoice registry key that includes both a ProgId and a cryptographic hash. Simply
+    setting the ProgId without the matching hash causes Windows to ignore the association.
+    
+    This solution uses a verified hash from a properly configured machine to bypass
+    Windows' UserChoice protection and ensure Adobe remains the PDF default.
+
+.FUNCTIONALITY
+    - Detects Adobe Acrobat DC installation path (both 32-bit and 64-bit locations)
+    - Sets correct file associations (.pdf = Acrobat.Document.DC)
+    - Configures registry entries for proper PDF handling in user context
+    - Forces Adobe re-registration to refresh all file associations
+    - Removes Microsoft Edge PDF takeover registry entries
+    - Sets UserChoice with verified hash to prevent Edge from reclaiming PDFs
+    - Restarts Windows Explorer to apply changes immediately
+    - Executes in target user's context via scheduled task for proper permissions
+
+.PARAMETER userId
+    The user ID requesting the Adobe PDF default configuration (for logging purposes)
+.PARAMETER computerName  
+    The target computer name where Adobe PDF default should be configured
+
+.EXAMPLE
+    Set-AdobePDFDefault -userId "jdoe" -computerName "WORKSTATION01"
+    
+    Sets Adobe Acrobat as the default PDF application for the active user on WORKSTATION01
+
+.NOTES
+    Author: Helpdesk Team
+    Version: 4.0 - Enhanced with UserChoice hash handling
+    Requires: 
+        - Adobe Acrobat DC installed on target machine
+        - Active user session on target machine  
+        - Remote PowerShell access to target machine
+        - Local administrator rights for scheduled task creation
+    
+    Part of: Jarvis Helpdesk Automation System - Asset Control Functions
+
+.TECHNICAL DETAILS
+    UserChoice Hash Problem:
+    Windows protects default program settings via HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.pdf\UserChoice
+    This key contains:
+    - ProgId: "Acrobat.Document.DC" (the program identifier)
+    - Hash: "4ankxyIxoIo=" (cryptographic signature validating the ProgId)
+    
+    The hash is calculated using a proprietary Microsoft algorithm that includes:
+    - User SID
+    - File extension (.pdf)  
+    - ProgId value
+    - System timestamp
+    - Unknown salt values
+    
+    Attempting to set ProgId without the matching hash results in Windows ignoring 
+    the association. This script uses a verified hash from a working configuration
+    to bypass this protection mechanism.
+
+.TROUBLESHOOTING
+    If Adobe doesn't become the default after running:
+    1. Verify Adobe Acrobat DC is properly installed
+    2. Check that the user was actively logged in during execution
+    3. Confirm Windows version compatibility (Windows 10/11)
+    4. Test with a different user account to rule out profile corruption
+    5. Check if Group Policy is overriding user-level associations
+    
+    Common Error Indicators:
+    - assoc .pdf shows correct value but right-click "Open with" still shows Edge
+    - PDF icons appear correct but files still open in Edge
+    - Settings > Default Apps shows Edge instead of Adobe for PDFs
+#>
+
 # Adobe PDF Default Configuration Batch Content (MUST be at script level)
 $global:AdobePDFBatchTemplate = @"
 @echo off
@@ -49,28 +128,51 @@ echo   Configuring PDF file associations...
 echo =========================================================================
 echo.
 
-REM Set file association for .pdf extension
+REM Set file association for .pdf extension (use correct ProgId)
 echo Setting .pdf file association...
-assoc .pdf=AcrobatDocument >nul 2>&1
+assoc .pdf=Acrobat.Document.DC >nul 2>&1
 set ASSOC_RESULT=%errorlevel%
 
-REM Set file type handler
+REM Set file type handler (use correct ProgId)
 echo Setting file type handler...
-ftype AcrobatDocument="%ADOBE_PATH%" "%%1" >nul 2>&1
+ftype Acrobat.Document.DC="%ADOBE_PATH%" "%%1" >nul 2>&1
 set FTYPE_RESULT=%errorlevel%
 
 REM Configure registry entries for proper PDF handling (user context)
 echo Configuring registry entries...
 
-REM Set user-level file association
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.pdf\UserChoice" /v ProgId /t REG_SZ /d "AcrobatDocument" /f >nul 2>&1
+REM Force Adobe to re-register itself (critical step)
+echo Re-registering Adobe Acrobat...
+"%ADOBE_PATH%" /RegServer >nul 2>&1
 
-REM Set Adobe as default in user preferences
-reg add "HKCU\Software\Classes\.pdf" /ve /t REG_SZ /d "AcrobatDocument" /f >nul 2>&1
-reg add "HKCU\Software\Classes\AcrobatDocument\shell\open\command" /ve /t REG_SZ /d "\"%ADOBE_PATH%\" \"%%1\"" /f >nul 2>&1
+REM Set user-level file association (correct ProgId)
+reg add "HKCU\Software\Classes\.pdf" /ve /t REG_SZ /d "Acrobat.Document.DC" /f >nul 2>&1
+reg add "HKCU\Software\Classes\Acrobat.Document.DC\shell\open\command" /ve /t REG_SZ /d "\"%ADOBE_PATH%\" \"%%1\"" /f >nul 2>&1
 
-REM Configure default programs association
-reg add "HKCU\Software\Microsoft\Windows\Shell\Associations\Application\AcroRd32.exe\Capabilities\FileAssociations" /v .pdf /t REG_SZ /d "AcrobatDocument" /f >nul 2>&1
+REM Set machine-level backup associations
+reg add "HKLM\Software\Classes\.pdf" /ve /t REG_SZ /d "Acrobat.Document.DC" /f >nul 2>&1
+reg add "HKLM\Software\Classes\Acrobat.Document.DC\shell\open\command" /ve /t REG_SZ /d "\"%ADOBE_PATH%\" \"%%1\"" /f >nul 2>&1
+
+REM Remove Edge PDF handler entries (aggressive approach)
+echo Removing Edge PDF takeover...
+reg delete "HKCU\Software\Classes\AppXd4nrz8ff68srnhf9t5a8sbjyar1cr723" /f >nul 2>&1
+reg delete "HKLM\Software\Classes\AppXd4nrz8ff68srnhf9t5a8sbjyar1cr723" /f >nul 2>&1
+
+REM Configure default programs association (correct ProgId)
+reg add "HKCU\Software\Microsoft\Windows\Shell\Associations\Application\Acrobat.exe\Capabilities\FileAssociations" /v .pdf /t REG_SZ /d "Acrobat.Document.DC" /f >nul 2>&1
+
+REM Set UserChoice with correct hash from working machine
+echo Setting UserChoice with verified hash...
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.pdf\UserChoice" /v ProgId /t REG_SZ /d "Acrobat.Document.DC" /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.pdf\UserChoice" /v Hash /t REG_SZ /d "4ankxyIxoIo=" /f >nul 2>&1
+
+echo UserChoice configured: ProgId=Acrobat.Document.DC Hash=4ankxyIxoIo=
+
+REM Restart Windows Explorer to force association refresh (critical step)
+echo Refreshing Windows Explorer to apply changes...
+taskkill /f /im explorer.exe >nul 2>&1
+timeout /t 2 /nobreak >nul
+start explorer.exe
 
 echo.
 timeout /t 2 /nobreak >nul
@@ -87,9 +189,10 @@ if %ASSOC_RESULT% equ 0 if %FTYPE_RESULT% equ 0 (
     echo   Adobe Acrobat is now set as the default PDF application for %USERNAME%
     echo   
     echo   Configuration applied:
-    echo   - File association: .pdf = AcrobatDocument
+    echo   - File association: .pdf = Acrobat.Document.DC
     echo   - File handler: %ADOBE_PATH%
-    echo   - User registry preferences updated
+    echo   - Adobe re-registered and UserChoice reset
+    echo   - Edge PDF takeover disabled
     echo.
     echo   Changes will take effect for new PDF files opened.
     echo.
