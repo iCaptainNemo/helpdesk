@@ -80,12 +80,10 @@ function Main-Loop {
                     }
                 } catch {
                     Write-Host "Error during unlock: $($_.Exception.Message)" -ForegroundColor Red
-                    # Fallback to standalone script if needed
-                    Write-Host "Attempting fallback unlock method..." -ForegroundColor Yellow
-                    & '.\Unlocker.ps1' -UserID $userId -StopLoop:$true > $null
+                    Write-Host "Unlock operation failed. Please check the error message above." -ForegroundColor Red
                 }
-            
-                Read-Host "Press any key to continue"
+
+                Read-Host "Press Enter to continue"
             }
             '2' {
                 # Password Reset submenu
