@@ -27,3 +27,9 @@ user_*.yaml
 # Temporary files
 *.tmp
 *.temp
+DriveMappings.csv
+servers.csv
+HANDOFF.md
+.claude/settings.local.json
+CLAUDE.md
+.claude
