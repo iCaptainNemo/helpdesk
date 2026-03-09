@@ -12,26 +12,6 @@
     Part of: Jarvis Helpdesk Automation System
 #>
 
-Write-Debug "Value of panesEnabled: $panesEnabled"
-
-# Legacy loop function - kept for compatibility but wrapped in function
-# This is an infinite loop that will keep running until you stop the script
-while ($panesEnabled -eq $true -and $ADUserProp -eq $true) {
-    Write-Debug "All conditions met, proceeding..."
-    if (-not $DebugPreference -eq 'Continue') { Clear-Host }
-
-    # Get the updated UserID from script environment variables (YAML system)
-    $userId = $script:envVars['UserID']
-    Write-Debug "$userID"
-
-    # Re-run the Get-ADUserProperties and Show-ADUserProperties functions with the updated UserID
-    $adUser = Get-ADUserProperties -userId $script:envVars['UserID']
-    Show-ADUserProperties -userId $script:envVars['UserID'] -adUser $adUser
-
-    # Wait until the Changed event is triggered
-    Start-Sleep -seconds 3
-
-}
 function Get-DomainControllers {
     $dcList = @{}
     try {
