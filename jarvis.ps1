@@ -572,6 +572,17 @@ try {
     $script:PSDomains = @()
     $script:cmdDomains = @()
 }
+
+# Validate domain controller initialization
+if ($script:PSDomains.Count -eq 0 -and $script:cmdDomains.Count -eq 0) {
+    Write-Host "No domain controllers cached - will be tested on first unlock operation" -ForegroundColor Yellow
+    Write-Debug "Domain controllers will be discovered and cached on first use"
+} else {
+    Write-Host "Domain Controllers Available:" -ForegroundColor Cyan
+    Write-Host "  PowerShell-enabled: $($script:PSDomains.Count)" -ForegroundColor Green
+    Write-Host "  Command-line only: $($script:cmdDomains.Count)" -ForegroundColor Green
+}
+
 Write-Host ""
 
 Write-Host "Press any key to continue..." -ForegroundColor Gray
