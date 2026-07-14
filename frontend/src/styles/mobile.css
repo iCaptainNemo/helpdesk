@@ -1,0 +1,590 @@
+/* Mobile Responsive Styles for Helpdesk Jarvis */
+/* Optimized for iPhone 13 Pro (390x844) and all mobile devices */
+
+/* ============================================
+   MOBILE BREAKPOINTS
+   - xs: 0-390px (iPhone 13 Pro and smaller)
+   - sm: 391px-480px (Small phones)
+   - md: 481px-768px (Large phones and tablets)
+   - lg: 769px-1024px (Tablets landscape and small desktops)
+   ============================================ */
+
+/* ============================================
+   GLOBAL MOBILE ADJUSTMENTS
+   ============================================ */
+
+/* iPhone 13 Pro and smaller devices */
+@media (max-width: 390px) {
+  html {
+    font-size: 14px; /* Reduce base font size for small screens */
+  }
+
+  body {
+    overflow-x: hidden; /* Prevent horizontal scroll */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  }
+
+  /* Remove the zoom effect on mobile as it makes things too small */
+  .app-main-content {
+    zoom: 1 !important;
+  }
+
+  /* Adjust spacing for mobile */
+  :root {
+    --spacing-xs: 0.125rem;
+    --spacing-sm: 0.25rem;
+    --spacing-md: 0.5rem;
+    --spacing-lg: 0.75rem;
+    --spacing-xl: 1rem;
+  }
+}
+
+/* All mobile devices up to 480px */
+@media (max-width: 480px) {
+  /* App Layout Adjustments */
+  .app-layout {
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height for mobile browsers */
+  }
+
+  /* Remove zoom on mobile */
+  .app-main-content {
+    zoom: 1 !important;
+  }
+
+  .app-page-content {
+    padding: 0.5rem;
+  }
+
+  /* Terminal Section - Make more compact on mobile */
+  .app-terminal-section {
+    min-height: 100px;
+    max-height: 200px;
+    flex: 0 0 150px;
+  }
+
+  .app-terminal-section.minimized {
+    min-height: 36px;
+    max-height: 36px;
+    flex: 0 0 36px;
+  }
+
+  .terminal-minimized-bar {
+    height: 36px;
+    font-size: 12px;
+    padding: 0 10px;
+  }
+
+  /* Header Adjustments */
+  .header {
+    margin: 10px 0;
+    padding: 0 10px;
+  }
+
+  .header h1 {
+    font-size: 1.25rem;
+  }
+
+  /* Form Container Adjustments */
+  .form-container {
+    padding: 0 10px;
+    margin-bottom: 10px;
+  }
+
+  .form-container input {
+    font-size: 14px;
+    padding: 8px;
+  }
+
+  .form-container button {
+    font-size: 14px;
+    padding: 8px 12px;
+  }
+
+  /* Navbar - Hamburger menu on mobile */
+  .navbar {
+    justify-content: flex-start !important;
+    padding: 0 var(--spacing-md) !important;
+  }
+
+  /* Show hamburger button on mobile */
+  .mobile-menu-toggle {
+    display: block !important;
+  }
+
+  /* Hide desktop nav links on mobile */
+  .nav-links-desktop {
+    display: none !important;
+  }
+
+  /* Show mobile dropdown menu */
+  .mobile-nav-menu {
+    display: block !important;
+  }
+
+  /* Mobile nav link hover effects */
+  .nav-link-mobile:hover {
+    background: rgba(54, 162, 235, 0.1) !important;
+  }
+
+  /* Dashboard Layout */
+  .dashboard-page {
+    padding: 8px;
+  }
+
+  .dashboard-tables-container {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .dashboard-tables-container > div {
+    min-width: 100%;
+    width: 100%;
+  }
+
+  /* Tables - Make responsive */
+  .dashboard-table {
+    font-size: 0.75rem;
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .dashboard-table thead {
+    display: table-header-group;
+  }
+
+  .dashboard-table tbody {
+    display: table-row-group;
+  }
+
+  .dashboard-table th,
+  .dashboard-table td {
+    padding: 6px 8px;
+    font-size: 0.75rem;
+  }
+
+  /* Cards - More compact on mobile */
+  .metrics-card,
+  .status-card,
+  .card,
+  .dashboard-card {
+    margin: 0 0 10px 0;
+    padding: 10px;
+  }
+
+  .metrics-card h3,
+  .status-card h3,
+  .card-title {
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .card-subtitle {
+    font-size: 0.75rem;
+  }
+
+  .metrics-card .metric-value {
+    font-size: 1.5rem;
+  }
+
+  /* Compact card headers and content */
+  .card-header {
+    padding: 8px 10px !important;
+  }
+
+  .card-content {
+    padding: 8px 10px !important;
+  }
+
+  /* Grid System - Stack on mobile */
+  .grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+
+  /* Buttons - More compact on mobile */
+  button,
+  .btn,
+  .button {
+    min-height: 36px;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  /* Smaller buttons for action buttons */
+  button:not(.mobile-menu-toggle):not(.nav-link):not(.nav-link-mobile) {
+    min-height: 32px;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  /* Logout Button */
+  .logout-button {
+    position: static;
+    width: 100%;
+    margin: 10px 0;
+  }
+
+  /* Tabs - Make scrollable */
+  .tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tab {
+    flex-shrink: 0;
+    min-width: auto;
+    padding: 10px 15px;
+    font-size: 0.875rem;
+  }
+
+  /* Modal Adjustments */
+  .modal {
+    width: 95%;
+    max-width: 95%;
+    margin: 10px auto;
+  }
+
+  .modal-content {
+    padding: 15px;
+  }
+
+  /* Form Controls - More compact */
+  input[type="text"],
+  input[type="password"],
+  input[type="email"],
+  input[type="search"],
+  textarea,
+  select {
+    font-size: 16px; /* Prevent zoom on iOS */
+    width: 100%;
+    padding: 8px;
+    min-height: 36px;
+  }
+
+  /* Make specific button types more compact */
+  button[type="submit"],
+  button[type="button"],
+  .action-button,
+  .primary-button,
+  .secondary-button {
+    padding: 7px 12px !important;
+    font-size: 12px !important;
+    min-height: 32px !important;
+  }
+
+  /* Extra compact for inline action buttons */
+  .inline-button,
+  button.text-xs,
+  button[style*="font-size-xs"] {
+    padding: 5px 8px !important;
+    font-size: 11px !important;
+    min-height: 28px !important;
+  }
+
+  /* Container Max Width */
+  .container {
+    padding: 0 10px;
+    max-width: 100%;
+  }
+
+  /* Status Indicators - Make larger for touch */
+  .status-indicator {
+    width: 12px;
+    height: 12px;
+  }
+
+  /* Charts - Make responsive */
+  canvas {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  /* Server Status Cards */
+  .server-card,
+  .domain-controller-card {
+    margin-bottom: 10px;
+    padding: 12px;
+  }
+
+  /* AD Properties Page - Reorder columns on mobile */
+  .ad-properties-container {
+    padding: 10px;
+  }
+
+  .ad-properties-grid {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto auto auto !important;
+    height: auto !important;
+  }
+
+  /* Mobile column ordering:
+     1. User Status (originally column 3)
+     2. User Properties (originally column 2)
+     3. Login Ledger (originally column 1)
+  */
+  .ad-column-status {
+    order: 1;
+    margin-bottom: 1rem;
+  }
+
+  .ad-column-properties {
+    order: 2;
+    margin-bottom: 1rem;
+  }
+
+  .ad-column-logs {
+    order: 3;
+    margin-bottom: 1rem;
+  }
+
+  /* Configure Page */
+  .configure-container {
+    padding: 10px;
+  }
+
+  .configure-section {
+    margin-bottom: 15px;
+  }
+
+  /* Profile Page */
+  .profile-container {
+    padding: 10px;
+  }
+
+  /* Login Page - Already has good mobile support, minor tweaks */
+  .form {
+    width: 100%;
+    max-width: 320px;
+    padding: 32px 15px 24px;
+  }
+
+  .control input {
+    font-size: 16px; /* Prevent iOS zoom */
+  }
+}
+
+/* Tablet and Medium Mobile Devices (481px - 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+  /* Remove zoom effect on tablets too */
+  .app-main-content {
+    zoom: 0.9 !important;
+  }
+
+  .app-page-content {
+    padding: 1rem;
+  }
+
+  /* Navbar - Keep horizontal but more compact */
+  .navbar {
+    flex-wrap: wrap;
+  }
+
+  .navbar a,
+  .navbar button {
+    padding: 12px 15px;
+    font-size: 14px;
+  }
+
+  /* Dashboard - 2 columns on tablets */
+  .dashboard-tables-container {
+    gap: 10px;
+  }
+
+  .dashboard-tables-container > div {
+    min-width: calc(50% - 5px);
+    max-width: calc(50% - 5px);
+  }
+
+  /* Grid - 2 columns on tablets */
+  .grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Tables */
+  .dashboard-table {
+    font-size: 0.875rem;
+  }
+
+  .dashboard-table th,
+  .dashboard-table td {
+    padding: 8px 10px;
+  }
+}
+
+/* Small Desktops and Landscape Tablets (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* Slightly reduce zoom */
+  .app-main-content {
+    zoom: 0.85 !important;
+  }
+
+  /* Dashboard - 2-3 columns */
+  .dashboard-tables-container > div {
+    min-width: calc(50% - 5px);
+    max-width: calc(50% - 5px);
+  }
+
+  /* Grid - 3 columns */
+  .grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+/* ============================================
+   MOBILE-SPECIFIC UTILITIES
+   ============================================ */
+
+/* Show/Hide on Mobile */
+@media (max-width: 480px) {
+  .mobile-hidden {
+    display: none !important;
+  }
+
+  .mobile-visible {
+    display: block !important;
+  }
+
+  .mobile-flex {
+    display: flex !important;
+  }
+}
+
+/* Show/Hide on Desktop */
+@media (min-width: 481px) {
+  .desktop-hidden {
+    display: none !important;
+  }
+
+  .desktop-visible {
+    display: block !important;
+  }
+}
+
+/* ============================================
+   TOUCH-FRIENDLY ENHANCEMENTS
+   ============================================ */
+
+@media (max-width: 768px) {
+  /* Tap targets for touch devices - more compact */
+  a,
+  button,
+  input[type="button"],
+  input[type="submit"],
+  .clickable {
+    min-height: 36px;
+    min-width: 36px;
+  }
+
+  /* Remove hover effects on touch devices */
+  @media (hover: none) {
+    .hover-lift:hover {
+      transform: none;
+    }
+
+    .hover-bg:hover {
+      background-color: inherit;
+    }
+  }
+
+  /* Improve scrolling */
+  .scroll-container {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+  }
+}
+
+/* ============================================
+   LANDSCAPE ORIENTATION ADJUSTMENTS
+   ============================================ */
+
+@media (max-width: 844px) and (orientation: landscape) {
+  /* Adjust for landscape mode (like iPhone 13 Pro landscape) */
+  .app-terminal-section {
+    min-height: 80px;
+    max-height: 150px;
+  }
+
+  .header {
+    margin: 5px 0;
+  }
+
+  .navbar {
+    flex-direction: row;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+
+  .navbar a,
+  .navbar button {
+    white-space: nowrap;
+  }
+}
+
+/* ============================================
+   ACCESSIBILITY IMPROVEMENTS FOR MOBILE
+   ============================================ */
+
+@media (max-width: 768px) {
+  /* Ensure focus states are visible on mobile */
+  *:focus {
+    outline: 2px solid var(--accent-blue, #36a2eb);
+    outline-offset: 2px;
+  }
+
+  /* Improve text readability */
+  body {
+    line-height: 1.6;
+  }
+
+  /* Prevent text size adjustment on orientation change */
+  html {
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+  }
+}
+
+/* ============================================
+   PERFORMANCE OPTIMIZATIONS FOR MOBILE
+   ============================================ */
+
+@media (max-width: 768px) {
+  /* Reduce animations on mobile for better performance */
+  .reduce-motion {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  /* Hardware acceleration for smoother animations */
+  .app-layout,
+  .app-main-content,
+  .app-terminal-section {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+}
+
+/* ============================================
+   SAFE AREA INSETS (for notched devices like iPhone 13 Pro)
+   ============================================ */
+
+@supports (padding: max(0px)) {
+  @media (max-width: 480px) {
+    body {
+      padding-left: max(0px, env(safe-area-inset-left));
+      padding-right: max(0px, env(safe-area-inset-right));
+      padding-bottom: max(0px, env(safe-area-inset-bottom));
+    }
+
+    .header {
+      padding-top: max(10px, env(safe-area-inset-top));
+    }
+
+    .app-terminal-section {
+      padding-bottom: max(0px, env(safe-area-inset-bottom));
+    }
+  }
+}

@@ -73,12 +73,99 @@
 
 @media (max-width: 768px) {
   .app-layout {
-    height: calc(100vh - 60px);
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height for mobile browsers */
   }
-  
+
   .app-terminal-section {
     min-height: 120px;
     max-height: 180px;
+  }
+}
+
+/* Mobile-specific responsive adjustments */
+@media (max-width: 480px) {
+  /* Header - Make more compact */
+  .header {
+    margin: 10px 0;
+    padding: 0 10px;
+  }
+
+  .header h1 {
+    font-size: 1.25rem;
+  }
+
+  /* Form Container */
+  .form-container {
+    padding: 0 10px;
+    margin-bottom: 10px;
+  }
+
+  .form-container input,
+  .form-container button {
+    font-size: 14px;
+    padding: 10px;
+  }
+
+  /* Content padding */
+  .content {
+    padding: 10px;
+  }
+
+  /* Logout button */
+  .logout-button {
+    position: static;
+    width: auto;
+    margin: 0;
+  }
+}
+
+/* Tablet adjustments (481px - 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+  .navbar {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .navbar .nav-link,
+  .navbar a,
+  .navbar button {
+    padding: 10px 12px;
+    font-size: 13px;
+    flex: 0 0 auto;
+  }
+
+  .header {
+    margin: 15px 0;
+  }
+}
+
+/* Landscape orientation adjustments */
+@media (max-width: 844px) and (orientation: landscape) {
+  .app-terminal-section {
+    min-height: 80px;
+    max-height: 120px;
+  }
+
+  .header {
+    margin: 8px 0;
+  }
+}
+
+/* Landscape on larger devices - keep horizontal nav */
+@media (min-width: 481px) and (max-width: 844px) and (orientation: landscape) {
+  .navbar {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .navbar a,
+  .navbar button {
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-size: 12px;
+    padding: 8px 10px;
   }
 }
 body {

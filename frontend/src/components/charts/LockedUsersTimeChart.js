@@ -30,7 +30,6 @@ const LockedUsersTimeChart = ({
   className = '' 
 }) => {
   const [chartData, setChartData] = useState(null);
-  const [timeLabels, setTimeLabels] = useState([]);
   const [selectedHours, setSelectedHours] = useState(3);
 
   // Generate time labels based on selected hours (current time on the right)
@@ -60,14 +59,12 @@ const LockedUsersTimeChart = ({
       const apiData = await response.json();
       
       // API returns data in the format we need for Chart.js
-      setTimeLabels(apiData.labels || []);
       return apiData;
     } catch (error) {
       console.error('Error fetching timeline data:', error);
       
       // Fallback to empty state
       const labels = generateTimeLabels();
-      setTimeLabels(labels);
       return {
         labels,
         datasets: [{
@@ -97,7 +94,6 @@ const LockedUsersTimeChart = ({
     if (data && data.length > 0 && (!chartData || chartData.datasets.length === 0)) {
       // If API fails, fall back to processing prop data
       const labels = generateTimeLabels();
-      setTimeLabels(labels);
       setChartData({
         labels,
         datasets: [{

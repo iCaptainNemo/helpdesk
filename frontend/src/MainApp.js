@@ -4,11 +4,13 @@ import socketIOClient from 'socket.io-client';
 import './styles.css'; // Import the CSS file
 import './styles/theme.css'; // Import the new theme
 import './styles/grid.css'; // Import the grid system
+import './styles/mobile.css'; // Import mobile responsive styles
 import Header from './Header';
 import Navbar from './Navbar';
 import Login from './pages/Login';
 import SplashScreen from './components/SplashScreen';
 import SetupWizard from './components/SetupWizard';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Lazy load heavy components
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
@@ -169,9 +171,19 @@ function App() {
   }
 
   return (
-    <Router>
-      <div className="App">
-        <Routes>
+    <ErrorBoundary fallbackMessage="Application failed to load">
+      <Suspense fallback={<div className="loading-spinner" style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        fontSize: '1.2rem',
+        background: 'var(--bg-primary)',
+        color: 'var(--text-primary)'
+      }}>Loading Application...</div>}>
+        <Router>
+          <div className="App">
+            <Routes>
           {/* Setup Routes - Only show if setup is not complete */}
           {!setupComplete && (
             <>
@@ -186,15 +198,15 @@ function App() {
             <>
               {isAuthenticated ? (
                 <>
-                  <Route path="/" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Suspense fallback={<div className="loading-spinner">Loading Dashboard...</div>}><ModernDashboard permissions={permissions} adminID={AdminID} adminComputer={adminComputer} /></Suspense></AuthenticatedLayout>} />
-                  <Route path="/dashboard" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Suspense fallback={<div className="loading-spinner">Loading Dashboard...</div>}><ModernDashboard permissions={permissions} adminID={AdminID} adminComputer={adminComputer} /></Suspense></AuthenticatedLayout>} />
-                  <Route path="/dashboard-legacy" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Suspense fallback={<div className="loading-spinner">Loading Legacy Dashboard...</div>}><Dashboard /></Suspense></AuthenticatedLayout>} />
-                  <Route path="/ad-object" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Suspense fallback={<div className="loading-spinner">Loading AD Properties...</div>}><ModernADProperties permissions={permissions} /></Suspense></AuthenticatedLayout>} />
-                  <Route path="/ad-object/:adObjectID" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Suspense fallback={<div className="loading-spinner">Loading AD Properties...</div>}><ModernADProperties permissions={permissions} /></Suspense></AuthenticatedLayout>} />
-                  <Route path="/ad-object-legacy/:adObjectID?" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Suspense fallback={<div className="loading-spinner">Loading Legacy AD Properties...</div>}><ADProperties permissions={permissions} /></Suspense></AuthenticatedLayout>} />
-                  <Route path="/Profile" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Suspense fallback={<div className="loading-spinner">Loading Profile...</div>}><Profile permissions={permissions} /></Suspense></AuthenticatedLayout>} />
-                  <Route path="/configure" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Suspense fallback={<div className="loading-spinner">Loading Configuration...</div>}><ModernConfigure permissions={permissions} /></Suspense></AuthenticatedLayout>} />
-                  <Route path="/setup" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><Suspense fallback={<div className="loading-spinner">Loading Setup...</div>}><Setup /></Suspense></AuthenticatedLayout>} />
+                  <Route path="/" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ErrorBoundary fallbackMessage="Dashboard failed to load"><Suspense fallback={<div className="loading-spinner">Loading Dashboard...</div>}><ModernDashboard permissions={permissions} adminID={AdminID} adminComputer={adminComputer} /></Suspense></ErrorBoundary></AuthenticatedLayout>} />
+                  <Route path="/dashboard" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ErrorBoundary fallbackMessage="Dashboard failed to load"><Suspense fallback={<div className="loading-spinner">Loading Dashboard...</div>}><ModernDashboard permissions={permissions} adminID={AdminID} adminComputer={adminComputer} /></Suspense></ErrorBoundary></AuthenticatedLayout>} />
+                  <Route path="/dashboard-legacy" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ErrorBoundary fallbackMessage="Legacy Dashboard failed to load"><Suspense fallback={<div className="loading-spinner">Loading Legacy Dashboard...</div>}><Dashboard /></Suspense></ErrorBoundary></AuthenticatedLayout>} />
+                  <Route path="/ad-object" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ErrorBoundary fallbackMessage="AD Properties failed to load"><Suspense fallback={<div className="loading-spinner">Loading AD Properties...</div>}><ModernADProperties permissions={permissions} /></Suspense></ErrorBoundary></AuthenticatedLayout>} />
+                  <Route path="/ad-object/:adObjectID" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ErrorBoundary fallbackMessage="AD Properties failed to load"><Suspense fallback={<div className="loading-spinner">Loading AD Properties...</div>}><ModernADProperties permissions={permissions} /></Suspense></ErrorBoundary></AuthenticatedLayout>} />
+                  <Route path="/ad-object-legacy/:adObjectID?" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ErrorBoundary fallbackMessage="Legacy AD Properties failed to load"><Suspense fallback={<div className="loading-spinner">Loading Legacy AD Properties...</div>}><ADProperties permissions={permissions} /></Suspense></ErrorBoundary></AuthenticatedLayout>} />
+                  <Route path="/Profile" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ErrorBoundary fallbackMessage="Profile page failed to load"><Suspense fallback={<div className="loading-spinner">Loading Profile...</div>}><Profile permissions={permissions} /></Suspense></ErrorBoundary></AuthenticatedLayout>} />
+                  <Route path="/configure" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ErrorBoundary fallbackMessage="Configuration page failed to load"><Suspense fallback={<div className="loading-spinner">Loading Configuration...</div>}><ModernConfigure permissions={permissions} /></Suspense></ErrorBoundary></AuthenticatedLayout>} />
+                  <Route path="/setup" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ErrorBoundary fallbackMessage="Setup page failed to load"><Suspense fallback={<div className="loading-spinner">Loading Setup...</div>}><Setup /></Suspense></ErrorBoundary></AuthenticatedLayout>} />
                   <Route path="*" element={<Navigate to="/dashboard" />} />
                 </>
               ) : (
@@ -206,9 +218,11 @@ function App() {
               )}
             </>
           )}
-        </Routes>
-      </div>
-    </Router>
+            </Routes>
+          </div>
+        </Router>
+      </Suspense>
+    </ErrorBoundary>
   );
 }
 

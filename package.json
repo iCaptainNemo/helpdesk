@@ -2,7 +2,7 @@
   "name": "helpdesk-jarvis",
   "productName": "Helpdesk Jarvis",
   "description": "IT Helpdesk Management System",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "Backend/server.js",
   "homepage": "./",
   "scripts": {
@@ -18,8 +18,9 @@
     "build": "npm run build:frontend && npm run build:backend && npm run post-build",
     "copy-native-binaries": "mkdir -p \"Backend/node_modules/better-sqlite3/lib/binding/node-v108-win32-x64\" 2>/dev/null || true && cp \"Backend/node_modules/better-sqlite3/build/Release/better_sqlite3.node\" \"Backend/node_modules/better-sqlite3/lib/binding/node-v108-win32-x64/better_sqlite3.node\" && echo 'SQLite binary copied' && mkdir -p \"dist/Backend/node_modules/bcrypt/lib/binding/napi-v3\" 2>/dev/null || true && cp \"Backend/node_modules/bcrypt/lib/binding/napi-v3/bcrypt_lib.node\" \"dist/Backend/node_modules/bcrypt/lib/binding/napi-v3/bcrypt_lib.node\" && echo 'bcrypt binary copied'",
     "dist:win": "npm run build && npm run copy-native-binaries && pkg Backend/server.js --targets node18-win-x64 --output releases/helpdesk-jarvis.exe",
+    "dist:win:versioned": "npm run build && npm run copy-native-binaries && node scripts/version-build.js",
     "install-deps": "npm install && cd Backend && npm install && cd ../frontend && npm install",
-    "release": "npm run dist:win"
+    "release": "npm run dist:win:versioned"
   },
   "pkg": {
     "assets": [

@@ -23,14 +23,19 @@ Helpdesk Jarvis is a web-based helpdesk management system with a React frontend 
 - Backend runs directly with `node server.js`
 
 #### Standalone Executable Building
-- `npm run dist:win` - Build standalone executable for Windows (targets node18 for bcrypt compatibility)
-- `npm run release` - Alias for dist:win
-- **Output**: Executable is placed in `releases/helpdesk-jarvis.exe`
+- `npm run release` - Build versioned standalone executable (recommended)
+- `npm run dist:win:versioned` - Same as release, builds with version number
+- `npm run dist:win` - Build without version (always outputs helpdesk-jarvis.exe)
+- **Output**:
+  - Versioned EXE: `releases/helpdesk-jarvis-v{version}.exe` (e.g., `helpdesk-jarvis-v1.1.0.exe`)
+  - Latest copy: `releases/helpdesk-jarvis.exe` (always points to latest build)
+- **Versioning**: Version number is read from `package.json` and automatically included in filename
 - **Important**: Uses node18 target due to bcrypt native module requirements
 - **Note**: The executable is fully self-contained and can be run on machines without Node.js installed
 - **Automated Post-Build**: The build process automatically:
   - Fixes CSP headers in index.html for Google Fonts support
   - Updates server.js with the correct React bundle filename from asset-manifest.json
+  - Creates both versioned and latest copies of the executable
   - No manual intervention needed for CI/CD pipelines
 
 ### Setup

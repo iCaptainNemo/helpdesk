@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
-import MetricsCard, { StatusMetricsCard, TimeMetricsCard, PercentageMetricsCard } from '../components/MetricsCard';
+import MetricsCard, { StatusMetricsCard } from '../components/MetricsCard';
 import { executePowerShellScript } from '../utils/apiUtils';
 import { ActionLogger } from '../utils/actionLogger';
 
@@ -96,7 +96,6 @@ const ModernDashboard = ({
 
       // Calculate metrics from real data
       const offlineServers = servers.filter(server => server.Status === 'Offline').length;
-      const warningServers = servers.filter(server => server.Status === 'Warning').length;
       const offlineDomainControllers = domainControllers.filter(dc => dc.Status === 'Offline').length;
       
       // Calculate today's unlocks by current admin from RecentActions
@@ -120,23 +119,7 @@ const ModernDashboard = ({
         todayUnlocks = 0;
       }
       
-      // Calculate total actions today across all admins
-      let totalActionsToday = 0;
-      try {
-        const today = new Date().toISOString().split('T')[0]; // Get YYYY-MM-DD format
-        const allActionsRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/actions/recent/200`);
-        if (allActionsRes.ok) {
-          const allActions = await allActionsRes.json();
-          // Count all successful actions today
-          totalActionsToday = allActions.filter(action => 
-            action.result === 'success' &&
-            action.timestamp.startsWith(today)
-          ).length;
-        }
-      } catch (error) {
-        console.error('Error fetching total actions count:', error);
-        totalActionsToday = 0;
-      }
+      // Note: Total actions tracking available for future dashboard metrics
 
       const metrics = {
         lockedUsersCount: totalLockedFromDepartments > 0 ? totalLockedFromDepartments : lockedUsers.length || 0,

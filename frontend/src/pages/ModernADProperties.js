@@ -501,23 +501,23 @@ const ModernADProperties = ({ permissions }) => {
             height: 'calc(100vh - 200px)',
             overflow: 'hidden'
           }}>
-            {/* Column 1: Logs (left) */}
-            <div className="dashboard-card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* Column 1: Logs (left) - Order 3 on mobile */}
+            <div className="dashboard-card ad-column-logs" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <div className="card-header">
                 <h3 className="card-title">
                   {currentData.ObjectClass === 'computer' ? 'Computer Logs' : 'Login ledger'}
                 </h3>
               </div>
               <div className="card-content" style={{ flex: 1, overflow: 'auto', padding: 'var(--spacing-md)' }}>
-                <Logs 
+                <Logs
                   ref={logsTableRef}
                   adObjectID={currentTab?.name}
                 />
               </div>
             </div>
-            
-            {/* Column 2: AD Properties (middle) */}
-            <div className="dashboard-card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+            {/* Column 2: AD Properties (middle) - Order 2 on mobile */}
+            <div className="dashboard-card ad-column-properties" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <div className="card-header" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
                 {/* Title Row */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-sm)' }}>
@@ -657,124 +657,109 @@ const ModernADProperties = ({ permissions }) => {
               </div>
               
               <div className="card-content" style={{ flex: 1, overflow: 'auto', padding: 'var(--spacing-md)' }}>
-                {/* Properties Table */}
-                <div className="table-container" style={{ height: '100%', overflow: 'auto' }}>
-                  <table className="logs-table" style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: 'var(--bg-card)' }}>
-                    <thead>
-                      <tr>
-                        {showPropertyColumn && (
-                          <th style={{
-                            backgroundColor: 'var(--bg-secondary)',
-                            color: 'var(--text-primary)',
-                            border: '1px solid var(--border-primary)',
-                            padding: 'var(--spacing-sm)',
-                            fontWeight: 'var(--font-weight-semibold)',
-                            position: 'sticky',
-                            top: 0,
-                            zIndex: 1
-                          }}>Property</th>
-                        )}
-                        <th style={{
-                          backgroundColor: 'var(--bg-secondary)',
-                          color: 'var(--text-primary)',
-                          border: '1px solid var(--border-primary)',
-                          padding: 'var(--spacing-sm)',
-                          fontWeight: 'var(--font-weight-semibold)',
-                          position: 'sticky',
-                          top: 0,
-                          zIndex: 1
-                        }}>Value</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {currentProperties?.map((property, index) => {
-                        let value = currentData[property];
+                {/* Properties Cards */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                  gap: 'var(--spacing-sm)',
+                  height: '100%',
+                  alignContent: 'start'
+                }}>
+                  {currentProperties?.map((property, index) => {
+                    let value = currentData[property];
 
-                        // Handle special formatting
-                        if (value === null || value === undefined) {
-                          value = 'N/A';
-                        } else if (Array.isArray(value)) {
-                          // For memberOf and similar fields, extract only CN (Common Name) values
-                          if (property === 'memberOf') {
-                            value = value.map(dn => {
-                              if (typeof dn === 'string') {
-                                const cnParts = dn.split(',').filter(part => part.trim().startsWith('CN='));
-                                if (cnParts.length > 0) {
-                                  return cnParts[0].replace('CN=', '').trim();
-                                }
-                              }
-                              return dn;
-                            }).join(', ');
-                          } else {
-                            value = value.join(', ');
-                          }
-                        } else if (typeof value === 'boolean') {
-                          value = value ? 'True' : 'False';
-                        } else if (property.toLowerCase().includes('date') || property.toLowerCase().includes('time')) {
-                          if (value && value !== 'N/A') {
-                            try {
-                              const date = new Date(value);
-                              if (!isNaN(date.getTime())) {
-                                value = date.toLocaleString();
-                                // Highlight recent creation (within 30 days)
-                                if (property === 'Created' && (Date.now() - date.getTime()) < 30 * 24 * 60 * 60 * 1000) {
-                                  value = `${value} (Recently Created)`;
-                                }
-                              }
-                            } catch (e) {
-                              // Keep original value if date parsing fails
+                    // Handle special formatting
+                    if (value === null || value === undefined) {
+                      value = 'N/A';
+                    } else if (Array.isArray(value)) {
+                      // For memberOf and similar fields, extract only CN (Common Name) values
+                      if (property === 'memberOf') {
+                        value = value.map(dn => {
+                          if (typeof dn === 'string') {
+                            const cnParts = dn.split(',').filter(part => part.trim().startsWith('CN='));
+                            if (cnParts.length > 0) {
+                              return cnParts[0].replace('CN=', '').trim();
                             }
                           }
+                          return dn;
+                        }).join(', ');
+                      } else {
+                        value = value.join(', ');
+                      }
+                    } else if (typeof value === 'boolean') {
+                      value = value ? 'True' : 'False';
+                    } else if (property.toLowerCase().includes('date') || property.toLowerCase().includes('time')) {
+                      if (value && value !== 'N/A') {
+                        try {
+                          const date = new Date(value);
+                          if (!isNaN(date.getTime())) {
+                            value = date.toLocaleString();
+                            // Highlight recent creation (within 30 days)
+                            if (property === 'Created' && (Date.now() - date.getTime()) < 30 * 24 * 60 * 60 * 1000) {
+                              value = `${value} (Recently Created)`;
+                            }
+                          }
+                        } catch (e) {
+                          // Keep original value if date parsing fails
                         }
+                      }
+                    }
 
-                        return (
-                          <tr key={index} style={{ ':hover': { backgroundColor: 'var(--bg-card-hover)' } }}>
-                            {showPropertyColumn && (
-                              <td style={{
-                                backgroundColor: 'var(--bg-card)',
-                                color: 'var(--text-primary)',
-                                border: '1px solid var(--border-primary)',
-                                padding: 'var(--spacing-sm)',
-                                textAlign: 'left',
-                                whiteSpace: 'nowrap'
-                              }}>
-                                {property}
-                              </td>
-                            )}
-                            <td
-                              onClick={() => copyToClipboard(String(value))}
-                              style={{
-                                backgroundColor: 'var(--bg-card)',
-                                color: 'var(--text-primary)',
-                                border: '1px solid var(--border-primary)',
-                                padding: 'var(--spacing-sm)',
-                                textAlign: 'left',
-                                cursor: 'pointer',
-                                position: 'relative',
-                                wordBreak: 'break-all',
-                                transition: 'background-color 0.2s ease'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.target.style.backgroundColor = 'var(--bg-card-hover)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.target.style.backgroundColor = 'var(--bg-card)';
-                              }}
-                              title="Click to copy"
-                            >
-                              {String(value)}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                    return (
+                      <div
+                        key={index}
+                        onClick={() => copyToClipboard(String(value))}
+                        style={{
+                          backgroundColor: 'var(--bg-secondary)',
+                          border: '1px solid var(--border-primary)',
+                          borderRadius: 'var(--border-radius-sm)',
+                          padding: 'var(--spacing-sm)',
+                          cursor: 'pointer',
+                          transition: 'var(--transition-fast)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 'var(--spacing-xs)'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)';
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
+                        title="Click to copy"
+                      >
+                        {showPropertyColumn && (
+                          <div style={{
+                            fontSize: 'var(--font-size-xs)',
+                            fontWeight: 'var(--font-weight-semibold)',
+                            color: 'var(--text-secondary)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px'
+                          }}>
+                            {property}
+                          </div>
+                        )}
+                        <div style={{
+                          fontSize: 'var(--font-size-sm)',
+                          color: 'var(--text-primary)',
+                          wordBreak: 'break-word',
+                          fontWeight: showPropertyColumn ? 'var(--font-weight-normal)' : 'var(--font-weight-medium)'
+                        }}>
+                          {String(value)}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
             
-            {/* Column 3: User/Computer Status Tables (right) */}
-            <div className="dashboard-card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* Column 3: User/Computer Status Tables (right) - Order 1 on mobile */}
+            <div className="dashboard-card ad-column-status" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <div className="card-header">
                 <h3 className="card-title">
                   {currentData.ObjectClass === 'user' ? 'User Status' : 'Computer Status'}

@@ -17,3 +17,7 @@ frontend/node_modules/
 database.db
 frontend/build/
 dist/
+
+# Build artifacts / release executables
+releases/
+*.exe

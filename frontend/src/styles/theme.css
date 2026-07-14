@@ -299,19 +299,52 @@ input:checked + .slider:before {
 }
 
 /* Responsive Utilities */
+/* iPhone 13 Pro and smaller (390px) */
+@media (max-width: 390px) {
+  .xs-hidden { display: none; }
+  .xs-block { display: block; }
+  .xs-flex { display: flex; }
+
+  /* Adjust font sizes for very small screens */
+  :root {
+    --font-size-xs: 0.625rem;
+    --font-size-sm: 0.75rem;
+    --font-size-base: 0.875rem;
+    --font-size-lg: 1rem;
+    --font-size-xl: 1.125rem;
+  }
+}
+
+/* Small mobile devices (480px) */
+@media (max-width: 480px) {
+  .xs-hidden { display: none; }
+  .xs-block { display: block; }
+}
+
+/* Mobile devices (640px) */
 @media (max-width: 640px) {
   .sm-hidden { display: none; }
   .sm-block { display: block; }
+  .sm-flex { display: flex; }
 }
 
+/* Tablets (768px) */
 @media (max-width: 768px) {
   .md-hidden { display: none; }
   .md-block { display: block; }
+  .md-flex { display: flex; }
+
+  /* Reduce spacing on tablets */
+  .container {
+    padding: 0 var(--spacing-sm);
+  }
 }
 
+/* Small desktops (1024px) */
 @media (max-width: 1024px) {
   .lg-hidden { display: none; }
   .lg-block { display: block; }
+  .lg-flex { display: flex; }
 }
 
 /* Custom Scrollbar */
@@ -364,9 +397,30 @@ input:checked + .slider:before {
   font-weight: var(--font-weight-semibold) !important;
 }
 
-/* App Layout Scaling */
+/* App Layout Scaling - Responsive */
 .app-main-content {
-  zoom: 0.8; /* Scale down the main app content by 20%, excluding terminal */
+  zoom: 0.8; /* Scale down the main app content by 20% on desktop */
+}
+
+/* Remove zoom on mobile devices for better readability */
+@media (max-width: 480px) {
+  .app-main-content {
+    zoom: 1;
+  }
+}
+
+/* Slightly less zoom on tablets */
+@media (min-width: 481px) and (max-width: 768px) {
+  .app-main-content {
+    zoom: 0.9;
+  }
+}
+
+/* Medium zoom on small desktops */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .app-main-content {
+    zoom: 0.85;
+  }
 }
 
 /* Dashboard Table Styles */
