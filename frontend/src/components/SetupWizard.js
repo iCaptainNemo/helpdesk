@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiGet, apiPost } from '../utils/api';
 import '../styles/SetupWizard.css';
 
 const SetupWizard = () => {
@@ -30,17 +31,14 @@ const SetupWizard = () => {
   useEffect(() => {
     const fetchSystemUsername = async () => {
       try {
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/setup/system-info`);
-        if (response.ok) {
-          const data = await response.json();
-          setFormData(prev => ({
-            ...prev,
-            adminCredentials: {
-              ...prev.adminCredentials,
-              username: data.systemUsername || 'helpdesk_agent'
-            }
-          }));
-        }
+        const data = await apiGet('/api/setup/system-info');
+        setFormData(prev => ({
+          ...prev,
+          adminCredentials: {
+            ...prev.adminCredentials,
+            username: data.systemUsername || 'helpdesk_agent'
+          }
+        }));
       } catch (error) {
         console.error('Error fetching system username:', error);
         // Fallback to a default username
@@ -114,19 +112,7 @@ const SetupWizard = () => {
     }
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/setup/wizard`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      });
-
-      if (!response.ok) {
-        throw new Error('Setup failed');
-      }
-
-      const result = await response.json();
+      await apiPost('/api/setup/wizard', formData);
       alert('Setup completed successfully!');
       // Refresh the page to re-check setup status and show login screen
       window.location.reload();

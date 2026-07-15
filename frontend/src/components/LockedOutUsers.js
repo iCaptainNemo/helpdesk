@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiGet, apiPost, apiPut } from '../utils/api';
 import '../styles/LockedOutUsers.css'; // Import the CSS file
 import ScriptButton from './ScriptButton'; // Import the ScriptButton component
 
@@ -10,53 +11,28 @@ const LockedOutUsers = () => {
     const [additionalFields, setAdditionalFields] = useState({});
     const navigate = useNavigate();
 
-    const fetchLockedOutUsers = () => {
-        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/get-locked-out-users`)
-            .then(response => response.json())
-            .then(data => setLockedOutUsers(Array.isArray(data) ? data : [])) // Ensure data is an array
-            .catch(error => console.error('Error fetching locked out users:', error));
-    };
-
-    const fetchPermissions = async () => {
+    const fetchLockedOutUsers = async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/profile`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}` // Include token in Authorization header
-                }
-            });
-
-            if (!response.ok) {
-                console.warn('Failed to fetch permissions, using default permissions');
-                // Default permissions for when profile fetch fails (local mode fallback)
-                setPermissions(['read', 'write', 'execute', 'unlock_user', 'reset_password']);
-                return;
-            }
-
-            const data = await response.json();
-            setPermissions(data.permissions || ['read', 'write', 'execute', 'unlock_user', 'reset_password']); // Default permissions
+            const data = await apiGet('/api/get-locked-out-users');
+            setLockedOutUsers(Array.isArray(data) ? data : []); // Ensure data is an array
         } catch (error) {
-            console.warn('Error fetching permissions, using default permissions:', error);
-            // Fallback to default permissions for local mode
-            setPermissions(['read', 'write', 'execute', 'unlock_user', 'reset_password']);
+            console.error('Error fetching locked out users:', error);
         }
     };
 
-    const updateLockedOutUsers = () => {
-        return fetch(`${process.env.REACT_APP_BACKEND_URL}/api/update-locked-out-users`, {
-            method: 'POST'
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Failed to update locked out users');
-            }
-        })
-        .catch(error => {
-            console.error('Error updating locked out users:', error);
-            throw error;
-        });
+    const fetchPermissions = async () => {
+        const defaultPermissions = ['read', 'write', 'execute', 'unlock_user', 'reset_password'];
+        try {
+            const data = await apiGet('/api/auth/profile');
+            setPermissions(data.permissions || defaultPermissions);
+        } catch (error) {
+            console.warn('Error fetching permissions, using default permissions:', error);
+            // Fallback to default permissions for local mode
+            setPermissions(defaultPermissions);
+        }
     };
+
+    const updateLockedOutUsers = () => apiPost('/api/update-locked-out-users');
 
     useEffect(() => {
         // Fetch data initially
@@ -81,62 +57,21 @@ const LockedOutUsers = () => {
             };
     
             try {
-                const token = localStorage.getItem('token');
-                if (!token) throw new Error('No token found');
-    
-                const backendUrl = process.env.REACT_APP_BACKEND_URL;
-                if (!backendUrl) throw new Error('Backend URL is not defined');
-    
                 // Check if the user exists
-                let response = await fetch(`${backendUrl}/api/fetch-user`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`,
-                    },
-                    body: JSON.stringify({ adObjectID: userID }),
-                });
-    
-                if (!response.ok) throw new Error('Network response was not ok');
-    
-                let user = await response.json();
-    
+                let user = await apiPost('/api/fetch-user', { adObjectID: userID });
+
                 // If user does not exist, create the user
                 if (!user || user.length === 0) {
-                    const newUser = {
+                    user = await apiPost('/api/fetch-user', {
                         UserID: userID,
                         LastHelped: null,
                         TimesUnlocked: 0,
                         PasswordResets: 0
-                    };
-    
-                    response = await fetch(`${backendUrl}/api/fetch-user`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`,
-                        },
-                        body: JSON.stringify(newUser),
                     });
-    
-                    if (!response.ok) throw new Error('Failed to create new user');
-    
-                    user = await response.json();
                 }
-    
+
                 // Update the user with the new stats
-                response = await fetch(`${backendUrl}/api/fetch-user/update`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`,
-                    },
-                    body: JSON.stringify({ adObjectID: userID, updates }),
-                });
-    
-                if (!response.ok) throw new Error('Network response was not ok');
-    
-                const updatedUser = await response.json();
+                const updatedUser = await apiPut('/api/fetch-user/update', { adObjectID: userID, updates });
                 setAdditionalFields((prevFields) => ({
                     ...prevFields,
                     ...updatedUser

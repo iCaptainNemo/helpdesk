@@ -394,6 +394,32 @@ function clearUserSecurityQuestion(userID) {
     }
 }
 
+// User feedback: free-text comment
+function updateUserComment(userID, comment) {
+    try {
+        const stmt = db.prepare(`UPDATE Users SET Comment = ? WHERE UserID = ?`);
+        const result = stmt.run(comment, userID);
+        return Promise.resolve(result);
+    } catch (err) {
+        return Promise.reject(err);
+    }
+}
+
+// User feedback: record a thumbs vote and stamp the date (one vote per calendar day).
+// `vote` is validated to 'up'/'down' by the caller, so the column name is safe to interpolate.
+function incrementUserVote(userID, vote, today) {
+    try {
+        const column = vote === 'up' ? 'ThumbsUp' : 'ThumbsDown';
+        const stmt = db.prepare(
+            `UPDATE Users SET ${column} = COALESCE(${column}, 0) + 1, LastVoteDate = ? WHERE UserID = ?`
+        );
+        const result = stmt.run(today, userID);
+        return Promise.resolve(result);
+    } catch (err) {
+        return Promise.reject(err);
+    }
+}
+
 module.exports = {
     insertDomainController,
     insertCurrentDomain,
@@ -424,5 +450,7 @@ module.exports = {
     fetchPermissionsForRoles,
     updateUserSecurityQuestion,
     fetchUserSecurityQuestion,
+    updateUserComment,
+    incrementUserVote,
     clearUserSecurityQuestion
 };

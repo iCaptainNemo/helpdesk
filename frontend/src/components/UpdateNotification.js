@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiGet } from '../utils/api';
 import '../styles/UpdateNotification.css';
 
 const UpdateNotification = () => {
@@ -36,23 +37,17 @@ const UpdateNotification = () => {
     const checkForUpdatesWeb = async () => {
         try {
             setIsChecking(true);
-            const response = await fetch('/api/check-updates');
-            
-            if (response.ok) {
-                const updateData = await response.json();
-                
-                if (updateData.updateAvailable) {
-                    setUpdateInfo(updateData);
-                    setShowNotification(true);
-                }
-                
-                setUpdateStatus(updateData.updateAvailable 
-                    ? `Update available: ${updateData.latestVersion}`
-                    : 'You have the latest version'
-                );
-            } else {
-                setUpdateStatus('Failed to check for updates');
+            const updateData = await apiGet('/api/check-updates');
+
+            if (updateData.updateAvailable) {
+                setUpdateInfo(updateData);
+                setShowNotification(true);
             }
+
+            setUpdateStatus(updateData.updateAvailable
+                ? `Update available: ${updateData.latestVersion}`
+                : 'You have the latest version'
+            );
         } catch (error) {
             console.error('Error checking for updates:', error);
             setUpdateStatus('Update check failed');

@@ -56,7 +56,11 @@ const tables = [
             'PasswordResets INT',
             'TimesHelped INT',
             'SecurityQuestion TEXT', // Custom security question
-            'SecurityAnswer TEXT' // Custom security answer
+            'SecurityAnswer TEXT', // Custom security answer
+            'Comment TEXT', // Free-text note about the user
+            'ThumbsUp INT DEFAULT 0', // Running thumbs-up tally
+            'ThumbsDown INT DEFAULT 0', // Running thumbs-down tally
+            'LastVoteDate TEXT' // YYYY-MM-DD of the last thumbs vote (one vote per calendar day)
         ]
     },
     {

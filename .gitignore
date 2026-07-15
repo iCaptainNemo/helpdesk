@@ -21,3 +21,6 @@ dist/
 # Build artifacts / release executables
 releases/
 *.exe
+
+# Admin account backups (may contain credential hashes)
+Backend/db/admin_backup_*.json

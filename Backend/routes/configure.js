@@ -18,7 +18,7 @@ function verifyToken(req, res, next) {
         return res.status(401).json({ message: 'Malformed token' });
     }
 
-    const SECRET_KEY = process.env.JWT_SECRET || '-secret-key';
+    const SECRET_KEY = process.env.JWT_SECRET; // Guaranteed set by the secrets bootstrap in server.js
     jwt.verify(token, SECRET_KEY, (err, decoded) => {
         if (err) {
             logger.error('Failed to authenticate token:', err);

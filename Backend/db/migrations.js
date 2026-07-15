@@ -122,6 +122,11 @@ class DatabaseMigrator {
         version: '2025-01-01-add-print-spooler-service',
         description: 'Add PrintSpoolerService column to Servers table',
         up: this.migration_addPrintSpoolerService.bind(this)
+      },
+      {
+        version: '2025-07-15-add-user-feedback',
+        description: 'Add Comment, ThumbsUp, ThumbsDown, LastVoteDate columns to Users table',
+        up: this.migration_addUserFeedback.bind(this)
       }
     ];
 
@@ -312,6 +317,37 @@ class DatabaseMigrator {
           logger.info('Servers table already has PrintSpoolerService column');
         }
 
+        resolve();
+      } catch (error) {
+        logger.error('Migration error:', error);
+        reject(error);
+      }
+    });
+  }
+
+  /**
+   * Migration: Add user feedback columns (comment + thumbs voting) to Users table
+   */
+  migration_addUserFeedback() {
+    return new Promise((resolve, reject) => {
+      try {
+        const userTableInfo = this.db.prepare(`PRAGMA table_info(Users)`).all();
+        const columns = [
+          { name: 'Comment', ddl: 'ALTER TABLE Users ADD COLUMN Comment TEXT' },
+          { name: 'ThumbsUp', ddl: 'ALTER TABLE Users ADD COLUMN ThumbsUp INT DEFAULT 0' },
+          { name: 'ThumbsDown', ddl: 'ALTER TABLE Users ADD COLUMN ThumbsDown INT DEFAULT 0' },
+          { name: 'LastVoteDate', ddl: 'ALTER TABLE Users ADD COLUMN LastVoteDate TEXT' }
+        ];
+
+        for (const col of columns) {
+          if (userTableInfo.some(c => c.name === col.name)) {
+            logger.info(`Users table already has ${col.name} column`);
+          } else {
+            logger.info(`Adding ${col.name} column to Users table`);
+            this.db.exec(col.ddl);
+            logger.info(`${col.name} column added successfully`);
+          }
+        }
         resolve();
       } catch (error) {
         logger.error('Migration error:', error);

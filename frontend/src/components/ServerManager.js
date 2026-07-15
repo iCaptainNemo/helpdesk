@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Modal from 'react-modal';
+import { apiGet, apiPost, apiPut, apiDelete } from '../utils/api';
 import '../styles/ServerManager.css'; // Import the CSS file for styling
 
 Modal.setAppElement('#root'); // Set the app element for accessibility
@@ -20,11 +21,7 @@ const ServerManager = () => {
 
     const fetchServers = async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/server-manager`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch servers');
-            }
-            const data = await response.json();
+            const data = await apiGet('/api/server-manager');
             setServers(data);
         } catch (error) {
             console.error('Error fetching servers:', error);
@@ -34,18 +31,7 @@ const ServerManager = () => {
 
     const handleSearch = async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/multi-fetch`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                },
-                body: JSON.stringify({ adObjectIDs: [searchQuery] }),
-            });
-            if (!response.ok) {
-                throw new Error('Failed to search servers');
-            }
-            const data = await response.json();
+            const data = await apiPost('/api/multi-fetch', { adObjectIDs: [searchQuery] });
             console.log('Search response data:', data); // Log the response data
     
             // Handle both single object and array of objects
@@ -62,21 +48,11 @@ const ServerManager = () => {
 
     const handleAddServer = async (server) => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/server-manager`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                },
-                body: JSON.stringify({
-                    ServerName: server.CN,
-                    Description: newServerDetails[server.CN]?.Description || '',
-                    Location: newServerDetails[server.CN]?.Location || ''
-                }),
+            await apiPost('/api/server-manager', {
+                ServerName: server.CN,
+                Description: newServerDetails[server.CN]?.Description || '',
+                Location: newServerDetails[server.CN]?.Location || ''
             });
-            if (!response.ok) {
-                throw new Error('Failed to add server');
-            }
             fetchServers(); // Refresh the server list
             setSearchResults(prevResults => prevResults.filter(result => result.CN !== server.CN)); // Remove added server from search results
         } catch (error) {
@@ -87,15 +63,7 @@ const ServerManager = () => {
 
     const handleRemoveServer = async (serverName) => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/server-manager/${serverName}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                },
-            });
-            if (!response.ok) {
-                throw new Error('Failed to remove server');
-            }
+            await apiDelete(`/api/server-manager/${serverName}`);
             fetchServers(); // Refresh the server list
         } catch (error) {
             console.error('Error removing server:', error);
@@ -110,17 +78,7 @@ const ServerManager = () => {
 
     const handleSaveServer = async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/server-manager/${editServer.ServerName}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                },
-                body: JSON.stringify(editServer),
-            });
-            if (!response.ok) {
-                throw new Error('Failed to update server');
-            }
+            await apiPut(`/api/server-manager/${editServer.ServerName}`, editServer);
             setEditMode(null);
             fetchServers(); // Refresh the server list
         } catch (error) {

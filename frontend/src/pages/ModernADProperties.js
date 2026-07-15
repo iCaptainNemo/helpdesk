@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Modal from 'react-modal';
+import { apiGet, apiPost, apiPatch, apiRequestRaw, logAction, invalidateCache, executeScript } from '../utils/api';
 import Logs from '../components/Logs';
 import UserStatusTable from '../components/UserStatusTable';
 import ComputerStatusTable from '../components/ComputerStatusTable';
@@ -124,6 +125,8 @@ const ModernADProperties = ({ permissions }) => {
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [forceChangePassword, setForceChangePassword] = useState(true);
+  const [shadowModal, setShadowModal] = useState({ open: false, computer: '', sessions: [], selectedSessionId: '', loading: false, starting: false });
+  const [pickerModal, setPickerModal] = useState({ open: false, matches: [], query: '' });
   const [showPropertyColumn, setShowPropertyColumn] = useState(true);
   const [tooltip, setTooltip] = useState({ visible: false, message: '' });
   const [additionalFields, setAdditionalFields] = useState({
@@ -136,23 +139,10 @@ const ModernADProperties = ({ permissions }) => {
   const adPropertiesTableRef = useRef(null);
 
   // All the callback functions from original ADProperties
-  const fetchADObjectData = useCallback(async (id) => {
+  const fetchADObjectData = useCallback(async (id, exact = false) => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No token found');
-
-      const response = await fetch(`${ENDPOINT}/api/fetch-adobject`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ adObjectID: id }),
-      });
-
-      if (!response.ok) throw new Error('Network response was not ok');
-
-      const data = await response.json();
+      // Cache briefly so reopening/switching tabs for the same object is instant.
+      const data = await apiPost('/api/fetch-adobject', { adObjectID: id, exact }, { cache: 60000 });
       return data;
     } catch (error) {
       console.error('Error fetching AD object properties:', error);
@@ -162,20 +152,8 @@ const ModernADProperties = ({ permissions }) => {
 
   const fetchAdditionalFields = useCallback(async (userID) => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) return {};
-
-      const response = await fetch(`${ENDPOINT}/api/fetch-user`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ adObjectID: userID }),
-      });
-
-      if (response.ok) {
-        const userData = await response.json();
+      const userData = await apiPost('/api/fetch-user', { adObjectID: userID }, { cache: 30000 });
+      if (userData) {
         return {
           LastHelped: userData.LastHelped || null,
           TimesUnlocked: userData.TimesUnlocked || null,
@@ -190,14 +168,24 @@ const ModernADProperties = ({ permissions }) => {
     }
   }, []);
 
-  const addTab = useCallback(async (adObjectID) => {
+  const addTab = useCallback(async (adObjectID, exact = false) => {
     const existingTabIndex = tabs.findIndex(tab => tab.name === adObjectID);
     if (existingTabIndex !== -1) {
       setActiveTab(existingTabIndex);
       return;
     }
 
-    const adObjectData = await fetchADObjectData(adObjectID);
+    const adObjectData = await fetchADObjectData(adObjectID, exact);
+
+    // Ambiguous search returned several candidates → let the user pick one
+    if (adObjectData && adObjectData.__multipleMatches) {
+      const matches = Array.isArray(adObjectData.Matches)
+        ? adObjectData.Matches
+        : (adObjectData.Matches ? [adObjectData.Matches] : []);
+      setPickerModal({ open: true, matches, query: adObjectData.Query || adObjectID });
+      return;
+    }
+
     const allProperties = Object.keys(adObjectData || {});
     const defaultProperties = getDefaultProperties(adObjectData?.ObjectClass, allProperties);
     
@@ -225,6 +213,13 @@ const ModernADProperties = ({ permissions }) => {
     // Always keep URL as /ad-object for persistent tab behavior
     navigate('/ad-object');
   }, [tabs, fetchADObjectData, fetchAdditionalFields, getDefaultProperties, navigate]);
+
+  // User picked one of the ambiguous search results — resolve it exactly (by the
+  // unique SamAccountName) so the re-query returns a single object.
+  const handlePickObject = useCallback((match) => {
+    setPickerModal({ open: false, matches: [], query: '' });
+    addTab(match.SamAccountName || match.Name, true);
+  }, [addTab]);
 
   const closeTab = useCallback((index) => {
     const updatedTabs = tabs.filter((_, i) => i !== index);
@@ -264,39 +259,14 @@ const ModernADProperties = ({ permissions }) => {
 
   const handlePasswordReset = useCallback(async (userID) => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No token found');
-
       // First command to reset the password
       const resetPasswordCommand = `Set-ADAccountPassword -Identity ${userID} -Reset -NewPassword (ConvertTo-SecureString -AsPlainText "${newPassword}" -Force) -ErrorAction Stop;`;
-      const resetPasswordResponse = await fetch(`${ENDPOINT}/api/execute-command`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ command: resetPasswordCommand }),
-      });
-
-      if (!resetPasswordResponse.ok) {
-        throw new Error('Failed to reset password');
-      }
+      await apiPost('/api/execute-command', { command: resetPasswordCommand });
 
       // If the toggle switch is enabled, run the second command
       if (forceChangePassword) {
         const changePasswordAtLogonCommand = `Set-ADUser -Identity ${userID} -ChangePasswordAtLogon $true -ErrorAction Stop;`;
-        const changePasswordAtLogonResponse = await fetch(`${ENDPOINT}/api/execute-command`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({ command: changePasswordAtLogonCommand }),
-        });
-
-        if (!changePasswordAtLogonResponse.ok) {
-          throw new Error('Failed to set change password at logon');
-        }
+        await apiPost('/api/execute-command', { command: changePasswordAtLogonCommand });
       }
 
       // If we get here, both commands were successful
@@ -310,13 +280,10 @@ const ModernADProperties = ({ permissions }) => {
 
         // Update database
         try {
-          const checkResponse = await fetch(`${ENDPOINT}/api/fetch-user`, {
+          // Use the raw response so we can branch on whether the user already exists
+          const checkResponse = await apiRequestRaw('/api/fetch-user', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify({ adObjectID: userID }),
+            body: { adObjectID: userID }
           });
 
           const updates = {
@@ -326,52 +293,30 @@ const ModernADProperties = ({ permissions }) => {
           };
 
           if (checkResponse.ok) {
-            await fetch(`${ENDPOINT}/api/users/${encodeURIComponent(userID)}`, {
-              method: 'PATCH',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-              },
-              body: JSON.stringify(updates),
-            });
+            await apiPatch(`/api/users/${encodeURIComponent(userID)}`, updates);
           } else {
-            await fetch(`${ENDPOINT}/api/users`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-              },
-              body: JSON.stringify({ UserID: userID, ...updates }),
-            });
+            await apiPost('/api/users', { UserID: userID, ...updates });
           }
         } catch (dbError) {
           console.warn('Error updating user stats:', dbError);
         }
 
-        // Log the password reset action to Recent Actions
-        try {
-          await fetch(`${ENDPOINT}/api/actions/log`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              activity: `Reset password for user: ${userID}`,
-              target: userID,
-              action_type: 'password_reset',
-              details: {
-                userID: userID,
-                forceChangePassword: forceChangePassword,
-                newPassword: '[REDACTED]' // Don't log the actual password
-              },
-              result: 'success'
-            }),
-          });
-        } catch (logError) {
-          console.warn('Failed to log password reset action:', logError);
-          // Don't fail the main operation if logging fails
-        }
+        // The user's DB stats just changed — drop cached fetch-user reads so the
+        // status table reflects the new PasswordResets/LastHelped values.
+        invalidateCache('/api/fetch-user');
+
+        // Log the password reset action to Recent Actions (non-blocking)
+        await logAction({
+          activity: `Reset password for user: ${userID}`,
+          target: userID,
+          actionType: 'password_reset',
+          details: {
+            userID: userID,
+            forceChangePassword: forceChangePassword,
+            newPassword: '[REDACTED]' // Don't log the actual password
+          },
+          result: 'success'
+        });
 
         alert(`Password successfully reset for ${userID}`);
         setModalIsOpen(false);
@@ -405,6 +350,66 @@ const ModernADProperties = ({ permissions }) => {
     }
   }, []);
 
+  // RD Shadowing: fetch the target's sessions, then let the tech pick which to shadow.
+  // Launched via execute-script (backend runs mstsc on the tech's desktop) rather than
+  // the jarvis:// deep link, because shadow needs two params (session id + computer).
+  const handleOpenShadow = useCallback(async (computerName) => {
+    if (!computerName) return;
+    setShadowModal({ open: true, computer: computerName, sessions: [], selectedSessionId: '', loading: true, starting: false });
+    try {
+      const result = await executeScript('GetComputerSessions', { ComputerName: computerName });
+      const scriptResult = result.message;
+      if (scriptResult && scriptResult.Success) {
+        const sessions = Array.isArray(scriptResult.Sessions)
+          ? scriptResult.Sessions
+          : (scriptResult.Sessions ? [scriptResult.Sessions] : []);
+        // Default to the Active session when present, else the first one
+        const active = sessions.find(s => (s.State || '').toLowerCase() === 'active');
+        const defaultId = (active || sessions[0])?.SessionId;
+        setShadowModal(prev => ({
+          ...prev,
+          sessions,
+          selectedSessionId: defaultId !== undefined ? String(defaultId) : '',
+          loading: false
+        }));
+      } else {
+        alert(`Could not get sessions from ${computerName}: ${scriptResult?.Message || 'Unknown error'}`);
+        setShadowModal(prev => ({ ...prev, loading: false }));
+      }
+    } catch (error) {
+      console.error('Error fetching sessions:', error);
+      alert(`Failed to get sessions from ${computerName}: ${error.message}`);
+      setShadowModal(prev => ({ ...prev, loading: false }));
+    }
+  }, []);
+
+  const handleStartShadow = useCallback(async () => {
+    const { computer, selectedSessionId } = shadowModal;
+    if (selectedSessionId === '' || selectedSessionId === null || selectedSessionId === undefined) return;
+    setShadowModal(prev => ({ ...prev, starting: true }));
+    try {
+      const result = await executeScript('StartShadowSession', { ComputerName: computer, SessionId: selectedSessionId });
+      const scriptResult = result.message;
+      if (scriptResult && scriptResult.Success) {
+        await logAction({
+          activity: `Started RD shadow of session ${selectedSessionId} on ${computer}`,
+          target: computer,
+          actionType: 'shadow_session',
+          details: { computerName: computer, sessionId: selectedSessionId },
+          result: 'success'
+        });
+        setShadowModal({ open: false, computer: '', sessions: [], selectedSessionId: '', loading: false, starting: false });
+      } else {
+        alert(`Failed to start shadow: ${scriptResult?.Message || 'Unknown error'}`);
+        setShadowModal(prev => ({ ...prev, starting: false }));
+      }
+    } catch (error) {
+      console.error('Error starting shadow:', error);
+      alert(`Failed to start shadow: ${error.message}`);
+      setShadowModal(prev => ({ ...prev, starting: false }));
+    }
+  }, [shadowModal]);
+
   // Handle URL parameter changes and page refresh
   useEffect(() => {
     if (adObjectID && adObjectID !== '') {
@@ -426,21 +431,10 @@ const ModernADProperties = ({ permissions }) => {
   useEffect(() => {
     const fetchTempPassword = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
+        if (!localStorage.getItem('token')) return;
 
-        const response = await fetch(`${ENDPOINT}/api/auth/profile`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setNewPassword(data.profile?.temppassword || '');
-        }
+        const data = await apiGet('/api/auth/profile');
+        setNewPassword(data.profile?.temppassword || '');
       } catch (error) {
         console.error('Error fetching temp password:', error);
       }
@@ -598,6 +592,22 @@ const ModernADProperties = ({ permissions }) => {
                         }}
                       >
                         📺 CmRcViewer
+                      </button>
+                      <button
+                        onClick={() => handleOpenShadow(currentTab?.name)}
+                        style={{
+                          background: 'var(--accent-orange)',
+                          color: 'white',
+                          border: 'none',
+                          padding: 'var(--spacing-xs) var(--spacing-sm)',
+                          borderRadius: 'var(--border-radius-sm)',
+                          fontSize: 'var(--font-size-xs)',
+                          cursor: 'pointer',
+                          transition: 'var(--transition-fast)'
+                        }}
+                        title="Shadow the user's session (RD Shadowing)"
+                      >
+                        🕶️ Shadow
                       </button>
                       <button
                         onClick={() => launchProgram('msra', currentTab?.name)}
@@ -883,7 +893,134 @@ const ModernADProperties = ({ permissions }) => {
           </div>
         </div>
       </Modal>
-      
+
+      {/* RD Shadow session picker */}
+      <Modal
+        isOpen={shadowModal.open}
+        onRequestClose={() => setShadowModal(prev => ({ ...prev, open: false }))}
+        style={{
+          overlay: {
+            backgroundColor: 'var(--bg-overlay)',
+            zIndex: 'var(--z-modal)'
+          },
+          content: {
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-primary)',
+            borderRadius: 'var(--border-radius-lg)',
+            color: 'var(--text-primary)',
+            maxWidth: '440px',
+            margin: 'auto',
+            padding: 'var(--spacing-lg)',
+            top: '50%',
+            left: '50%',
+            right: 'auto',
+            bottom: 'auto',
+            transform: 'translate(-50%, -50%)'
+          }
+        }}
+      >
+        <h3 style={{ margin: '0 0 var(--spacing-md) 0', color: 'var(--text-primary)' }}>
+          🕶️ Shadow session on {shadowModal.computer}
+        </h3>
+
+        {shadowModal.loading ? (
+          <p className="text-secondary">Loading sessions…</p>
+        ) : shadowModal.sessions.length === 0 ? (
+          <p className="text-secondary">No active sessions found on this computer.</p>
+        ) : (
+          <>
+            <label className="text-sm text-secondary" style={{ display: 'block', marginBottom: 'var(--spacing-xs)' }}>
+              Select the session to shadow
+            </label>
+            <select
+              value={shadowModal.selectedSessionId}
+              onChange={(e) => setShadowModal(prev => ({ ...prev, selectedSessionId: e.target.value }))}
+              style={{ width: '100%', padding: '8px', marginBottom: 'var(--spacing-md)' }}
+            >
+              {shadowModal.sessions.map((s) => (
+                <option key={s.SessionId} value={String(s.SessionId)}>
+                  {s.Username} — {s.State}{s.Info ? ` (${s.Info})` : ''} · id {s.SessionId}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted" style={{ marginBottom: 'var(--spacing-md)' }}>
+              The user will see a consent prompt. mstsc opens on your desktop with view + control.
+            </p>
+          </>
+        )}
+
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+          <button
+            onClick={() => setShadowModal(prev => ({ ...prev, open: false }))}
+            style={{ padding: '6px 12px', border: '1px solid var(--border-primary)', background: 'transparent', color: 'var(--text-primary)', borderRadius: 'var(--border-radius-sm)', cursor: 'pointer' }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleStartShadow}
+            disabled={shadowModal.loading || shadowModal.starting || !shadowModal.selectedSessionId}
+            style={{ padding: '6px 12px', border: 'none', background: 'var(--accent-blue)', color: 'white', borderRadius: 'var(--border-radius-sm)', cursor: 'pointer', opacity: (shadowModal.loading || shadowModal.starting || !shadowModal.selectedSessionId) ? 0.6 : 1 }}
+          >
+            {shadowModal.starting ? 'Starting…' : 'Start Shadow'}
+          </button>
+        </div>
+      </Modal>
+
+      {/* Ambiguous search picker */}
+      <Modal
+        isOpen={pickerModal.open}
+        onRequestClose={() => setPickerModal({ open: false, matches: [], query: '' })}
+        style={{
+          overlay: {
+            backgroundColor: 'var(--bg-overlay)',
+            zIndex: 'var(--z-modal)'
+          },
+          content: {
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-primary)',
+            borderRadius: 'var(--border-radius-lg)',
+            color: 'var(--text-primary)',
+            maxWidth: '480px',
+            margin: 'auto',
+            padding: 'var(--spacing-lg)',
+            top: '50%',
+            left: '50%',
+            right: 'auto',
+            bottom: 'auto',
+            transform: 'translate(-50%, -50%)'
+          }
+        }}
+      >
+        <h3 style={{ margin: '0 0 var(--spacing-xs) 0', color: 'var(--text-primary)' }}>
+          Multiple matches for “{pickerModal.query}”
+        </h3>
+        <p className="text-sm text-secondary" style={{ marginBottom: 'var(--spacing-md)' }}>
+          Select the object you meant:
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '50vh', overflowY: 'auto' }}>
+          {pickerModal.matches.map((m, i) => (
+            <button
+              key={m.DistinguishedName || m.SamAccountName || i}
+              onClick={() => handlePickObject(m)}
+              style={{ textAlign: 'left', padding: '8px 12px', background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: 'var(--border-radius-sm)', color: 'var(--text-primary)', cursor: 'pointer' }}
+            >
+              <div style={{ fontWeight: 600 }}>{m.SamAccountName || m.Name}</div>
+              <div className="text-xs text-muted">
+                {m.ObjectClass}{m.DisplayName ? ` · ${m.DisplayName}` : ''}{m.Name && m.Name !== m.SamAccountName ? ` · ${m.Name}` : ''}
+              </div>
+            </button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--spacing-md)' }}>
+          <button
+            onClick={() => setPickerModal({ open: false, matches: [], query: '' })}
+            style={{ padding: '6px 12px', border: '1px solid var(--border-primary)', background: 'transparent', color: 'var(--text-primary)', borderRadius: 'var(--border-radius-sm)', cursor: 'pointer' }}
+          >
+            Cancel
+          </button>
+        </div>
+      </Modal>
+
       {/* Tooltip */}
       {tooltip.visible && (
         <div

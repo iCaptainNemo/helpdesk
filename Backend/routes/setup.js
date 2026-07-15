@@ -1,6 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { insertOrUpdateAdminUser } = require('../db/queries'); // Import the function
 const { hashPassword } = require('../utils/hashUtils'); // Import the hashPassword function
 const bcrypt = require('bcrypt');
@@ -247,14 +248,11 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Utility function to generate random strings
+// Utility function to generate a cryptographically random secret string.
+// Uses crypto.randomBytes (not Math.random) so per-deployment secrets are not
+// predictable — important because these become the JWT/session secrets.
 function generateRandomString(length) {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
+  return crypto.randomBytes(Math.ceil(length / 2)).toString('hex').slice(0, length);
 }
 
 module.exports = router;

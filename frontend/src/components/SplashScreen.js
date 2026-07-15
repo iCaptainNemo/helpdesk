@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiGet } from '../utils/api';
 import '../styles/SplashScreen.css';
 
 const SplashScreen = () => {
@@ -13,9 +14,8 @@ const SplashScreen = () => {
 
   const checkConfiguration = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/setup/status`);
-      const data = await response.json();
-      
+      const data = await apiGet('/api/setup/status');
+
       setIsConfigured(data.configured);
       
       if (data.configured) {

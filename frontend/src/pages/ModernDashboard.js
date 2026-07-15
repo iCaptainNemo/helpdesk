@@ -1,7 +1,8 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MetricsCard, { StatusMetricsCard } from '../components/MetricsCard';
-import { executePowerShellScript } from '../utils/apiUtils';
+import Notification from '../components/Notification';
+import { executePowerShellScript, apiGet, apiPut, apiRequestRaw, invalidateCache } from '../utils/api';
 import { ActionLogger } from '../utils/actionLogger';
 
 // Lazy load chart components to reduce initial bundle size
@@ -18,6 +19,10 @@ const ModernDashboard = ({
   const [initialLoad, setInitialLoad] = useState(true);
   const [showAllServers, setShowAllServers] = useState(false);
   const [showAllLockedUsers, setShowAllLockedUsers] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [notification, setNotification] = useState({ message: '', type: '' });
+  const [departmentFilter, setDepartmentFilter] = useState(null);
   const [dashboardData, setDashboardData] = useState({
     lockedUsers: [],
     metrics: {
@@ -41,85 +46,53 @@ const ModernDashboard = ({
         setLoading(true);
       }
 
-      // Fetch actual data from endpoints (following original component patterns)
+      // Fetch every endpoint concurrently rather than sequentially. Each request
+      // falls back to null on failure (via .catch) so one slow/failing endpoint
+      // doesn't block or blank the rest of the dashboard.
+      const [lockedUsersRes, deptData, serversData, dcData, unlockActions, actionsData] = await Promise.all([
+        apiRequestRaw('/api/ledger/current-locked-users').catch(() => null),
+        apiGet('/api/ledger/locked-users-by-department').catch(() => null),
+        apiGet('/api/servers/status').catch(() => null),
+        apiGet('/api/domain-controllers').catch(() => null),
+        apiGet(`/api/actions/by-admin/${encodeURIComponent(adminID)}/100`).catch(() => null),
+        apiGet('/api/actions/recent/10').catch(() => null),
+      ]);
 
-      // Fetch locked out users from ledger (optimized) - use same endpoint as pie chart for consistency
-      const lockedUsersRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/ledger/current-locked-users`);
-
-      // Check if this response came from cache
-      if (lockedUsersRes.headers.get('X-Cache') === 'HIT') {
-        hasCachedData = true;
-      }
-
-      const lockedUsersData = await lockedUsersRes.json();
-      // Ensure locked users is an array (following LockedOutUsers component pattern)
-      const lockedUsers = Array.isArray(lockedUsersData) ? lockedUsersData : [];
-      
-      // Also fetch department data to get total count for metrics consistency
-      let totalLockedFromDepartments = 0;
-      try {
-        const deptRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/ledger/locked-users-by-department`);
-        if (deptRes.ok) {
-          const deptData = await deptRes.json();
-          totalLockedFromDepartments = deptData.reduce((total, dept) => total + dept.locked_count, 0);
+      // Locked users (raw response so we can read the X-Cache header)
+      let lockedUsers = [];
+      if (lockedUsersRes) {
+        if (lockedUsersRes.headers.get('X-Cache') === 'HIT') {
+          hasCachedData = true;
         }
-      } catch (error) {
-        console.error('Error fetching department totals:', error);
-      }
-      
-      // Fetch server status (using same endpoint as ServerStatus component)
-      let servers = [];
-      try {
-        const serversRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/servers/status`);
-        if (serversRes.ok) {
-          servers = await serversRes.json();
-          // Ensure servers is an array (following ServerStatus component pattern)
-          servers = Array.isArray(servers) ? servers : [servers];
-        }
-      } catch (error) {
-        console.error('Error fetching servers:', error);
-        servers = [];
+        const lockedUsersData = await lockedUsersRes.json().catch(() => []);
+        lockedUsers = Array.isArray(lockedUsersData) ? lockedUsersData : [];
       }
 
-      // Fetch domain controllers (using same endpoint as DomainControllers component)
-      let domainControllers = [];
-      try {
-        const dcRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/domain-controllers`);
-        if (dcRes.ok) {
-          const dcData = await dcRes.json();
-          domainControllers = dcData.domainControllers || [];
-        }
-      } catch (error) {
-        console.error('Error fetching domain controllers:', error);
-        domainControllers = [];
-      }
+      // Department totals (used for metric consistency)
+      const totalLockedFromDepartments = Array.isArray(deptData)
+        ? deptData.reduce((total, dept) => total + dept.locked_count, 0)
+        : 0;
+
+      // Servers (ensure array, following ServerStatus component pattern)
+      const servers = Array.isArray(serversData) ? serversData : (serversData ? [serversData] : []);
+
+      // Domain controllers
+      const domainControllers = (dcData && dcData.domainControllers) || [];
 
       // Calculate metrics from real data
       const offlineServers = servers.filter(server => server.Status === 'Offline').length;
       const offlineDomainControllers = domainControllers.filter(dc => dc.Status === 'Offline').length;
-      
-      // Calculate today's unlocks by current admin from RecentActions
+
+      // Count this admin's successful unlocks today
       let todayUnlocks = 0;
-      try {
-        const today = new Date().toISOString().split('T')[0]; // Get YYYY-MM-DD format
-        const unlockActionsRes = await fetch(
-          `${process.env.REACT_APP_BACKEND_URL}/api/actions/by-admin/${encodeURIComponent(adminID)}/100`
-        );
-        if (unlockActionsRes.ok) {
-          const unlockActions = await unlockActionsRes.json();
-          // Count successful unlocks by this admin today
-          todayUnlocks = unlockActions.filter(action => 
-            action.action_type === 'unlock' && 
-            action.result === 'success' &&
-            action.timestamp.startsWith(today)
-          ).length;
-        }
-      } catch (error) {
-        console.error('Error fetching today\'s unlock count:', error);
-        todayUnlocks = 0;
+      if (Array.isArray(unlockActions)) {
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        todayUnlocks = unlockActions.filter(action =>
+          action.action_type === 'unlock' &&
+          action.result === 'success' &&
+          action.timestamp.startsWith(today)
+        ).length;
       }
-      
-      // Note: Total actions tracking available for future dashboard metrics
 
       const metrics = {
         lockedUsersCount: totalLockedFromDepartments > 0 ? totalLockedFromDepartments : lockedUsers.length || 0,
@@ -140,14 +113,9 @@ const ModernDashboard = ({
         location: server.Location
       }));
 
-      // Fetch recent actions from database
-      let recentActivity = [];
-      try {
-        const actionsRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/actions/recent/10`);
-        if (actionsRes.ok) {
-          const actionsData = await actionsRes.json();
-          console.log('Recent actions response:', actionsData); // Debug log
-          recentActivity = actionsData.map(action => ({
+      // Recent actions (already fetched above via Promise.all)
+      const recentActivity = Array.isArray(actionsData)
+        ? actionsData.map(action => ({
             id: action.ID,
             time: new Date(action.timestamp + (action.timestamp.includes('Z') ? '' : 'Z')), // Ensure UTC parsing
             title: getActionTitle(action.action_type),
@@ -156,15 +124,8 @@ const ModernDashboard = ({
             adminID: action.adminID,
             target: action.target,
             result: action.result
-          }));
-        } else {
-          console.log('Recent actions request failed:', actionsRes.status);
-        }
-      } catch (error) {
-        console.error('Error fetching recent actions:', error);
-        // Fallback to empty array
-        recentActivity = [];
-      }
+          }))
+        : [];
 
       setDashboardData({
         lockedUsers: lockedUsers || [],
@@ -203,7 +164,23 @@ const ModernDashboard = ({
       if (initialLoad) {
         setInitialLoad(false);
       }
+      setLastUpdated(new Date());
     }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchDashboardData(true);
+    setRefreshing(false);
+  };
+
+  const showNotification = (message, type = 'info') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification({ message: '', type: '' }), 4000);
+  };
+
+  const scrollToSection = (id) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   useEffect(() => {
@@ -265,7 +242,10 @@ const ModernDashboard = ({
   };
 
   const handleDepartmentClick = (department) => {
-    navigate(`/active-issues?department=${encodeURIComponent(department)}`);
+    // Toggle a filter on the locked-users table and scroll to it (no separate page exists)
+    setDepartmentFilter(prev => (prev === department ? null : department));
+    setShowAllLockedUsers(true);
+    scrollToSection('dash-locked-users');
   };
 
   const handleUnlockUser = async (userID) => {
@@ -293,21 +273,10 @@ const ModernDashboard = ({
         };
 
         try {
-          const token = localStorage.getItem('token');
-          if (token) {
-            // Update user stats using the correct endpoint
-            await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/fetch-user/update`, {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                adObjectID: userID,
-                updates: updates
-              }),
-            });
-          }
+          // Update user stats using the correct endpoint
+          await apiPut('/api/fetch-user/update', { adObjectID: userID, updates });
+          // Drop cached fetch-user so the AD properties view reflects the unlock
+          invalidateCache('/api/fetch-user');
         } catch (dbError) {
           console.warn('Error updating user stats in database:', dbError);
         }
@@ -315,17 +284,18 @@ const ModernDashboard = ({
         // Log the successful unlock action
         await ActionLogger.logUnlock(adminID, userID, true);
 
+        showNotification(`Unlocked ${userID}`, 'success');
         console.log(`Successfully unlocked user: ${userID}`);
       } else {
         throw new Error(result.message || 'Unlock failed');
       }
     } catch (error) {
       console.error('Error unlocking user:', error);
-      
+
       // Log the failed unlock action
       await ActionLogger.logUnlock(adminID, userID, false);
-      
-      alert(`Failed to unlock user ${userID}: ${error.message}`);
+
+      showNotification(`Failed to unlock ${userID}: ${error.message}`, 'error');
     }
   };
 
@@ -333,6 +303,27 @@ const ModernDashboard = ({
 
   return (
     <div className={`dashboard-content ${!initialLoad ? 'dashboard-loaded' : ''}`} style={{ background: 'var(--bg-primary)', minHeight: '100%' }}>
+      <Notification
+        message={notification.message}
+        type={notification.type}
+        onClose={() => setNotification({ message: '', type: '' })}
+      />
+
+      {/* Dashboard header: last-updated indicator + manual refresh */}
+      <div className="flex items-center justify-between px-md py-sm" style={{ gap: 'var(--spacing-md)' }}>
+        <span className="text-xs text-muted">
+          {lastUpdated ? `Last updated ${lastUpdated.toLocaleTimeString()}` : 'Loading…'}
+        </span>
+        <button
+          className="px-sm py-xs bg-primary-gradient text-white rounded-sm text-xs hover-lift transition"
+          onClick={handleRefresh}
+          disabled={refreshing}
+          title="Refresh dashboard data"
+        >
+          {refreshing ? 'Refreshing…' : '↻ Refresh'}
+        </button>
+      </div>
+
       {/* Dashboard Grid */}
       <main className="dashboard-grid dashboard-main">
           {/* Metrics Cards Row */}
@@ -343,7 +334,7 @@ const ModernDashboard = ({
             status={dashboardData.metrics.lockedUsersCount > 5 ? 'critical' : dashboardData.metrics.lockedUsersCount > 2 ? 'warning' : 'normal'}
             icon="🔒"
             loading={loading}
-            onClick={() => navigate('/active-issues')}
+            onClick={() => scrollToSection('dash-locked-users')}
           />
 
           <MetricsCard
@@ -362,7 +353,7 @@ const ModernDashboard = ({
             status={dashboardData.metrics.offlineServers > 0 ? 'warning' : 'normal'}
             icon="⚠️"
             loading={loading}
-            onClick={() => navigate('/reports/health')}
+            onClick={() => scrollToSection('dash-server-health')}
           />
 
           <StatusMetricsCard
@@ -372,7 +363,7 @@ const ModernDashboard = ({
             status={dashboardData.metrics.offlineDomainControllers > 0 ? 'critical' : 'normal'}
             icon="🏢"
             loading={loading}
-            onClick={() => navigate('/infrastructure/domain-controllers')}
+            onClick={() => scrollToSection('dash-domain-controllers')}
           />
 
           {/* Charts Row */}
@@ -392,13 +383,23 @@ const ModernDashboard = ({
           </Suspense>
 
           {/* Active Issues & Quick Actions Row */}
-          <div className="dashboard-card grid-active-issues">
+          <div id="dash-locked-users" className="dashboard-card grid-active-issues">
             <div className="card-header">
               <div>
                 <h3 className="card-title">Currently Locked Users</h3>
+                {departmentFilter && (
+                  <button
+                    className="text-xs text-accent-blue"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                    onClick={() => setDepartmentFilter(null)}
+                    title="Clear department filter"
+                  >
+                    Filtered by {departmentFilter} ✕
+                  </button>
+                )}
               </div>
               <div className="card-actions">
-                <button 
+                <button
                   className="px-sm py-xs bg-primary-gradient text-white rounded-sm text-xs hover-lift transition"
                   onClick={() => setShowAllLockedUsers(!showAllLockedUsers)}
                 >
@@ -406,7 +407,7 @@ const ModernDashboard = ({
                 </button>
               </div>
             </div>
-            
+
             <div className="card-content">
               {loading ? (
                 <div className="space-y-md">
@@ -429,10 +430,14 @@ const ModernDashboard = ({
                     <tbody>
                       {(() => {
                         // Sort by most recent lockout time first
-                        const sortedUsers = [...dashboardData.lockedUsers].sort((a, b) => 
+                        const sortedUsers = [...dashboardData.lockedUsers].sort((a, b) =>
                           new Date(b.AccountLockoutTime) - new Date(a.AccountLockoutTime)
                         );
-                        const displayUsers = showAllLockedUsers ? sortedUsers : sortedUsers.slice(0, 6);
+                        // Apply department filter (set by clicking a pie-chart slice)
+                        const filteredUsers = departmentFilter
+                          ? sortedUsers.filter(u => (u.department || 'Unknown Dept') === departmentFilter)
+                          : sortedUsers;
+                        const displayUsers = showAllLockedUsers ? filteredUsers : filteredUsers.slice(0, 6);
                         return displayUsers.map(user => {
                           // Check if lockout occurred within last 5 minutes
                           const lockoutTime = new Date(user.AccountLockoutTime);
@@ -450,7 +455,12 @@ const ModernDashboard = ({
                           } : {}}
                         >
                           <td>
-                            <span className="text-sm" style={isRecentLockout ? {color: '#000000'} : {color: 'var(--text-primary)'}}>
+                            <span
+                              className="text-sm"
+                              style={{ color: isRecentLockout ? '#000000' : 'var(--accent-blue)', cursor: 'pointer', textDecoration: 'underline' }}
+                              onClick={() => navigate(`/ad-object/${user.UserID}`)}
+                              title={`Open AD object for ${user.UserID}`}
+                            >
                               {user.UserID}
                             </span>
                           </td>
@@ -496,7 +506,7 @@ const ModernDashboard = ({
             </div>
           </div>
 
-          <div className="dashboard-card grid-domain-controllers">
+          <div id="dash-domain-controllers" className="dashboard-card grid-domain-controllers">
             <div className="card-header">
               <div>
                 <h3 className="card-title">Domain Controllers</h3>
@@ -560,7 +570,7 @@ const ModernDashboard = ({
           </div>
 
           {/* System Status & Recent Activity Row */}
-          <div className="dashboard-card grid-system-status">
+          <div id="dash-server-health" className="dashboard-card grid-system-status">
             <div className="card-header">
               <div>
                 <h3 className="card-title">Server Health Status</h3>
@@ -700,14 +710,6 @@ const ModernDashboard = ({
               <div>
                 <h3 className="card-title">Recent Activity</h3>
                 <p className="card-subtitle">Latest help desk actions</p>
-              </div>
-              <div className="card-actions">
-                <button 
-                  className="px-sm py-xs bg-accent-blue text-white rounded-sm text-xs hover-lift transition"
-                  onClick={() => navigate('/reports/activity')}
-                >
-                  View All
-                </button>
               </div>
             </div>
             

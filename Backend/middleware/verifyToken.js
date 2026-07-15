@@ -14,7 +14,7 @@ const verifyToken = (req, res, next) => {
     return res.status(401).json({ message: 'Malformed token' });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key', (err, decoded) => {
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
     if (err) {
       logger.error('Failed to authenticate token:', err);
       return res.status(401).json({ message: 'Failed to authenticate token' });

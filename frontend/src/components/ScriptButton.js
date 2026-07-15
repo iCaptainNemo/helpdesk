@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { executePowerShellScript } from '../utils/apiUtils';
+import { executePowerShellScript } from '../utils/api';
 import '../styles/ScriptButton.css'; // Import the CSS file
 
 const ScriptButton = ({ scriptName, params, buttonText, onSuccess }) => {

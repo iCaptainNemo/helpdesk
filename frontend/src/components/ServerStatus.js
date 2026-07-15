@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { apiGet } from '../utils/api';
 import '../styles/ServerStatus.css'; // Import the CSS file
 
 const ServerStatus = () => {
@@ -9,11 +10,7 @@ const ServerStatus = () => {
 
     const fetchServerStatuses = async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/servers/status`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch server statuses');
-            }
-            const data = await response.json();
+            const data = await apiGet('/api/servers/status');
             // Ensure data is an array
             const statusesArray = Array.isArray(data) ? data : [data];
             setServerStatuses(statusesArray);

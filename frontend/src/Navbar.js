@@ -113,13 +113,6 @@ const Navbar = ({ permissions }) => {
           >
             👨‍💼 Profile
           </Link>
-          <Link
-            className={`nav-link ${location.pathname === '/dashboard-legacy' ? 'active' : ''}`}
-            to="/dashboard-legacy"
-            style={getNavLinkStyle('/dashboard-legacy')}
-          >
-            📊 Legacy View
-          </Link>
           {permissions.includes('access_configure_page') && (
             <Link
               className={`nav-link ${location.pathname === '/configure' ? 'active' : ''}`}
@@ -206,24 +199,6 @@ const Navbar = ({ permissions }) => {
             }}
           >
             👨‍💼 Profile
-          </Link>
-          <Link
-            className={`nav-link-mobile ${location.pathname === '/dashboard-legacy' ? 'active' : ''}`}
-            to="/dashboard-legacy"
-            onClick={closeMobileMenu}
-            style={{
-              display: 'block',
-              padding: 'var(--spacing-md) var(--spacing-lg)',
-              color: location.pathname === '/dashboard-legacy' ? 'var(--accent-blue)' : 'var(--text-primary)',
-              textDecoration: 'none',
-              borderLeft: location.pathname === '/dashboard-legacy' ? '4px solid var(--accent-blue)' : '4px solid transparent',
-              background: location.pathname === '/dashboard-legacy' ? 'rgba(54, 162, 235, 0.1)' : 'transparent',
-              transition: 'var(--transition-fast)',
-              fontSize: 'var(--font-size-base)',
-              fontWeight: location.pathname === '/dashboard-legacy' ? 'var(--font-weight-semibold)' : 'normal'
-            }}
-          >
-            📊 Legacy View
           </Link>
           {permissions.includes('access_configure_page') && (
             <Link

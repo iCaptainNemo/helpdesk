@@ -7,7 +7,7 @@ const logger = require('../utils/logger'); // Import the logger
 const sessionStore = require('../utils/sessionStore'); // Import sessionStore
 const { hashPassword, verifyPassword } = require('../utils/hashUtils'); // Import password hashing and verification functions
 require('dotenv').config(); // Load environment variables from .env file
-const SECRET_KEY = process.env.JWT_SECRET || '-secret-key';
+const SECRET_KEY = process.env.JWT_SECRET; // Guaranteed set by the secrets bootstrap in server.js
 const JWT_EXPIRATION = process.env.JWT_EXPIRATION || '1d'; // Default to 1 day if not set
 
 // Middleware to sanitize inputs

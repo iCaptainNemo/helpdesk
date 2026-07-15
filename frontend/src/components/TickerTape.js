@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiGet } from '../utils/api';
 import '../styles/TickerTape.css';
 
 const TickerTape = ({ className = '' }) => {
@@ -14,10 +15,11 @@ const TickerTape = ({ className = '' }) => {
   // Fetch ticker data using same endpoints as dashboard
   const fetchTickerData = async () => {
     try {
-      const [lockedUsersRes, actionsRes, serversRes] = await Promise.all([
-        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/ledger/current-locked-users`),
-        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/actions/recent/50`),
-        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/servers/status`)
+      // Fetch independently so one failing endpoint doesn't blank the whole ticker
+      const [lockedData, actionsData, serversData] = await Promise.all([
+        apiGet('/api/ledger/current-locked-users').catch(() => null),
+        apiGet('/api/actions/recent/50').catch(() => null),
+        apiGet('/api/servers/status').catch(() => null)
       ]);
 
       let lockedUsers = 0;
@@ -27,8 +29,7 @@ const TickerTape = ({ className = '' }) => {
       let offlineDCs = 0;
 
       // Process locked users (same as dashboard)
-      if (lockedUsersRes.ok) {
-        const lockedData = await lockedUsersRes.json();
+      if (Array.isArray(lockedData)) {
         lockedUsers = lockedData.length || 0;
         if (lockedData.length > 0) {
           // Sort by lockout time to get most recent
@@ -40,8 +41,7 @@ const TickerTape = ({ className = '' }) => {
       }
 
       // Process recent actions for unlock count (today only)
-      if (actionsRes.ok) {
-        const actionsData = await actionsRes.json();
+      if (Array.isArray(actionsData)) {
         const today = new Date().toDateString();
         totalUnlocks = actionsData.filter(action =>
           action.action_type === 'unlock' &&
@@ -50,8 +50,7 @@ const TickerTape = ({ className = '' }) => {
       }
 
       // Process servers (same as dashboard)
-      if (serversRes.ok) {
-        const serversData = await serversRes.json();
+      if (serversData) {
         // Ensure servers is an array (following dashboard pattern)
         const servers = Array.isArray(serversData) ? serversData : [serversData];
 

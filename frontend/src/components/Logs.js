@@ -1,4 +1,5 @@
 import React, { useEffect, useState, forwardRef } from 'react';
+import { apiPost } from '../utils/api';
 import '../styles/Logs.css'; // Import the CSS file
 import '../styles/theme.css'; // Import modern theme
 
@@ -16,20 +17,8 @@ const Logs = forwardRef(({ adObjectID }, ref) => {
 
        // console.log('Fetching logs for AD Object ID:', adObjectID); // Add this log
 
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/get-logs`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ adObjectID }),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to fetch logs');
-        }
-
-        const logsData = await response.json();
+        // Cache briefly so switching between AD tabs doesn't re-pull the same logs.
+        const logsData = await apiPost('/api/get-logs', { adObjectID }, { cache: 60000 });
        // console.log('Fetched logs data:', logsData); // Add this log
 
         if (Array.isArray(logsData)) {

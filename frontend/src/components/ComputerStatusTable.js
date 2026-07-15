@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { apiPost, executeScript, logAction } from '../utils/api';
 import '../styles/ComputerStatusTable.css';
 
 const ComputerStatusTable = ({ adObjectID }) => {
@@ -20,26 +21,16 @@ const ComputerStatusTable = ({ adObjectID }) => {
     selectedProfiles: [],
     loading: false
   });
+  const [processes, setProcesses] = useState(null); // null = not fetched yet
+  const [processLoading, setProcessLoading] = useState(false);
+  const [processFilter, setProcessFilter] = useState('');
+  const [killingProcess, setKillingProcess] = useState(null); // process name currently being killed
 
   const fetchIpv4Address = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No token found');
-
       const ipCommand = `Invoke-Command -ComputerName ${adObjectID} -ScriptBlock { Get-WmiObject -Class Win32_NetworkAdapterConfiguration | Where-Object { $_.IPEnabled -eq $true } | Select-Object -ExpandProperty IPAddress | Where-Object { $_ -match '^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$' } } | ConvertTo-Json -Compress`;
 
-      const ipResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ command: ipCommand }),
-      });
-
-      if (!ipResponse.ok) throw new Error('Network response was not ok');
-
-      const ipData = await ipResponse.json();
+      const ipData = await apiPost('/api/execute-command', { command: ipCommand });
       const ipAddress = ipData.value; // Extract the IP address value
       setIpv4Address(ipAddress);
     } catch (error) {
@@ -50,23 +41,9 @@ const ComputerStatusTable = ({ adObjectID }) => {
 
   const fetchLoggedInUsers = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No token found');
-
       const usersCommand = `PsLoggedon.exe -l -x \\\\${adObjectID} | ConvertTo-Json -Compress`;
 
-      const usersResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ command: usersCommand }),
-      });
-
-      if (!usersResponse.ok) throw new Error('Network response was not ok');
-
-      const usersData = await usersResponse.json();
+      const usersData = await apiPost('/api/execute-command', { command: usersCommand });
 
       if (!Array.isArray(usersData)) {
         throw new Error('Unexpected data format');
@@ -88,23 +65,9 @@ const ComputerStatusTable = ({ adObjectID }) => {
   useEffect(() => {
     const fetchComputerStatus = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('No token found');
-
         const statusCommand = `Test-Connection -ComputerName ${adObjectID} -Count 1 -Quiet -ErrorAction Stop | ConvertTo-Json -Compress`;
 
-        const statusResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({ command: statusCommand }),
-        });
-
-        if (!statusResponse.ok) throw new Error('Network response was not ok');
-
-        const statusData = await statusResponse.json();
+        const statusData = await apiPost('/api/execute-command', { command: statusCommand });
         setComputerStatus(statusData === true ? 'Online' : 'Offline');
 
         if (statusData === true && !ipFetched) {
@@ -123,14 +86,34 @@ const ComputerStatusTable = ({ adObjectID }) => {
       }
     };
 
-    fetchComputerStatus();
-
-    let interval;
-    if (autoRefresh) {
+    // Poll only while the page is visible. When the operator switches to another
+    // browser tab or app window, polling pauses (no wasted Test-Connection/PsLoggedon
+    // traffic) and resumes with an immediate refresh when they return.
+    let interval = null;
+    const startPolling = () => {
+      if (interval || !autoRefresh || document.hidden) return;
       interval = setInterval(fetchComputerStatus, 5000); // Refresh every 5 seconds
-    }
+    };
+    const stopPolling = () => {
+      if (interval) { clearInterval(interval); interval = null; }
+    };
+    const handleVisibility = () => {
+      if (document.hidden) {
+        stopPolling();
+      } else {
+        fetchComputerStatus();
+        startPolling();
+      }
+    };
 
-    return () => clearInterval(interval); // Cleanup interval on component unmount
+    fetchComputerStatus();
+    startPolling();
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [adObjectID, autoRefresh, ipFetched, fetchIpv4Address, fetchLoggedInUsers]);
 
   const handleRestartComputer = async () => {
@@ -140,24 +123,7 @@ const ComputerStatusTable = ({ adObjectID }) => {
 
     setLoading(prev => ({ ...prev, restart: true }));
     try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No token found');
-
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-script`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          scriptName: 'RestartComputer',
-          params: { ComputerName: adObjectID }
-        }),
-      });
-
-      if (!response.ok) throw new Error('Network response was not ok');
-
-      const result = await response.json();
+      await executeScript('RestartComputer', { ComputerName: adObjectID });
       alert(`Restart command sent to ${adObjectID}. The computer should restart shortly.`);
 
       // Update status after a brief delay
@@ -178,24 +144,7 @@ const ComputerStatusTable = ({ adObjectID }) => {
   const handleGroupPolicyUpdate = async () => {
     setLoading(prev => ({ ...prev, gpupdate: true }));
     try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No token found');
-
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-script`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          scriptName: 'ForceGroupPolicyUpdate',
-          params: { ComputerName: adObjectID }
-        }),
-      });
-
-      if (!response.ok) throw new Error('Network response was not ok');
-
-      const result = await response.json();
+      const result = await executeScript('ForceGroupPolicyUpdate', { ComputerName: adObjectID });
       alert(`Group Policy update completed on ${adObjectID}`);
       console.log('GP Update result:', result);
 
@@ -210,47 +159,18 @@ const ComputerStatusTable = ({ adObjectID }) => {
   const handlePrintSpoolerRestart = async () => {
     setLoading(prev => ({ ...prev, printSpooler: true }));
     try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No token found');
-
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-script`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          scriptName: 'RestartPrintSpooler',
-          params: { ComputerName: adObjectID }
-        }),
-      });
-
-      if (!response.ok) throw new Error('Network response was not ok');
-
-      const result = await response.json();
+      const result = await executeScript('RestartPrintSpooler', { ComputerName: adObjectID });
       alert(`Print Spooler service restarted on ${adObjectID}`);
       console.log('Print Spooler restart result:', result);
 
-      // Log action to actions endpoint
-      try {
-        await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/actions/log`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            activity: `Restarted Print Spooler service on computer: ${adObjectID}`,
-            target: adObjectID,
-            action_type: 'restart_print_spooler',
-            details: { computerName: adObjectID, scriptResult: result },
-            result: 'success'
-          }),
-        });
-      } catch (logError) {
-        console.error('Error logging print spooler restart action:', logError);
-        // Don't fail the main operation if logging fails
-      }
+      // Log action (non-blocking — logAction never throws)
+      await logAction({
+        activity: `Restarted Print Spooler service on computer: ${adObjectID}`,
+        target: adObjectID,
+        actionType: 'restart_print_spooler',
+        details: { computerName: adObjectID, scriptResult: result },
+        result: 'success'
+      });
 
     } catch (error) {
       console.error('Error restarting print spooler:', error);
@@ -263,24 +183,7 @@ const ComputerStatusTable = ({ adObjectID }) => {
   const handleGraphicsDriverRestart = async () => {
     setLoading(prev => ({ ...prev, graphicsRestart: true }));
     try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No token found');
-
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-script`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          scriptName: 'GraphicsDriverRestart',
-          params: { ComputerName: adObjectID }
-        }),
-      });
-
-      if (!response.ok) throw new Error('Network response was not ok');
-
-      const result = await response.json();
+      const result = await executeScript('GraphicsDriverRestart', { ComputerName: adObjectID });
       alert(`Graphics driver restart completed on ${adObjectID}`);
       console.log('Graphics restart result:', result);
 
@@ -295,24 +198,7 @@ const ComputerStatusTable = ({ adObjectID }) => {
   const handleGetUserProfiles = async () => {
     setProfileModal(prev => ({ ...prev, loading: true }));
     try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No token found');
-
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-script`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          scriptName: 'GetUserProfiles',
-          params: { ComputerName: adObjectID }
-        }),
-      });
-
-      if (!response.ok) throw new Error('Network response was not ok');
-
-      const result = await response.json();
+      const result = await executeScript('GetUserProfiles', { ComputerName: adObjectID });
       const scriptResult = result.message; // The actual PowerShell result is in the message property
 
       if (scriptResult.Success) {
@@ -351,27 +237,10 @@ const ComputerStatusTable = ({ adObjectID }) => {
 
     setLoading(prev => ({ ...prev, profileRemoval: true }));
     try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No token found');
-
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-script`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          scriptName: 'RemoveUserProfiles',
-          params: {
-            ComputerName: adObjectID,
-            UserIDs: profileModal.selectedProfiles
-          }
-        }),
+      const result = await executeScript('RemoveUserProfiles', {
+        ComputerName: adObjectID,
+        UserIDs: profileModal.selectedProfiles
       });
-
-      if (!response.ok) throw new Error('Network response was not ok');
-
-      const result = await response.json();
       const scriptResult = result.message; // The actual PowerShell result is in the message property
 
       if (scriptResult.Success) {
@@ -413,6 +282,68 @@ const ComputerStatusTable = ({ adObjectID }) => {
       loading: false
     });
   };
+
+  // On-demand fetch of the remote computer's user processes (no polling)
+  const handleGetProcesses = async () => {
+    setProcessLoading(true);
+    try {
+      const result = await executeScript('GetUserProcesses', { ComputerName: adObjectID });
+      const scriptResult = result.message; // PowerShell payload is in .message
+      if (scriptResult && scriptResult.Success) {
+        setProcesses(Array.isArray(scriptResult.Processes) ? scriptResult.Processes : []);
+      } else {
+        alert(`Failed to get processes: ${scriptResult?.Message || 'Unknown error'}`);
+        setProcesses([]);
+      }
+    } catch (error) {
+      console.error('Error getting processes:', error);
+      alert(`Failed to get processes from ${adObjectID}: ${error.message}`);
+    } finally {
+      setProcessLoading(false);
+    }
+  };
+
+  // Kill all instances of a named process (mirrors Stop-Process -Name <x> -Force)
+  const handleKillProcess = async (processName) => {
+    if (!window.confirm(`Kill all instances of "${processName}" on ${adObjectID}?`)) return;
+    setKillingProcess(processName);
+    try {
+      const result = await executeScript('StopUserProcesses', { ComputerName: adObjectID, ProcessName: processName });
+      const scriptResult = result.message;
+      if (scriptResult && scriptResult.Success) {
+        await logAction({
+          activity: `Killed ${scriptResult.Killed} instance(s) of ${processName} on ${adObjectID}`,
+          target: adObjectID,
+          actionType: 'kill_process',
+          details: { computerName: adObjectID, processName, killed: scriptResult.Killed },
+          result: 'success'
+        });
+        await handleGetProcesses(); // refresh the list to reflect the kill
+      } else {
+        alert(`Failed to kill ${processName}: ${scriptResult?.Message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error killing process:', error);
+      alert(`Failed to kill ${processName} on ${adObjectID}: ${error.message}`);
+    } finally {
+      setKillingProcess(null);
+    }
+  };
+
+  // Group the flat process list by name (count + total memory), filtered + sorted
+  const groupedProcesses = (() => {
+    if (!processes) return [];
+    const map = new Map();
+    for (const p of processes) {
+      const g = map.get(p.Name) || { name: p.Name, count: 0, memory: 0 };
+      g.count += 1;
+      g.memory += p.MemoryMB || 0;
+      map.set(p.Name, g);
+    }
+    return Array.from(map.values())
+      .filter(g => g.name.toLowerCase().includes(processFilter.toLowerCase()))
+      .sort((a, b) => b.count - a.count || b.memory - a.memory);
+  })();
 
   return (
     <div className="computer-status-table-container">
@@ -496,6 +427,68 @@ const ComputerStatusTable = ({ adObjectID }) => {
           >
             {profileModal.loading ? 'Loading Profiles...' : '👤 Remove User Profiles'}
           </button>
+        </div>
+      )}
+
+      {/* Processes - on-demand list of user processes with kill-by-name (only when online) */}
+      {computerStatus === 'Online' && (
+        <div className="computer-processes-section" style={{ marginTop: 'var(--spacing-md)' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+            <button
+              className={`control-button ${processLoading ? 'loading' : ''}`}
+              onClick={handleGetProcesses}
+              disabled={processLoading}
+            >
+              {processLoading ? 'Loading Processes...' : '🧾 Get Processes'}
+            </button>
+            {processes && (
+              <input
+                type="text"
+                value={processFilter}
+                onChange={(e) => setProcessFilter(e.target.value)}
+                placeholder="Filter processes…"
+                style={{ flex: 1, padding: '4px 8px', minWidth: 0 }}
+              />
+            )}
+          </div>
+
+          {processes && (
+            groupedProcesses.length > 0 ? (
+              <table className="computer-status-table">
+                <thead>
+                  <tr>
+                    <th>Process</th>
+                    <th>Count</th>
+                    <th>Memory</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {groupedProcesses.map((g) => (
+                    <tr key={g.name}>
+                      <td className="property-cell">{g.name}</td>
+                      <td className="value-cell">{g.count}</td>
+                      <td className="value-cell">{g.memory.toFixed(1)} MB</td>
+                      <td className="value-cell">
+                        <button
+                          className="control-button"
+                          onClick={() => handleKillProcess(g.name)}
+                          disabled={killingProcess === g.name}
+                          title={`Stop-Process -Name ${g.name} -Force`}
+                        >
+                          {killingProcess === g.name ? 'Killing…' : 'Kill all'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', padding: '8px' }}>
+                {processFilter ? 'No processes match your filter.' : 'No user processes found.'}
+              </div>
+            )
+          )}
         </div>
       )}
 

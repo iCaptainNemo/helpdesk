@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { apiGet } from '../../utils/api'; // shared API client
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -52,11 +53,7 @@ const LockedUsersTimeChart = ({
   // Fetch data from ledger API
   const fetchChartData = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/ledger/locked-users-timeline/${selectedHours}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch timeline data');
-      }
-      const apiData = await response.json();
+      const apiData = await apiGet(`/api/ledger/locked-users-timeline/${selectedHours}`);
       
       // API returns data in the format we need for Chart.js
       return apiData;

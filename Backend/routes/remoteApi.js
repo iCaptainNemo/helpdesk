@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const logger = require('../utils/logger');
 require('dotenv').config();
 
-const SECRET_KEY = process.env.JWT_SECRET || '-secret-key';
+const SECRET_KEY = process.env.JWT_SECRET; // Guaranteed set by the secrets bootstrap in server.js
 const JWT_EXPIRATION = process.env.JWT_EXPIRATION || '1d';
 
 // Middleware to verify API key for remote connections

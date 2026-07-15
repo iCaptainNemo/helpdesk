@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiPost } from '../utils/api';
 import '../styles/CurrentComputers.css';
 
 const CurrentComputersTable = ({ adObjectID }) => {
@@ -12,18 +13,7 @@ const CurrentComputersTable = ({ adObjectID }) => {
 
   const fetchComputers = async () => {
     try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('No token found');
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/get-logs`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ adObjectID }),
-        });
-        if (!response.ok) throw new Error('Network response was not ok');
-
-        const logsData = await response.json();
+        const logsData = await apiPost('/api/get-logs', { adObjectID });
 
         // Sort logs by date and time
         logsData.sort((a, b) => {
@@ -50,22 +40,8 @@ const CurrentComputersTable = ({ adObjectID }) => {
 
   const checkComputerDomainStatus = async (computer) => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No token found');
-
       const command = `Get-ADComputer -Filter {Name -eq '${computer}'} -ErrorAction SilentlyContinue | ConvertTo-Json -Compress`;
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ command }),
-      });
-
-      if (!response.ok) throw new Error('Network response was not ok');
-
-      const data = await response.json();
+      const data = await apiPost('/api/execute-command', { command });
 
       if (data && data.DNSHostName) {
         return true;
@@ -81,22 +57,8 @@ const CurrentComputersTable = ({ adObjectID }) => {
   const fetchLoggedInUsers = async (computer, adObjectID) => {
     console.log(`Checking logged in users for computer: ${computer}, adObjectID: ${adObjectID}`);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No token found');
-
       const command = `PsLoggedon.exe -l -x \\\\${computer} | ConvertTo-Json -Compress`;
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/execute-command`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ command }),
-      });
-
-      if (!response.ok) throw new Error('Network response was not ok');
-
-      const data = await response.json();
+      const data = await apiPost('/api/execute-command', { command });
 
       if (!Array.isArray(data)) {
         throw new Error('Unexpected data format');

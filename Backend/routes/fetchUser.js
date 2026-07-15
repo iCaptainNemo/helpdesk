@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { storeUser, fetchUser, updateUserSecurityQuestion, fetchUserSecurityQuestion, clearUserSecurityQuestion } = require('../db/queries'); // Import the functions
+const { storeUser, fetchUser, updateUserSecurityQuestion, fetchUserSecurityQuestion, clearUserSecurityQuestion, updateUserComment, incrementUserVote } = require('../db/queries'); // Import the functions
 const logger = require('../utils/logger'); // Import the logger module
 const verifyToken = require('../middleware/verifyToken');
 
@@ -125,6 +125,73 @@ router.delete('/security-question/:userID', verifyToken, async (req, res) => {
         });
     } catch (error) {
         logger.error('Error clearing security question:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Ensure a Users row exists before writing feedback to it
+async function ensureUser(userID) {
+    const existing = await fetchUser(userID);
+    if (!existing || existing.length === 0) {
+        await storeUser({
+            UserID: userID,
+            LastHelped: null,
+            TimesUnlocked: 0,
+            PasswordResets: 0,
+            TimesHelped: 0
+        });
+    }
+}
+
+// Local (not UTC) calendar date as YYYY-MM-DD, used to enforce one vote per day
+function localDateString() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Route to update the free-text comment for a user
+router.put('/comment', verifyToken, async (req, res) => {
+    const { userID, comment } = req.body;
+    if (!userID) {
+        return res.status(400).json({ error: 'UserID is required' });
+    }
+    try {
+        await ensureUser(userID);
+        await updateUserComment(userID, comment ?? null);
+        const rows = await fetchUser(userID);
+        const user = Array.isArray(rows) ? rows[0] : rows;
+        logger.info(`Comment updated for user ${userID}`);
+        res.status(200).json(user);
+    } catch (error) {
+        logger.error('Error updating comment:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Route to record a thumbs up/down vote (one vote per calendar day, enforced server-side)
+router.post('/vote', verifyToken, async (req, res) => {
+    const { userID, vote } = req.body;
+    if (!userID || (vote !== 'up' && vote !== 'down')) {
+        return res.status(400).json({ error: "UserID and vote ('up' or 'down') are required" });
+    }
+    try {
+        await ensureUser(userID);
+        const rows = await fetchUser(userID);
+        const user = Array.isArray(rows) ? rows[0] : rows;
+        const today = localDateString();
+
+        if (user && user.LastVoteDate === today) {
+            // Already voted today — return current state with 409 so the UI can reflect it
+            return res.status(409).json({ error: 'Already voted today', ...user });
+        }
+
+        await incrementUserVote(userID, vote, today);
+        const updatedRows = await fetchUser(userID);
+        const updated = Array.isArray(updatedRows) ? updatedRows[0] : updatedRows;
+        logger.info(`Recorded thumbs ${vote} for user ${userID}`);
+        res.status(200).json(updated);
+    } catch (error) {
+        logger.error('Error recording vote:', error);
         res.status(500).json({ error: error.message });
     }
 });

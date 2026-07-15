@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { apiGet } from '../utils/api';
 import '../styles/DomainControllers.css'; // Import the new CSS file
 
 const DomainControllers = () => {
@@ -7,11 +8,7 @@ const DomainControllers = () => {
 
     const fetchDomainControllers = async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/domain-controllers`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch domain controllers');
-            }
-            const data = await response.json();
+            const data = await apiGet('/api/domain-controllers');
             setDomainControllers(data.domainControllers);
         } catch (error) {
             console.error('Error fetching domain controllers:', error);

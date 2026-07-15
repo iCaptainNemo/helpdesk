@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiPost } from '../utils/api';
 import '../styles/Login.css'; // Ensure this path is correct
 
 const Login = ({ onLogin }) => {
@@ -27,23 +28,10 @@ const Login = ({ onLogin }) => {
     }
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          AdminID: normalizedAdminID, // Use lowercase AdminID
-          password
-        })
+      const data = await apiPost('/api/auth/login', {
+        AdminID: normalizedAdminID, // Use lowercase AdminID
+        password
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error);
-      }
-
-      const data = await response.json();
       console.log('Login successful, token:', data.token); // Debug log
 
       // Check if the token is present in the response
@@ -83,21 +71,7 @@ const Login = ({ onLogin }) => {
     }
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/update-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          AdminID,
-          newPassword
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error);
-      }
+      await apiPost('/api/auth/update-password', { AdminID, newPassword });
 
       alert('Password updated successfully. Please log in with your new password.');
       setIsPasswordUpdateRequired(false);

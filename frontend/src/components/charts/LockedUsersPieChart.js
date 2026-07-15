@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { apiGet } from '../../utils/api'; // shared API client
 import {
   Chart as ChartJS,
   ArcElement,
@@ -21,11 +22,7 @@ const LockedUsersPieChart = ({
   // Fetch data from ledger API
   const fetchChartData = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/ledger/locked-users-by-department`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch department data');
-      }
-      const departmentData = await response.json();
+      const departmentData = await apiGet('/api/ledger/locked-users-by-department');
       
       // Color wheel colors based on the primary blue theme (#667eea) - matching timeline chart
       const colorWheel = [

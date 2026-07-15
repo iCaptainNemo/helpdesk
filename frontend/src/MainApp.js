@@ -5,6 +5,7 @@ import './styles.css'; // Import the CSS file
 import './styles/theme.css'; // Import the new theme
 import './styles/grid.css'; // Import the grid system
 import './styles/mobile.css'; // Import mobile responsive styles
+import { apiGet, apiPost } from './utils/api';
 import Header from './Header';
 import Navbar from './Navbar';
 import Login from './pages/Login';
@@ -13,9 +14,7 @@ import SetupWizard from './components/SetupWizard';
 import ErrorBoundary from './components/ErrorBoundary';
 
 // Lazy load heavy components
-const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const ModernDashboard = React.lazy(() => import('./pages/ModernDashboard'));
-const ADProperties = React.lazy(() => import('./pages/ADProperties'));
 const ModernADProperties = React.lazy(() => import('./pages/ModernADProperties'));
 const Profile = React.lazy(() => import('./pages/Profile'));
 const ModernConfigure = React.lazy(() => import('./pages/ModernConfigure'));
@@ -58,16 +57,10 @@ function App() {
   useEffect(() => {
     const checkSetupStatus = async () => {
       try {
-        const response = await fetch(`${ENDPOINT}/api/setup/status`);
-        if (response.ok) {
-          const data = await response.json();
-          setSetupComplete(data.configured);
-          // If setup is not complete, we don't need to check authentication
-          if (!data.configured) {
-            setInitialCheck(true);
-          }
-        } else {
-          setSetupComplete(false);
+        const data = await apiGet('/api/setup/status');
+        setSetupComplete(data.configured);
+        // If setup is not complete, we don't need to check authentication
+        if (!data.configured) {
           setInitialCheck(true);
         }
       } catch (error) {
@@ -87,41 +80,24 @@ function App() {
     
     const token = localStorage.getItem('token');
     if (token) {
-      fetch(`${ENDPOINT}/api/auth/verify-token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      })
-        .then(response => response.json())
-        .then(data => {
+      (async () => {
+        try {
+          const data = await apiPost('/api/auth/verify-token');
           if (data.AdminID) {
             setIsAuthenticated(true);
             setAdminID(data.AdminID);
             // Fetch permissions after verifying the token
-            return fetch(`${ENDPOINT}/api/auth/profile`, {
-              method: 'GET',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              }
-            });
-          } else {
-            setInitialCheck(true);
-          }
-        })
-        .then(response => response && response.json())
-        .then(data => {
-          if (data && data.permissions) {
-            setPermissions(data.permissions || []);
+            const profile = await apiGet('/api/auth/profile');
+            if (profile && profile.permissions) {
+              setPermissions(profile.permissions || []);
+            }
           }
           setInitialCheck(true);
-        })
-        .catch(error => {
+        } catch (error) {
           console.error('Session verification failed:', error);
           setInitialCheck(true);
-        });
+        }
+      })();
     } else {
       setInitialCheck(true);
     }
@@ -141,25 +117,13 @@ function App() {
     try {
       const sessionID = localStorage.getItem('sessionID');
 
-      const response = await fetch(`${ENDPOINT}/api/logout`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}` // Include token in Authorization header
-        },
-        body: JSON.stringify({ sessionID })
-      });
+      await apiPost('/api/logout', { sessionID }, { credentials: true });
 
-      if (response.ok) {
-        localStorage.removeItem('token');
-        setIsAuthenticated(false);
-        setAdminID('');
-        setAdminComputer('');
-        console.log('Successfully logged out and session destroyed.');
-      } else {
-        console.error('Logout failed: Network response was not ok');
-      }
+      localStorage.removeItem('token');
+      setIsAuthenticated(false);
+      setAdminID('');
+      setAdminComputer('');
+      console.log('Successfully logged out and session destroyed.');
     } catch (error) {
       console.error('Logout failed:', error);
     }
@@ -200,10 +164,8 @@ function App() {
                 <>
                   <Route path="/" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ErrorBoundary fallbackMessage="Dashboard failed to load"><Suspense fallback={<div className="loading-spinner">Loading Dashboard...</div>}><ModernDashboard permissions={permissions} adminID={AdminID} adminComputer={adminComputer} /></Suspense></ErrorBoundary></AuthenticatedLayout>} />
                   <Route path="/dashboard" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ErrorBoundary fallbackMessage="Dashboard failed to load"><Suspense fallback={<div className="loading-spinner">Loading Dashboard...</div>}><ModernDashboard permissions={permissions} adminID={AdminID} adminComputer={adminComputer} /></Suspense></ErrorBoundary></AuthenticatedLayout>} />
-                  <Route path="/dashboard-legacy" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ErrorBoundary fallbackMessage="Legacy Dashboard failed to load"><Suspense fallback={<div className="loading-spinner">Loading Legacy Dashboard...</div>}><Dashboard /></Suspense></ErrorBoundary></AuthenticatedLayout>} />
                   <Route path="/ad-object" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ErrorBoundary fallbackMessage="AD Properties failed to load"><Suspense fallback={<div className="loading-spinner">Loading AD Properties...</div>}><ModernADProperties permissions={permissions} /></Suspense></ErrorBoundary></AuthenticatedLayout>} />
                   <Route path="/ad-object/:adObjectID" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ErrorBoundary fallbackMessage="AD Properties failed to load"><Suspense fallback={<div className="loading-spinner">Loading AD Properties...</div>}><ModernADProperties permissions={permissions} /></Suspense></ErrorBoundary></AuthenticatedLayout>} />
-                  <Route path="/ad-object-legacy/:adObjectID?" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ErrorBoundary fallbackMessage="Legacy AD Properties failed to load"><Suspense fallback={<div className="loading-spinner">Loading Legacy AD Properties...</div>}><ADProperties permissions={permissions} /></Suspense></ErrorBoundary></AuthenticatedLayout>} />
                   <Route path="/Profile" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ErrorBoundary fallbackMessage="Profile page failed to load"><Suspense fallback={<div className="loading-spinner">Loading Profile...</div>}><Profile permissions={permissions} /></Suspense></ErrorBoundary></AuthenticatedLayout>} />
                   <Route path="/configure" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ErrorBoundary fallbackMessage="Configuration page failed to load"><Suspense fallback={<div className="loading-spinner">Loading Configuration...</div>}><ModernConfigure permissions={permissions} /></Suspense></ErrorBoundary></AuthenticatedLayout>} />
                   <Route path="/setup" element={<AuthenticatedLayout AdminID={AdminID} onLogout={handleLogout} permissions={permissions}><ErrorBoundary fallbackMessage="Setup page failed to load"><Suspense fallback={<div className="loading-spinner">Loading Setup...</div>}><Setup /></Suspense></ErrorBoundary></AuthenticatedLayout>} />
@@ -231,20 +193,7 @@ function HeaderWrapper({ AdminID, onLogout }) {
 
   const handleFormSubmit = async (adObjectID) => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No token found');
-
-      const response = await fetch(`${ENDPOINT}/api/fetch-adobject`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ adObjectID }),
-      });
-
-      if (!response.ok) throw new Error('Network response was not ok');
-
+      await apiPost('/api/fetch-adobject', { adObjectID });
       navigate(`/ad-object/${adObjectID}`); // Navigate to the AD properties page with adObjectID in the URL
     } catch (error) {
       console.error('Error fetching AD object properties:', error);

@@ -6,10 +6,12 @@ const sanitizeInput = require('../middleware/sanitizeInput');
 
 router.post('/', sanitizeInput, async (req, res) => {
     const adObjectID = req.body.adObjectID.toUpperCase();
-    const scriptPath = process.pkg 
+    const exact = req.body.exact === true || req.body.exact === 'true';
+    const scriptPath = process.pkg
         ? path.join(process.cwd(), 'functions', 'Get-ADObject.ps1')
         : path.join(__dirname, '../functions/Get-ADObject.ps1');
-    const params = [adObjectID]; // Pass adObjectID as a positional argument
+    // Positional args: <objectID> [exact]. 'exact' resolves a specific pick to a single object.
+    const params = exact ? [adObjectID, 'exact'] : [adObjectID];
 
     try {
         const adObjectProperties = await serverPowerShellScript(scriptPath, params);

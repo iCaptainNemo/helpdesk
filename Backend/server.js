@@ -50,6 +50,23 @@ if (process.pkg) {
 }
 console.log('Environment variables loaded');
 
+// Ensure security secrets exist before any module captures them at load time.
+// The setup wizard writes persistent random secrets to .env. If they are missing
+// (first run before setup, or a copied exe dropped into a new domain that hasn't
+// been configured) generate ephemeral per-process secrets rather than falling back
+// to a shared hardcoded value that would be identical across every deployment and
+// allow token forgery. Ephemeral secrets let the app boot to the setup wizard;
+// completing setup persists real ones.
+const crypto = require('crypto');
+if (!process.env.JWT_SECRET) {
+    process.env.JWT_SECRET = crypto.randomBytes(32).toString('hex');
+    console.warn('[Security] JWT_SECRET not configured — generated an ephemeral secret for this process. Complete setup to persist one.');
+}
+if (!process.env.SESSION_SECRET) {
+    process.env.SESSION_SECRET = crypto.randomBytes(32).toString('hex');
+    console.warn('[Security] SESSION_SECRET not configured — generated an ephemeral secret for this process.');
+}
+
 console.log('Loading database module...');
 const db = require('./db/init');
 console.log('Database module loaded');
@@ -195,7 +212,7 @@ app.use((req, res, next) => {
 // Session management middleware
 app.use(session({
     store: sessionStore, // Use your session store here
-    secret: process.env.SESSION_SECRET || 'your-session-secret', // Secret for signing the session ID cookie
+    secret: process.env.SESSION_SECRET, // Guaranteed set by the secrets bootstrap above
     resave: false,
     saveUninitialized: true,
     cookie: { secure: false } // Set to true if using HTTPS
@@ -235,29 +252,34 @@ const { startLedgerService } = require('./services/ledgerService'); // Import le
 app.use('/api/fetch-adobject', fetchADObjectRoute);
 app.use('/api/fetch-user', fetchUserRoute); // Register the fetchUser route
 app.use('/api/auth', authRoutes); // Authentication routes
-app.use('/api/get-locked-out-users', getLockedOutUsersRoute); // Route to fetch locked out users
+app.use('/api/get-locked-out-users', verifyToken, getLockedOutUsersRoute); // Route to fetch locked out users
 app.use('/api/execute-script', verifyToken, verifyPermissions('execute_script'), executeScriptRoute); // Route to execute PowerShell scripts with permissions
-app.use('/api/update-locked-out-users', updateLockedOutUsersRoute); // Route to update locked out users
+app.use('/api/update-locked-out-users', verifyToken, updateLockedOutUsersRoute); // Route to update locked out users
 app.use('/api/logout', logoutRoute); // Register the logout route
 app.use('/api/check-session', checkSessionRoute); // Check powershell sessions on backend
-app.use('/api/get-logs', getLogsRoute); // Route to fetch logs
-app.use('/api/roles', rolesRoute); // Route to manage roles
-app.use('/api/permissions', permissionsRoute); // Route to manage permissions
+app.use('/api/get-logs', verifyToken, getLogsRoute); // Route to fetch logs
+app.use('/api/roles', verifyToken, rolesRoute); // Route to manage roles
+app.use('/api/permissions', verifyToken, permissionsRoute); // Route to manage permissions
 app.use('/api/configure', verifyToken, verifyPermissions('access_configure_page'), configureRoute); // Route to access the configure page
-app.use('/api/servers', serverStatusRoute); // Use the serverStatus route
-app.use('/api/users', usersRoute); // Register the new users route
-// app.use('/api/execute-command', verifyToken, verifyPermissions('execute_command'), executeCommandRoute); // Use the executeCommand route
-app.use('/api/execute-command', executeCommandRoute); // Use the executeCommand route
-app.use('/api/logging-settings', loggingSettingsRoute); // Use the loggingSettings route
-app.use('/api/multi-fetch', multiFetchRoute);
-app.use('/api/server-manager', serverManagerRoute);
+app.use('/api/servers', verifyToken, serverStatusRoute); // Use the serverStatus route
+app.use('/api/users', verifyToken, usersRoute); // Register the new users route
+// execute-command runs arbitrary PowerShell — require auth AND the execute_command permission
+app.use('/api/execute-command', verifyToken, verifyPermissions('execute_command'), executeCommandRoute); // Use the executeCommand route
+app.use('/api/logging-settings', verifyToken, loggingSettingsRoute); // Use the loggingSettings route
+app.use('/api/multi-fetch', verifyToken, multiFetchRoute);
+app.use('/api/server-manager', verifyToken, serverManagerRoute);
 app.use('/api/setup', setupRoute); // Register the setup route
 app.use('/api/updates', updatesRoute); // Update checking routes
-app.use('/api/domain-controllers', domainControllersRouter); // Use the domainControllers route
+app.use('/api/domain-controllers', verifyToken, domainControllersRouter); // Use the domainControllers route
 app.use('/api/remote', remoteApiRoute); // Register the remote API routes
-app.use('/api/test-data', testDataRoute); // Register test data routes
-app.use('/api/ledger', ledgerRoute); // Register ledger routes
-app.use('/api/actions', actionsRoute); // Register actions routes
+// Test data routes can DELETE from live tables — only register when explicitly
+// enabled, so the portable exe never exposes them by default in a real domain.
+if (process.env.ENABLE_TEST_DATA === 'true') {
+    app.use('/api/test-data', testDataRoute);
+    logger.warn('[Security] Test data routes ENABLED (ENABLE_TEST_DATA=true) — do not use in production');
+}
+app.use('/api/ledger', verifyToken, ledgerRoute); // Register ledger routes
+app.use('/api/actions', verifyToken, actionsRoute); // Register actions routes (verifyToken protects the audit log)
 app.use('/api/cache', require('./routes/cacheInfo')); // Cache monitoring and management routes
 
 // Catch-all handler: send back React's index.html file for any non-API routes
@@ -435,14 +457,15 @@ server.listen(PORT, HOST, async () => {
     const domainControllerStatusRefreshInterval = 600000; // Default to 10 minutes
     setInterval(DomainControllerStatus, domainControllerStatusRefreshInterval);
 
-    // Set up daily cleanup for recent actions at startup and then daily at midnight
-    const performDailyActionsCleanup = async () => {
+    // Set up daily cleanup for recent actions at startup and then daily at midnight.
+    // Call the database directly rather than issuing an HTTP request to our own
+    // /api/actions endpoint — that avoids needing an unauthenticated cleanup route.
+    const performDailyActionsCleanup = () => {
         try {
-            const response = await fetch(`http://localhost:${process.env.PORT || 3001}/api/actions/cleanup-daily`, {
-                method: 'DELETE'
-            });
-            const result = await response.json();
-            console.log('[Daily Cleanup] Actions cleanup completed:', result);
+            const startOfDay = new Date();
+            startOfDay.setHours(0, 0, 0, 0);
+            const result = db.prepare('DELETE FROM RecentActions WHERE timestamp < ?').run(startOfDay.toISOString());
+            console.log(`[Daily Cleanup] Actions cleanup completed: removed ${result.changes} old actions`);
         } catch (error) {
             console.error('[Daily Cleanup] Failed to cleanup actions:', error);
         }

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiGet, apiPost } from '../utils/api';
 import '../styles/theme.css';
 import '../styles/grid.css';
 import ServerManager from '../components/ServerManager';
@@ -52,72 +53,46 @@ const ModernConfigure = ({ permissions }) => {
     };
 
     const loadLoggingSettings = async () => {
-        const token = localStorage.getItem('token');
-        const response = await fetch('/api/logging-settings', {
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-            },
-        });
-        const data = await response.json();
-        setDebugLogging(data.debug);
-        setVerboseLogging(data.verbose);
+        try {
+            const data = await apiGet('/api/logging-settings');
+            setDebugLogging(data.debug);
+            setVerboseLogging(data.verbose);
+        } catch (error) {
+            console.error('Error loading logging settings:', error);
+        }
     };
 
     const loadUsers = async () => {
-        const token = localStorage.getItem('token');
-        const response = await fetch('/api/users', {
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-            },
-        });
-        if (response.ok) {
-            const data = await response.json();
+        try {
+            const data = await apiGet('/api/users');
             setUsers(Array.isArray(data) ? data : []);
+        } catch (error) {
+            console.error('Error loading users:', error);
         }
     };
 
     const loadRoles = async () => {
-        const token = localStorage.getItem('token');
-        const response = await fetch('/api/roles', {
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-            },
-        });
-        if (response.ok) {
-            const data = await response.json();
+        try {
+            const data = await apiGet('/api/roles');
             setRoles(Array.isArray(data) ? data : []);
+        } catch (error) {
+            console.error('Error loading roles:', error);
         }
     };
 
     const loadPermissions = async () => {
-        const token = localStorage.getItem('token');
-        const response = await fetch('/api/permissions', {
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-            },
-        });
-        if (response.ok) {
-            const data = await response.json();
+        try {
+            const data = await apiGet('/api/permissions');
             setPermissionsList(Array.isArray(data) ? data : []);
+        } catch (error) {
+            console.error('Error loading permissions:', error);
         }
     };
 
     const handleLoggingToggle = async (type, value) => {
-        const token = localStorage.getItem('token');
         try {
-            await fetch('/api/logging-settings', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify({ [type]: value }),
-            });
-            
+            await apiPost('/api/logging-settings', { [type]: value });
+
             if (type === 'debug') setDebugLogging(value);
             if (type === 'verbose') setVerboseLogging(value);
         } catch (error) {
@@ -126,16 +101,8 @@ const ModernConfigure = ({ permissions }) => {
     };
 
     const handleRoleChange = async (userId, roleId) => {
-        const token = localStorage.getItem('token');
         try {
-            await fetch('/api/roles/assign', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify({ adminID: userId, roleID: roleId }),
-            });
+            await apiPost('/api/roles/assign', { adminID: userId, roleID: roleId });
             setUsers(users.map(user => user.AdminID === userId ? { ...user, roleID: roleId } : user));
         } catch (error) {
             console.error('Error updating user role:', error);
@@ -144,18 +111,9 @@ const ModernConfigure = ({ permissions }) => {
 
     const handleAddUser = async () => {
         if (!newUser.AdminID.trim()) return;
-        
-        const token = localStorage.getItem('token');
+
         try {
-            const response = await fetch('/api/users', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify(newUser),
-            });
-            const data = await response.json();
+            const data = await apiPost('/api/users', newUser);
             setUsers([...users, data]);
             setNewUser({ AdminID: '', roleID: '' });
         } catch (error) {

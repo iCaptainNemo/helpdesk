@@ -4,6 +4,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import '../styles/Terminal.css';
 import io from 'socket.io-client';
+import { apiGet } from '../utils/api';
 
 const TerminalComponent = ({ onToggle }) => {
     const terminalRef = useRef(null);
@@ -96,8 +97,7 @@ const TerminalComponent = ({ onToggle }) => {
     const connectToBackend = async () => {
         try {
             // Get deployment mode from backend
-            const response = await fetch('/api/setup/status');
-            const setupData = await response.json();
+            const setupData = await apiGet('/api/setup/status');
             setDeploymentMode(setupData.details?.mode || 'local');
 
             // Connect to Socket.IO
