@@ -29,7 +29,7 @@ if (!fs.existsSync(releasesDir)) {
 console.log('\n📦 Running pkg...');
 try {
   execSync(
-    `pkg Backend/server.js --targets node18-win-x64 --output "${versionedExe}"`,
+    `pkg Backend/server.js --targets node22-win-x64 --output "${versionedExe}"`,
     { stdio: 'inherit', cwd: path.join(__dirname, '..') }
   );
 } catch (error) {

@@ -16,8 +16,8 @@
     "build:backend": "echo 'Backend build complete (no build step needed)'",
     "post-build": "node scripts/post-build.js",
     "build": "npm run build:frontend && npm run build:backend && npm run post-build",
-    "copy-native-binaries": "mkdir -p \"Backend/node_modules/better-sqlite3/lib/binding/node-v108-win32-x64\" 2>/dev/null || true && cp \"Backend/node_modules/better-sqlite3/build/Release/better_sqlite3.node\" \"Backend/node_modules/better-sqlite3/lib/binding/node-v108-win32-x64/better_sqlite3.node\" && echo 'SQLite binary copied' && mkdir -p \"dist/Backend/node_modules/bcrypt/lib/binding/napi-v3\" 2>/dev/null || true && cp \"Backend/node_modules/bcrypt/lib/binding/napi-v3/bcrypt_lib.node\" \"dist/Backend/node_modules/bcrypt/lib/binding/napi-v3/bcrypt_lib.node\" && echo 'bcrypt binary copied'",
-    "dist:win": "npm run build && npm run copy-native-binaries && pkg Backend/server.js --targets node18-win-x64 --output releases/helpdesk-jarvis.exe",
+    "copy-native-binaries": "node scripts/copy-native-binaries.js",
+    "dist:win": "npm run build && npm run copy-native-binaries && pkg Backend/server.js --targets node22-win-x64 --output releases/helpdesk-jarvis.exe",
     "dist:win:versioned": "npm run build && npm run copy-native-binaries && node scripts/version-build.js",
     "install-deps": "npm install && cd Backend && npm install && cd ../frontend && npm install",
     "release": "npm run dist:win:versioned"
@@ -26,7 +26,7 @@
     "assets": [
       "Backend/**/*",
       "Backend/node_modules/bcrypt/lib/binding/napi-v3/bcrypt_lib.node",
-      "Backend/node_modules/better-sqlite3/lib/binding/node-v108-win32-x64/better_sqlite3.node",
+      "Backend/node_modules/better-sqlite3/lib/binding/node-v127-win32-x64/better_sqlite3.node",
       "frontend/build/**/*",
       "Tools/**/*",
       "setupConfig.js"
@@ -35,13 +35,13 @@
       "Backend/**/*.js"
     ],
     "targets": [
-      "node18-win-x64"
+      "node22-win-x64"
     ],
     "outputPath": "releases/"
   },
   "devDependencies": {
-    "concurrently": "^9.0.1",
-    "pkg": "^5.8.1"
+    "@yao-pkg/pkg": "^6.21.0",
+    "concurrently": "^9.0.1"
   },
   "dependencies": {
     "node-gyp": "^11.4.2"
