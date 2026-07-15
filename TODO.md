@@ -25,9 +25,9 @@
 **Status**: ✅ Completed - **Successfully replaced Electron with PKG**
 
 **Technical Achievements**:
-- ✅ **61MB Standalone Exe**: No external dependencies required
+- ✅ **~85MB Standalone Exe**: No external dependencies required
 - ✅ **Native Module Solutions**: 
-  - better-sqlite3: Rebuilt for Node.js v18 and bundled as pkg assets
+  - better-sqlite3: ABI-matched to the pkg target (Node 22 = ABI 127) and bundled as pkg assets
   - bcrypt: Custom wrapper (bcryptPkg.js) bypassing node-pre-gyp completely
 - ✅ **Truly Portable**: Works on any Windows computer without installation
 - ✅ **Build System**: `npm run dist:win` creates production executable
@@ -172,7 +172,7 @@ npm run start:backend
 - ✅ `Backend/routes/getLockedOutUsers.js` (converted to better-sqlite3)
 
 **Built Executable**:
-- `C:\Users\j9270\Desktop\helpdesk-GUI\dist\helpdesk-jarvis.exe` (61MB, Node.js v18)
+- `C:\Users\j9270\Desktop\helpdesk-GUI\releases\helpdesk-jarvis.exe` (~85MB, Node.js v22)
 
 **Custom Solutions**:
 - `Backend/utils/bcryptPkg.js` - Custom bcrypt wrapper for pkg
@@ -188,7 +188,7 @@ npm run start:backend
 
 1. **Solved Native Module Crisis**: Created custom bcrypt solution and better-sqlite3 integration for pkg
 2. **Eliminated Electron Dependency**: Successfully moved to lightweight pkg distribution  
-3. **Achieved True Portability**: 61MB exe works anywhere without installation
+3. **Achieved True Portability**: ~85MB exe works anywhere without installation
 4. **✅ COMPLETED FULL DATABASE MIGRATION**: All database operations converted to better-sqlite3 synchronous API
 5. **✅ IMPLEMENTED DEEP LINKING SYSTEM**: Automatic registry setup for external tool integration on startup
 6. **✅ CREATED TOOLS DOWNLOAD SYSTEM**: Automatic GitHub-based tool acquisition without bundling binaries

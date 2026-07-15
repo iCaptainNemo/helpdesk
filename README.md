@@ -1,6 +1,6 @@
 # Helpdesk Jarvis - Standalone IT Management Tool
 
-**A complete, portable IT helpdesk solution in a single 61MB executable.**
+**A complete, portable IT helpdesk solution in a single ~85MB executable.**
 
 Helpdesk Jarvis provides IT professionals with a comprehensive web-based interface for managing user accounts, system monitoring, and administrative tasks. No installation required - just run the exe and get started!
 
@@ -34,7 +34,7 @@ cd helpdesk-GUI
 npm run dist:win
 
 # Run the built executable
-dist/helpdesk-jarvis.exe
+releases/helpdesk-jarvis.exe
 ```
 
 ## 🛠️ First Run Setup
@@ -121,7 +121,7 @@ Click computer names or use context menus to:
 ## 📁 File Structure
 
 ```
-helpdesk-jarvis.exe           # Main executable (61MB)
+helpdesk-jarvis.exe           # Main executable (~85MB)
 ├── .env                      # Configuration file (created on first run)
 ├── database.db               # SQLite database (created automatically)
 ├── logs/                     # Application logs
@@ -169,7 +169,7 @@ Check the `logs/` folder for detailed error information and debugging data.
 | Feature | Standalone Exe | Development Mode |
 |---------|----------------|------------------|
 | Installation | Single file | Node.js + npm install |
-| Size | 61MB | ~500MB+ (node_modules) |
+| Size | ~85MB | ~500MB+ (node_modules) |
 | Startup Time | ~3 seconds | ~10 seconds |
 | Updates | Replace exe | git pull + rebuild |
 | Dependencies | None | Node.js ecosystem |

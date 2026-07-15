@@ -106,7 +106,7 @@ The backend server will run on `http://localhost:3001` and the frontend server w
     npm run dist:win
     ```
 
-The standalone executable will be created at `dist/helpdesk-jarvis.exe`.
+The standalone executable will be created at `releases/helpdesk-jarvis.exe`.
 
 ## Development vs Production
 
