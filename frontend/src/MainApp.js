@@ -5,6 +5,7 @@ import './styles.css'; // Import the CSS file
 import './styles/theme.css'; // Import the new theme
 import './styles/grid.css'; // Import the grid system
 import './styles/mobile.css'; // Import mobile responsive styles
+import 'boxicons/css/boxicons.min.css'; // Icon font - self-hosted via npm (no CDN/CSP changes needed)
 import { apiGet, apiPost } from './utils/api';
 import Header from './Header';
 import Navbar from './Navbar';

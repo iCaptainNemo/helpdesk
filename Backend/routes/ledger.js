@@ -21,11 +21,33 @@ router.get('/locked-users-timeline/:hours', cacheMiddleware(60), (req, res) => {
             ORDER BY timestamp ASC
         `;
         
-        const rows = db.prepare(query).all(timeLimit);
-        
+        const rawRows = db.prepare(query).all(timeLimit);
+
+        // Snapshot rows land at whatever moment the periodic ledger job fires (e.g.
+        // :03, :08, :18) rather than on clean clock marks, which made the x-axis show
+        // irregular times instead of readable :00/:15/:30/:45 marks. Bucket each row
+        // into the 15-minute window it falls in, keeping only the LATEST snapshot per
+        // (bucket, department) - each row is already a full point-in-time count, so
+        // buckets must pick one representative snapshot rather than sum multiple
+        // snapshots together (which would double-count the same locked users).
+        const BUCKET_MS = 15 * 60 * 1000;
+        const bucketOf = (ts) => Math.floor(new Date(ts).getTime() / BUCKET_MS) * BUCKET_MS;
+
+        const latestByBucketDept = new Map();
+        for (const row of rawRows) {
+            const bucket = bucketOf(row.timestamp);
+            const key = `${bucket}|${row.department}`;
+            const ts = new Date(row.timestamp).getTime();
+            const existing = latestByBucketDept.get(key);
+            if (!existing || ts > existing.ts) {
+                latestByBucketDept.set(key, { bucket, department: row.department, count: row.count, ts });
+            }
+        }
+        const rows = Array.from(latestByBucketDept.values());
+
         // Process data for chart format
-        const timestamps = [...new Set(rows.map(row => row.timestamp))];
-        
+        const timestamps = [...new Set(rows.map(row => row.bucket))].sort((a, b) => a - b);
+
         // Get departments ordered by their latest count (same as pie chart ordering)
         const deptCounts = {};
         rows.forEach(row => {
@@ -34,15 +56,15 @@ router.get('/locked-users-timeline/:hours', cacheMiddleware(60), (req, res) => {
             }
             deptCounts[row.department] += row.count;
         });
-        
+
         // Sort departments by total count DESC to match pie chart ordering
         const departments = Object.keys(deptCounts).sort((a, b) => deptCounts[b] - deptCounts[a]);
-        
+
         const chartData = {
-            labels: timestamps.map(ts => new Date(ts).toLocaleTimeString()),
+            labels: timestamps.map(bucket => new Date(bucket).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })),
             datasets: departments.map((dept, index) => {
-                const data = timestamps.map(timestamp => {
-                    const dataPoint = rows.find(row => row.timestamp === timestamp && row.department === dept);
+                const data = timestamps.map(bucket => {
+                    const dataPoint = rows.find(row => row.bucket === bucket && row.department === dept);
                     return dataPoint ? dataPoint.count : 0;
                 });
                 

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { apiPost, executeScript, logAction } from '../utils/api';
 import '../styles/ComputerStatusTable.css';
 
@@ -492,8 +493,12 @@ const ComputerStatusTable = ({ adObjectID }) => {
         </div>
       )}
 
-      {/* Profile Removal Modal */}
-      {profileModal.open && (
+      {/* Profile Removal Modal - portaled to document.body so it isn't nested inside
+          .dashboard-card. That ancestor applies `transform` on :hover (grid.css), and any
+          transformed ancestor becomes the containing block for position:fixed children -
+          which was hijacking this modal's centering and confining it to the card's column
+          every time the cursor crossed into/out of it. */}
+      {profileModal.open && createPortal(
         <div className="profile-modal-overlay" onClick={closeProfileModal}>
           <div className="profile-modal" onClick={e => e.stopPropagation()}>
             <div className="profile-modal-header">
@@ -581,7 +586,8 @@ const ComputerStatusTable = ({ adObjectID }) => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

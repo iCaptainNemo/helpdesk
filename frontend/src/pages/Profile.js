@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { apiGet, apiPost } from '../utils/api';
+import { apiGet, apiPost, logAction } from '../utils/api';
+import * as tabSyncService from '../utils/tabSyncService';
 import '../styles/Profile.css';
 import '../styles/theme.css';
 import '../styles/grid.css';
@@ -13,6 +14,7 @@ const Profile = ({ permissions }) => {
     const [confirmNewPassword, setConfirmNewPassword] = useState('');
     const [tempPassword, setTempPassword] = useState('');
     const [newTempPassword, setNewTempPassword] = useState('');
+    const [tabSyncEnabled, setTabSyncEnabled] = useState(false);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -27,8 +29,40 @@ const Profile = ({ permissions }) => {
             }
         };
 
+        // Fetched independently so a tabs-endpoint hiccup never blocks the rest of
+        // the profile page from rendering.
+        const fetchTabSyncPref = async () => {
+            try {
+                const data = await apiGet('/api/tabs');
+                setTabSyncEnabled(!!data.enabled);
+            } catch (error) {
+                console.warn('Error fetching tab sync preference:', error);
+            }
+        };
+
         fetchProfile();
+        fetchTabSyncPref();
     }, []);
+
+    const handleToggleTabSync = async (event) => {
+        const enabled = event.target.checked;
+        setTabSyncEnabled(enabled); // optimistic
+        try {
+            const localTabs = JSON.parse(localStorage.getItem('tabs') || '[]');
+            await tabSyncService.setSyncPreference(enabled, localTabs);
+            // Fire-and-forget, already fail-silent - only toggle events are logged here,
+            // not every background scheduleSync call (that would spam RecentActions).
+            logAction({
+                activity: `Tab sync ${enabled ? 'enabled' : 'disabled'}`,
+                actionType: 'toggle_sync',
+                result: 'success'
+            });
+        } catch (error) {
+            console.error('Error updating tab sync preference:', error);
+            setTabSyncEnabled(!enabled); // revert
+            setError('Error updating tab sync preference');
+        }
+    };
 
     const handlePasswordUpdate = async (event) => {
         event.preventDefault();
@@ -185,6 +219,29 @@ const Profile = ({ permissions }) => {
                                 Update Temporary Password
                             </button>
                         </form>
+                    </div>
+                </div>
+
+                {/* Tab Sync Card */}
+                <div className="dashboard-card">
+                    <div className="card-header">
+                        <div>
+                            <h3 className="card-title">🔄 Cross-Device Tab Sync</h3>
+                            <p className="card-subtitle">Carry your open AD object tabs between devices</p>
+                        </div>
+                    </div>
+                    <div className="card-content">
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>
+                            <input
+                                type="checkbox"
+                                checked={tabSyncEnabled}
+                                onChange={handleToggleTabSync}
+                            />
+                            <span className="text-primary font-medium">Sync tabs across devices</span>
+                        </label>
+                        <p className="text-secondary text-sm mt-sm">
+                            Off by default. When enabled, tabs you open here sync in the background and merge in whenever this page loads on another logged-in device.
+                        </p>
                     </div>
                 </div>
 

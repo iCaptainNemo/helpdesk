@@ -98,20 +98,20 @@ router.get('/locked-users', verifyApiKey, async (req, res) => {
 // Get server status
 router.get('/server-status', verifyApiKey, async (req, res) => {
   try {
-    const { serverPowerShellScript } = require('../powershell');
+    const { serverPowerShellScript, MONITORING_SCRIPT_TIMEOUT_MS } = require('../powershell');
     const path = require('path');
-    
+
     // Get server list from query parameters or use default
     const serverNames = req.query.servers ? req.query.servers.split(',') : [];
-    
+
     if (serverNames.length === 0) {
       return res.status(400).json({ error: 'Server names required' });
     }
-    
-    const scriptPath = process.pkg 
+
+    const scriptPath = process.pkg
         ? path.join(process.cwd(), 'functions', 'Get-ServerStatus.ps1')
         : path.join(__dirname, '../functions/Get-ServerStatus.ps1');
-    const result = await serverPowerShellScript(scriptPath, serverNames);
+    const result = await serverPowerShellScript(scriptPath, serverNames, MONITORING_SCRIPT_TIMEOUT_MS);
     
     logger.info('Remote API: Fetched server status');
     res.json({

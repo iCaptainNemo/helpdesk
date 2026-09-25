@@ -3,8 +3,15 @@ param(
     [string]$ComputerName,
 
     [Parameter(Mandatory=$true)]
-    [string[]]$UserIDs
+    [string]$UserIDs
 )
+
+# The Node caller (executeScript.js) serializes JS array params via .toString(), which joins
+# them into a single comma-separated string - and since scripts run via execFile (no shell
+# re-parsing), PowerShell's -File binder can't turn that back into a [string[]] on its own
+# (it lands as one single-element array containing the whole CSV string). Splitting here
+# ourselves is the correct fix for that invocation path.
+$UserIDsToDeleteList = $UserIDs -split ',' | Where-Object { $_ }
 
 try {
     # Remove selected user profiles from the remote computer
@@ -65,10 +72,12 @@ try {
                 }
             }
 
+            $errorSuffix = if ($errors.Count -gt 0) { " $($errors.Count) error(s) occurred." } else { "" }
+
             return @{
                 Success = $deletedCount -gt 0
                 Message = if ($deletedCount -gt 0) {
-                    "Successfully deleted $deletedCount profile(s). $(if ($errors.Count -gt 0) { "$($errors.Count) error(s) occurred." } else { "" })"
+                    "Successfully deleted $deletedCount profile(s).$errorSuffix"
                 } else {
                     "No profiles were deleted successfully."
                 }
@@ -90,7 +99,7 @@ try {
                 ComputerName = $env:COMPUTERNAME
             }
         }
-    } -ArgumentList @(,$UserIDs)
+    } -ArgumentList @(,$UserIDsToDeleteList)
 
     # Convert result to JSON and output
     $result | ConvertTo-Json -Depth 10 -Compress

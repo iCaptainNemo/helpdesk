@@ -108,71 +108,31 @@ const LockedUsersTimeChart = ({
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    devicePixelRatio: window.devicePixelRatio || 1,
+    // devicePixelRatio intentionally left unset - Chart.js computes this itself by
+    // default; forcing it was redundant even now that the CSS zoom hack is gone.
     plugins: {
       legend: {
-        position: 'bottom',
-        labels: {
-          color: '#b8c5d1',
-          usePointStyle: true,
-          pointStyle: 'circle',
-          padding: 20,
-          font: {
-            size: 12,
-            family: 'Inter, sans-serif'
-          }
-        }
+        // Replaced by a custom HTML legend below the chart (colored boxes with the
+        // department name rendered in white inside each box) - Chart.js's built-in
+        // legend only supports a swatch next to separately-colored text, it can't
+        // render the label inside the colored shape itself.
+        display: false
       },
       title: {
         display: false
       },
+      // Tooltip removed - the data is already directly readable from the plotted
+      // lines and the custom legend below the chart, and getting hover-accuracy
+      // right across ~10 closely-clustered department lines wasn't worth it.
       tooltip: {
-        mode: 'point',
-        intersect: false,
-        position: 'nearest',
-        backgroundColor: '#242b3d',
-        titleColor: '#ffffff',
-        bodyColor: '#b8c5d1',
-        borderColor: '#364153',
-        borderWidth: 1,
-        cornerRadius: 8,
-        displayColors: true,
-        xAlign: 'right',
-        yAlign: 'top',
-        caretPadding: 20,
-        caretSize: 8,
-        callbacks: {
-          title: (context) => {
-            return `Time: ${context[0].label}`;
-          },
-          label: (context) => {
-            const value = context.parsed.y;
-            const plural = value === 1 ? 'user' : 'users';
-            return `${context.dataset.label}: ${value} locked ${plural}`;
-          }
-        }
+        enabled: false
       }
-    },
-    interaction: {
-      mode: 'point',
-      intersect: false
-    },
-    hover: {
-      mode: 'point',
-      intersect: false,
-      animationDuration: 0
     },
     scales: {
       x: {
         display: true,
         title: {
-          display: true,
-          text: 'Time (12-hour period)',
-          color: '#7a8694',
-          font: {
-            size: 12,
-            family: 'Inter, sans-serif'
-          }
+          display: false
         },
         grid: {
           color: '#364153',
@@ -214,13 +174,6 @@ const LockedUsersTimeChart = ({
         suggestedMin: 0,
         suggestedMax: 10
       }
-    },
-    elements: {
-      point: {
-        hoverBackgroundColor: '#ffffff',
-        hoverRadius: 8,
-        hoverBorderWidth: 2
-      }
     }
   };
 
@@ -259,9 +212,40 @@ const LockedUsersTimeChart = ({
       
       <div className="card-content">
         {chartData ? (
-          <div className="chart-container">
-            <Line data={chartData} options={chartOptions} />
-          </div>
+          <>
+            <div className="chart-container">
+              <Line data={chartData} options={chartOptions} />
+            </div>
+
+            {/* Custom legend: colored box per department with the name in white
+                inside it, since Chart.js's built-in legend can't render that. */}
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 'var(--spacing-sm)',
+                marginTop: 'var(--spacing-sm)',
+              }}
+            >
+              {chartData.datasets.map((dataset) => (
+                <span
+                  key={dataset.label}
+                  style={{
+                    backgroundColor: dataset.borderColor,
+                    color: '#ffffff',
+                    padding: '2px 8px',
+                    borderRadius: 'var(--border-radius-sm)',
+                    fontSize: 'var(--font-size-xs)',
+                    fontWeight: 'var(--font-weight-medium)',
+                  }}
+                >
+                  {dataset.label}
+                </span>
+              ))}
+            </div>
+          </>
         ) : (
           <div className="empty-state">
             <div className="empty-state-icon">📊</div>

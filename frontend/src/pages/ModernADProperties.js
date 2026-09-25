@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom';
 import Modal from 'react-modal';
 import { apiGet, apiPost, apiPatch, apiRequestRaw, logAction, invalidateCache, executeScript } from '../utils/api';
+import * as tabSyncService from '../utils/tabSyncService';
 import Logs from '../components/Logs';
 import UserStatusTable from '../components/UserStatusTable';
 import ComputerStatusTable from '../components/ComputerStatusTable';
@@ -118,7 +119,7 @@ const ModernADProperties = ({ permissions }) => {
   }, [defaultUserProperties, defaultComputerProperties]);
 
   const [tabs, setTabs] = useState(() => {
-    const savedTabs = sessionStorage.getItem('tabs');
+    const savedTabs = localStorage.getItem('tabs');
     return savedTabs ? JSON.parse(savedTabs) : [];
   });
   const [activeTab, setActiveTab] = useState(0);
@@ -168,7 +169,7 @@ const ModernADProperties = ({ permissions }) => {
     }
   }, []);
 
-  const addTab = useCallback(async (adObjectID, exact = false) => {
+  const addTab = useCallback(async (adObjectID, exact = false, initialShowAdvanced = false) => {
     const existingTabIndex = tabs.findIndex(tab => tab.name === adObjectID);
     if (existingTabIndex !== -1) {
       setActiveTab(existingTabIndex);
@@ -200,12 +201,13 @@ const ModernADProperties = ({ permissions }) => {
       data: { ...adObjectData, ...additionalData },
       allProperties,
       defaultProperties,
-      showAdvanced: false,
+      showAdvanced: initialShowAdvanced,
     };
 
     setTabs(prevTabs => {
       const updatedTabs = [...prevTabs, newTab];
-      sessionStorage.setItem('tabs', JSON.stringify(updatedTabs));
+      localStorage.setItem('tabs', JSON.stringify(updatedTabs));
+      tabSyncService.scheduleSync(updatedTabs);
       return updatedTabs;
     });
 
@@ -224,7 +226,8 @@ const ModernADProperties = ({ permissions }) => {
   const closeTab = useCallback((index) => {
     const updatedTabs = tabs.filter((_, i) => i !== index);
     setTabs(updatedTabs);
-    sessionStorage.setItem('tabs', JSON.stringify(updatedTabs));
+    localStorage.setItem('tabs', JSON.stringify(updatedTabs));
+    tabSyncService.scheduleSync(updatedTabs);
     
     if (activeTab >= updatedTabs.length) {
       setActiveTab(Math.max(0, updatedTabs.length - 1));
@@ -427,6 +430,37 @@ const ModernADProperties = ({ permissions }) => {
     }
   }, [adObjectID, tabs, addTab, navigate, activeTab]);
 
+  // Cross-device tab sync: on first mount, pull the synced tab list (if the admin has
+  // opted in via Profile) and open any tabs that aren't already open locally. Runs once
+  // per page mount (hasMergedTabsRef guard - addTab's identity changes on every tabs
+  // update, so without the guard this would re-fire in a loop as it adds tabs). Tabs are
+  // opened sequentially so the local `handled` Set (not React state, which won't have
+  // flushed mid-loop) is what prevents duplicate opens within this pass. The `adObjectID`
+  // URL param is excluded here - the effect above already owns opening that one.
+  const hasMergedTabsRef = useRef(false);
+  useEffect(() => {
+    if (hasMergedTabsRef.current) return;
+    hasMergedTabsRef.current = true;
+
+    (async () => {
+      if (!localStorage.getItem('token')) return;
+
+      const remote = await tabSyncService.fetchRemoteState(); // never throws
+      if (!remote.enabled) return; // opted out (default) - local storage stays authoritative
+
+      const handled = new Set(tabs.map(tab => tab.name));
+      if (adObjectID) handled.add(adObjectID);
+
+      const toOpen = (remote.tabs || []).filter(rt => rt && rt.name && !handled.has(rt.name));
+      for (const rt of toOpen) {
+        handled.add(rt.name);
+        await addTab(rt.name, false, !!rt.showAdvanced);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally runs once per
+    // mount (hasMergedTabsRef gate); addTab is called fresh at invocation time regardless.
+  }, []);
+
   // Fetch temp password from backend profile
   useEffect(() => {
     const fetchTempPassword = async () => {
@@ -470,17 +504,7 @@ const ModernADProperties = ({ permissions }) => {
       {/* Content */}
       <div className="p-lg">
         {tabs.length === 0 && !adObjectID ? (
-          <div className="dashboard-card text-center py-xl">
-            <div className="text-4xl mb-md">🔍</div>
-            <h3 className="text-lg font-semibold mb-sm">No AD Objects Loaded</h3>
-            <p className="text-secondary mb-lg">Search for an AD object from the dashboard to get started</p>
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="bg-primary-gradient text-white px-lg py-md rounded-md hover-lift transition"
-            >
-              Go to Dashboard
-            </button>
-          </div>
+          <p className="text-secondary text-center">No active directory objects loaded</p>
         ) : tabs.length === 0 && adObjectID ? (
           <div className="dashboard-card text-center py-xl">
             <div className="text-4xl mb-md">⏳</div>
@@ -530,7 +554,8 @@ const ModernADProperties = ({ permissions }) => {
                           index === activeTab ? { ...tab, showAdvanced: e.target.checked } : tab
                         );
                         setTabs(updatedTabs);
-                        sessionStorage.setItem('tabs', JSON.stringify(updatedTabs));
+                        localStorage.setItem('tabs', JSON.stringify(updatedTabs));
+                        tabSyncService.scheduleSync(updatedTabs);
                       }}
                       style={{
                         accentColor: 'var(--accent-blue)',

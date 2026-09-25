@@ -91,11 +91,14 @@
   text-align: center;
 }
 
-/* Metrics Card Specific Styles */
+/* Metrics Card Specific Styles - more compact than a general .dashboard-card since
+   these are small stat tiles (Locked Users / Unlocks Today / Offline Servers /
+   Domain Controllers), not content cards. */
 .metrics-card {
   text-align: center;
   position: relative;
   overflow: hidden;
+  padding: var(--spacing-md);
 }
 
 .metrics-card::before {
@@ -108,16 +111,20 @@
   background: var(--primary-gradient);
 }
 
+.metrics-card .card-icon {
+  font-size: var(--font-size-lg);
+}
+
 .metrics-value {
-  font-size: var(--font-size-4xl);
+  font-size: var(--font-size-3xl);
   font-weight: var(--font-weight-bold);
   color: var(--text-primary);
   line-height: 1;
-  margin: var(--spacing-sm) 0;
+  margin: var(--spacing-xs) 0;
 }
 
 .metrics-label {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -357,34 +364,47 @@
     padding: var(--spacing-md);
     gap: var(--spacing-md);
   }
-  
+
   .dashboard-main {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
     grid-template-areas:
-      "metrics-1"
-      "metrics-2"
-      "metrics-3"
-      "metrics-4"
-      "chart-timeline"
-      "chart-pie"
-      "active-issues"
-      "domain-controllers"
-      "system-status"
-      "recent-activity";
+      "metrics-1 metrics-2"
+      "metrics-3 metrics-4"
+      "chart-timeline chart-timeline"
+      "chart-pie chart-pie"
+      "active-issues active-issues"
+      "domain-controllers domain-controllers"
+      "system-status system-status"
+      "recent-activity recent-activity";
   }
-  
+
   .dashboard-card {
     padding: var(--spacing-md);
   }
-  
-  .metrics-value {
-    font-size: var(--font-size-3xl);
+
+  /* Stat tiles: 2x2 grid of compact icon+count boxes, title hidden */
+  .metrics-card {
+    padding: var(--spacing-sm);
   }
-  
+
+  .metrics-card .metrics-label {
+    display: none;
+  }
+
+  .metrics-card .card-icon {
+    font-size: var(--font-size-xl);
+    margin-bottom: var(--spacing-xs);
+  }
+
+  .metrics-value {
+    font-size: var(--font-size-2xl);
+    margin: 0;
+  }
+
   .chart-container {
     height: 200px;
   }
-  
+
   .quick-actions-grid {
     grid-template-columns: 1fr;
   }

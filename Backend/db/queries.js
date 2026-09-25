@@ -420,6 +420,98 @@ function incrementUserVote(userID, vote, today) {
     }
 }
 
+// Cross-device tab sync: fetch the stored tab list + preference for an admin.
+// Falls back to a disabled/empty shape when no row exists yet (no sync attempted so far).
+function fetchUserTabs(adminID) {
+    try {
+        const row = db.prepare(
+            `SELECT tabs, sync_enabled, updated_at FROM UserTabs WHERE AdminID = ?`
+        ).get(adminID);
+
+        if (!row) {
+            return Promise.resolve({ enabled: false, tabs: [], updatedAt: null });
+        }
+
+        let tabs = [];
+        try {
+            tabs = JSON.parse(row.tabs) || [];
+        } catch {
+            tabs = [];
+        }
+
+        return Promise.resolve({ enabled: !!row.sync_enabled, tabs, updatedAt: row.updated_at });
+    } catch (err) {
+        return Promise.reject(err);
+    }
+}
+
+// Background-sync hot path: plain overwrite of the stored tab list (last-write-wins,
+// no server-side merge - see PLAN-async-tab-sync.md for why that's intentional here).
+function upsertUserTabsBlob(adminID, tabs) {
+    try {
+        const stmt = db.prepare(`
+            INSERT INTO UserTabs (AdminID, tabs, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(AdminID) DO UPDATE SET
+                tabs = excluded.tabs,
+                updated_at = CURRENT_TIMESTAMP
+        `);
+        const result = stmt.run(adminID, JSON.stringify(tabs));
+        return Promise.resolve(result);
+    } catch (err) {
+        return Promise.reject(err);
+    }
+}
+
+// Toggle the sync preference. When turning sync ON with a seed `tabs` list, union it
+// with whatever's already stored server-side (incoming wins on name conflicts) instead
+// of overwriting, so enabling sync on a second device doesn't wipe out the first
+// device's already-synced tabs.
+function upsertSyncPreference(adminID, enabled, tabs) {
+    try {
+        const enabledInt = enabled ? 1 : 0;
+
+        if (tabs === undefined) {
+            const stmt = db.prepare(`
+                INSERT INTO UserTabs (AdminID, sync_enabled, updated_at)
+                VALUES (?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(AdminID) DO UPDATE SET
+                    sync_enabled = excluded.sync_enabled,
+                    updated_at = CURRENT_TIMESTAMP
+            `);
+            return Promise.resolve(stmt.run(adminID, enabledInt));
+        }
+
+        const existingRow = db.prepare(`SELECT tabs FROM UserTabs WHERE AdminID = ?`).get(adminID);
+        let existingTabs = [];
+        if (existingRow) {
+            try {
+                existingTabs = JSON.parse(existingRow.tabs) || [];
+            } catch {
+                existingTabs = [];
+            }
+        }
+
+        const byName = new Map(existingTabs.map(t => [t.name, t]));
+        for (const t of tabs) {
+            byName.set(t.name, t);
+        }
+        const merged = Array.from(byName.values());
+
+        const stmt = db.prepare(`
+            INSERT INTO UserTabs (AdminID, tabs, sync_enabled, updated_at)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(AdminID) DO UPDATE SET
+                tabs = excluded.tabs,
+                sync_enabled = excluded.sync_enabled,
+                updated_at = CURRENT_TIMESTAMP
+        `);
+        return Promise.resolve(stmt.run(adminID, JSON.stringify(merged), enabledInt));
+    } catch (err) {
+        return Promise.reject(err);
+    }
+}
+
 module.exports = {
     insertDomainController,
     insertCurrentDomain,
@@ -452,5 +544,8 @@ module.exports = {
     fetchUserSecurityQuestion,
     updateUserComment,
     incrementUserVote,
-    clearUserSecurityQuestion
+    clearUserSecurityQuestion,
+    fetchUserTabs,
+    upsertUserTabsBlob,
+    upsertSyncPreference
 };

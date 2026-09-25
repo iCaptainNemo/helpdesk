@@ -155,7 +155,7 @@ const tables = [
         columns: [
             'ID INTEGER PRIMARY KEY AUTOINCREMENT',
             'timestamp DATETIME NOT NULL',
-            'department TEXT NOT NULL',
+            'department TEXT', // AD users can have no department set - allow NULL
             'locked_count INTEGER DEFAULT 0',
             'total_users INTEGER DEFAULT 0',
             'snapshot_interval INTEGER DEFAULT 300' // 5 minutes in seconds
@@ -172,6 +172,15 @@ const tables = [
             'action_type TEXT', // unlock, reset_password, system_check, etc.
             'details TEXT', // Additional details in JSON format
             'result TEXT' // success, error, etc.
+        ]
+    },
+    {
+        name: 'UserTabs', // Opt-in cross-device AD-object tab sync, one row per admin
+        columns: [
+            'AdminID TEXT PRIMARY KEY',
+            "tabs TEXT NOT NULL DEFAULT '[]'", // JSON array of {name, showAdvanced}
+            'sync_enabled INTEGER NOT NULL DEFAULT 0', // 0 = off (default), 1 = on
+            'updated_at DATETIME DEFAULT CURRENT_TIMESTAMP'
         ]
     }
 ];

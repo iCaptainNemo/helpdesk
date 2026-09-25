@@ -23,8 +23,9 @@ function Get-DomainControllers {
             $dcList[$_.Name] = $_
         }
 
-        # Get PDC emulator for consistent lockout status
-        $PDC = $currentDomain.PdcRoleOwner
+        # Get PDC emulator for consistent lockout status (name only - Search-ADAccount/
+        # Get-ADUser -Server expects a DNS/NetBIOS name, not the DomainController object)
+        $PDC = $currentDomain.PdcRoleOwner.Name
 
         return @{
             DcList = $dcList  # All DCs for potential future use
@@ -39,8 +40,17 @@ function Get-DomainControllers {
 $domainControllers = Get-DomainControllers
 $PDC = $domainControllers.PDC
 
+# Target the PDC emulator explicitly - lockout status is authoritative there, and
+# otherwise the AD module's own locator can silently land on a different DC whose
+# ADWS happens to be down, throwing ADServerDownException. Fall back to the module's
+# default locator only if PDC resolution itself failed above.
+$serverParam = @{}
+if ($PDC) {
+    $serverParam['Server'] = $PDC
+}
+
 # Query AD for any locked out users
-$lockedOutUsers = Search-ADAccount -LockedOut -UsersOnly
+$lockedOutUsers = Search-ADAccount -LockedOut -UsersOnly @serverParam
 
 # Return empty array if no locked accounts found
 if (!$lockedOutUsers -or $lockedOutUsers.Count -eq 0) {
@@ -51,7 +61,7 @@ if (!$lockedOutUsers -or $lockedOutUsers.Count -eq 0) {
 
 # Get additional user properties needed for display
 $lockedOutUsersWithProperties = foreach ($lockedOutUser in $lockedOutUsers) {
-    Get-ADUser -Identity $lockedOutUser.SamAccountName -Properties SamAccountName, Name, Department, AccountLockoutTime, Enabled
+    Get-ADUser -Identity $lockedOutUser.SamAccountName -Properties SamAccountName, Name, Department, AccountLockoutTime, Enabled @serverParam
 }
 
 # Filter for:

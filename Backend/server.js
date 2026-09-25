@@ -246,6 +246,7 @@ const remoteApiRoute = require('./routes/remoteApi'); // Import the remote API r
 const testDataRoute = require('./routes/testData'); // Import test data routes
 const ledgerRoute = require('./routes/ledger'); // Import ledger routes
 const actionsRoute = require('./routes/actions'); // Import actions routes
+const tabsRoute = require('./routes/tabs'); // Import cross-device tab sync routes
 const { startLedgerService } = require('./services/ledgerService'); // Import ledger service
 
 // Use routes and pass db to them
@@ -280,6 +281,7 @@ if (process.env.ENABLE_TEST_DATA === 'true') {
 }
 app.use('/api/ledger', verifyToken, ledgerRoute); // Register ledger routes
 app.use('/api/actions', verifyToken, actionsRoute); // Register actions routes (verifyToken protects the audit log)
+app.use('/api/tabs', verifyToken, tabsRoute); // Register cross-device tab sync routes
 app.use('/api/cache', require('./routes/cacheInfo')); // Cache monitoring and management routes
 
 // Catch-all handler: send back React's index.html file for any non-API routes

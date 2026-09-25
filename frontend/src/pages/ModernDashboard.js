@@ -332,7 +332,7 @@ const ModernDashboard = ({
             title="Locked Users"
             value={dashboardData.metrics.lockedUsersCount}
             status={dashboardData.metrics.lockedUsersCount > 5 ? 'critical' : dashboardData.metrics.lockedUsersCount > 2 ? 'warning' : 'normal'}
-            icon="🔒"
+            icon={<i className="bx bx-lock-alt"></i>}
             loading={loading}
             onClick={() => scrollToSection('dash-locked-users')}
           />
@@ -341,7 +341,7 @@ const ModernDashboard = ({
             className="grid-metrics-2"
             title="Unlocks Today"
             value={dashboardData.metrics.todayUnlocks}
-            icon="✅"
+            icon={<i className="bx bx-check-circle"></i>}
             color="success"
             loading={loading}
           />
@@ -351,7 +351,7 @@ const ModernDashboard = ({
             title="Offline Servers"
             value={dashboardData.metrics.offlineServers}
             status={dashboardData.metrics.offlineServers > 0 ? 'warning' : 'normal'}
-            icon="⚠️"
+            icon={<i className="bx bx-error"></i>}
             loading={loading}
             onClick={() => scrollToSection('dash-server-health')}
           />
@@ -361,7 +361,7 @@ const ModernDashboard = ({
             title="Domain Controllers"
             value={dashboardData.metrics.offlineDomainControllers}
             status={dashboardData.metrics.offlineDomainControllers > 0 ? 'critical' : 'normal'}
-            icon="🏢"
+            icon={<i className="bx bx-buildings"></i>}
             loading={loading}
             onClick={() => scrollToSection('dash-domain-controllers')}
           />
@@ -475,8 +475,12 @@ const ModernDashboard = ({
                             </span>
                           </td>
                           <td>
-                            <span className="text-sm" style={isRecentLockout ? {color: '#000000'} : {color: 'var(--text-muted)'}}>
-                              {new Date(user.AccountLockoutTime).toLocaleString()}
+                            <span
+                              className="text-sm"
+                              style={isRecentLockout ? {color: '#000000'} : {color: 'var(--text-muted)'}}
+                              title={lockoutTime.toLocaleString()}
+                            >
+                              {lockoutTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })}
                             </span>
                           </td>
                           <td>

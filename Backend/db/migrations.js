@@ -127,6 +127,16 @@ class DatabaseMigrator {
         version: '2025-07-15-add-user-feedback',
         description: 'Add Comment, ThumbsUp, ThumbsDown, LastVoteDate columns to Users table',
         up: this.migration_addUserFeedback.bind(this)
+      },
+      {
+        version: '2026-09-25-add-user-tabs-table',
+        description: 'Create UserTabs table for opt-in cross-device tab sync',
+        up: this.migration_addUserTabsTable.bind(this)
+      },
+      {
+        version: '2026-09-25-allow-null-department-ledger',
+        description: 'Allow NULL department in DepartmentLedger (AD users can have no department set)',
+        up: this.migration_allowNullDepartmentLedger.bind(this)
       }
     ];
 
@@ -348,6 +358,87 @@ class DatabaseMigrator {
             logger.info(`${col.name} column added successfully`);
           }
         }
+        resolve();
+      } catch (error) {
+        logger.error('Migration error:', error);
+        reject(error);
+      }
+    });
+  }
+
+  /**
+   * Migration: Create UserTabs table for opt-in cross-device tab sync
+   */
+  migration_addUserTabsTable() {
+    return new Promise((resolve, reject) => {
+      try {
+        const exists = this.db.prepare(
+          `SELECT name FROM sqlite_master WHERE type='table' AND name='UserTabs'`
+        ).get();
+
+        if (exists) {
+          logger.info('UserTabs table already exists');
+        } else {
+          logger.info('Creating UserTabs table');
+          this.db.exec(`
+            CREATE TABLE IF NOT EXISTS UserTabs (
+              AdminID TEXT PRIMARY KEY,
+              tabs TEXT NOT NULL DEFAULT '[]',
+              sync_enabled INTEGER NOT NULL DEFAULT 0,
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+          `);
+          logger.info('UserTabs table created successfully');
+        }
+
+        resolve();
+      } catch (error) {
+        logger.error('Migration error:', error);
+        reject(error);
+      }
+    });
+  }
+
+  /**
+   * Migration: Allow NULL in DepartmentLedger.department - AD users without a
+   * department attribute were hitting a NOT NULL constraint when the ledger
+   * service tried to group/insert their locked-out snapshot. SQLite can't drop a
+   * NOT NULL constraint via ALTER TABLE, so this rebuilds the table (standard
+   * SQLite pattern: new table -> copy data -> drop old -> rename).
+   */
+  migration_allowNullDepartmentLedger() {
+    return new Promise((resolve, reject) => {
+      try {
+        const columns = this.db.prepare(`PRAGMA table_info(DepartmentLedger)`).all();
+        const deptCol = columns.find(c => c.name === 'department');
+
+        if (!deptCol || deptCol.notnull === 0) {
+          logger.info('DepartmentLedger.department already allows NULL');
+          return resolve();
+        }
+
+        logger.info('Rebuilding DepartmentLedger to allow NULL department');
+        const rebuild = this.db.transaction(() => {
+          this.db.exec(`
+            CREATE TABLE DepartmentLedger_new (
+              ID INTEGER PRIMARY KEY AUTOINCREMENT,
+              timestamp DATETIME NOT NULL,
+              department TEXT,
+              locked_count INTEGER DEFAULT 0,
+              total_users INTEGER DEFAULT 0,
+              snapshot_interval INTEGER DEFAULT 300
+            )
+          `);
+          this.db.exec(`
+            INSERT INTO DepartmentLedger_new (ID, timestamp, department, locked_count, total_users, snapshot_interval)
+            SELECT ID, timestamp, department, locked_count, total_users, snapshot_interval FROM DepartmentLedger
+          `);
+          this.db.exec(`DROP TABLE DepartmentLedger`);
+          this.db.exec(`ALTER TABLE DepartmentLedger_new RENAME TO DepartmentLedger`);
+        });
+        rebuild();
+
+        logger.info('DepartmentLedger rebuilt successfully - department now allows NULL');
         resolve();
       } catch (error) {
         logger.error('Migration error:', error);

@@ -213,32 +213,6 @@ const LockedUsersPieChart = ({
           </div>
         )}
       </div>
-      
-      {/* Department Summary */}
-      {chartData && totalUsers > 0 && (
-        <div className="mt-md pt-md" style={{ borderTop: '1px solid var(--divider)' }}>
-          <div className="grid status-grid">
-            {chartData.labels.map((department, index) => (
-              <div 
-                key={department}
-                className="status-item"
-              >
-                <div 
-                  className="status-indicator"
-                  style={{ 
-                    backgroundColor: chartData.datasets[0].backgroundColor[index],
-                    boxShadow: `0 0 8px ${chartData.datasets[0].backgroundColor[index]}40`
-                  }}
-                ></div>
-                <div className="text-xs text-center">
-                  <div className="font-medium" style={{ color: '#ffffff' }}>{department}</div>
-                  <div style={{ color: '#b8c5d1' }}>{chartData.datasets[0].data[index]}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

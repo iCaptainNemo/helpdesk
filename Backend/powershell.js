@@ -36,6 +36,10 @@ const ACTION_SCRIPTS = [
 // pinning a request open forever; maxBuffer avoids truncating large script output
 // (e.g. Get-Logs) mid-JSON.
 const EXEC_TIMEOUT_MS = 120000; // 2 minutes
+// Sequential multi-server scans (e.g. Get-ServerStatus) legitimately run longer than a
+// single-target lookup, especially when checking dozens of hosts one at a time. This is
+// only used for background monitoring calls, not requests a user is actively waiting on.
+const MONITORING_SCRIPT_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 const EXEC_MAX_BUFFER = 1024 * 1024 * 10; // 10 MB
 
 function buildExecOptions(extra = {}) {
@@ -51,6 +55,21 @@ function buildExecOptions(extra = {}) {
 // Drop empty/undefined parameters, matching the previous filter(Boolean) behavior.
 function cleanParams(params = []) {
     return params.filter(Boolean);
+}
+
+// execFile's callback error is already an Error (with .killed/.signal/.code set when the
+// process was killed, e.g. by the timeout option) — reject with that object instead of a
+// bare string so callers' `error.message` stays meaningful instead of `undefined`, and so
+// a future timeout kill is identifiable from the message instead of looking like a bare
+// "Command failed" with no explanation.
+function toExecError(execError, stderr, timeoutMs) {
+    if (stderr) {
+        execError.message += `\n${stderr}`;
+    }
+    if (execError.killed) {
+        execError.message += ` (process was killed via ${execError.signal || 'timeout'} — likely exceeded the ${timeoutMs}ms exec timeout)`;
+    }
+    return execError;
 }
 
 /**
@@ -103,18 +122,19 @@ async function executePowerShellScript(scriptPath, params = []) {
     return new Promise((resolve, reject) => {
         execFile('powershell.exe', args, buildExecOptions(), (execError, stdout, stderr) => {
             if (execError) {
-                error(`Execution error: ${execError}`);
+                const err = toExecError(execError, stderr, EXEC_TIMEOUT_MS);
+                error(`Execution error: ${err.message}`);
 
                 // Broadcast error to terminal
                 if (global.terminalIO) {
                     global.terminalIO.to('terminal').emit('powershell-output', {
                         type: 'error',
-                        error: `${execError}\n${stderr}`,
+                        error: err.message,
                         timestamp: new Date().toISOString()
                     });
                 }
 
-                return reject(`Execution error: ${execError}\n${stderr}`);
+                return reject(err);
             }
             if (stderr) {
                 error(`stderr: ${stderr}`);
@@ -201,7 +221,7 @@ async function executeLocalScript(scriptPath, params = []) {
     return new Promise((resolve, reject) => {
         execFile('powershell.exe', args, buildExecOptions(), (execError, stdout, stderr) => {
             if (execError) {
-                return reject(`Execution error: ${execError}\n${stderr}`);
+                return reject(toExecError(execError, stderr, EXEC_TIMEOUT_MS));
             }
             if (!stdout) {
                 return reject('No output from PowerShell script');
@@ -222,9 +242,11 @@ async function executeLocalScript(scriptPath, params = []) {
  * Executes a PowerShell script with special handling for server status scripts and remote mode support.
  * @param {string} scriptPath - The path to the PowerShell script.
  * @param {Array<string>} params - The parameters to pass to the script.
+ * @param {number} [timeoutMs] - Optional override for the exec timeout (e.g. MONITORING_SCRIPT_TIMEOUT_MS
+ *   for sequential multi-server scans that legitimately run longer than the default).
  * @returns {Promise<Object>} - A promise that resolves with the JSON-parsed output of the script.
  */
-async function serverPowerShellScript(scriptPath, params = []) {
+async function serverPowerShellScript(scriptPath, params = [], timeoutMs = EXEC_TIMEOUT_MS) {
     // Check if we should use remote data instead of local execution
     if (shouldUseRemoteData(scriptPath)) {
         info(`Using remote data for monitoring script: ${scriptPath}`);
@@ -252,10 +274,11 @@ async function serverPowerShellScript(scriptPath, params = []) {
 
     // Return a promise that resolves with the script output
     return new Promise((resolve, reject) => {
-        execFile('powershell.exe', args, buildExecOptions(), (execError, stdout, stderr) => {
+        execFile('powershell.exe', args, buildExecOptions({ timeout: timeoutMs }), (execError, stdout, stderr) => {
             if (execError) {
-                error(`Execution error: ${execError}`);
-                return reject(`Execution error: ${execError}\n${stderr}`);
+                const err = toExecError(execError, stderr, timeoutMs);
+                error(`Execution error: ${err.message}`);
+                return reject(err);
             }
             if (stderr) {
                 error(`stderr: ${stderr}`);
@@ -316,8 +339,9 @@ function executePowerShellCommand(command) {
         // a cmd.exe string, so no shell quoting/escaping is required.
         execFile('powershell.exe', ['-Command', modifiedCommand], execOptions, (execError, stdout, stderr) => {
             if (execError) {
-                error(`Execution error: ${execError}`);
-                return reject(`Execution error: ${execError}\n${stderr}`);
+                const err = toExecError(execError, stderr, EXEC_TIMEOUT_MS);
+                error(`Execution error: ${err.message}`);
+                return reject(err);
             }
             if (stderr) {
                 error(`stderr: ${stderr}`);
@@ -347,5 +371,6 @@ function executePowerShellCommand(command) {
 module.exports = {
     executePowerShellScript,
     serverPowerShellScript,
-    executePowerShellCommand
+    executePowerShellCommand,
+    MONITORING_SCRIPT_TIMEOUT_MS
 };

@@ -24,11 +24,6 @@
     -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
   }
 
-  /* Remove the zoom effect on mobile as it makes things too small */
-  .app-main-content {
-    zoom: 1 !important;
-  }
-
   /* Adjust spacing for mobile */
   :root {
     --spacing-xs: 0.125rem;
@@ -45,11 +40,6 @@
   .app-layout {
     height: 100vh;
     height: 100dvh; /* Dynamic viewport height for mobile browsers */
-  }
-
-  /* Remove zoom on mobile */
-  .app-main-content {
-    zoom: 1 !important;
   }
 
   .app-page-content {
@@ -101,30 +91,23 @@
     padding: 8px 12px;
   }
 
-  /* Navbar - Hamburger menu on mobile */
+  /* Navbar - icon-only inline nav on mobile (no hamburger/dropdown) */
   .navbar {
-    justify-content: flex-start !important;
-    padding: 0 var(--spacing-md) !important;
+    padding: 0 !important;
   }
 
-  /* Show hamburger button on mobile */
-  .mobile-menu-toggle {
-    display: block !important;
+  /* Hide text labels, keep icons - the same markup used on desktop just
+     collapses to icon-only buttons here instead of showing a separate menu. */
+  .nav-label {
+    display: none;
   }
 
-  /* Hide desktop nav links on mobile */
-  .nav-links-desktop {
-    display: none !important;
-  }
-
-  /* Show mobile dropdown menu */
-  .mobile-nav-menu {
-    display: block !important;
-  }
-
-  /* Mobile nav link hover effects */
-  .nav-link-mobile:hover {
-    background: rgba(54, 162, 235, 0.1) !important;
+  /* Each item grows to fill an equal-width slot so the 4 icons span the full
+     navbar edge-to-edge instead of clustering with unused space on the sides. */
+  .nav-link {
+    flex: 1 !important;
+    justify-content: center !important;
+    padding: var(--spacing-sm) 0 !important;
   }
 
   /* Dashboard Layout */
@@ -213,7 +196,7 @@
   }
 
   /* Smaller buttons for action buttons */
-  button:not(.mobile-menu-toggle):not(.nav-link):not(.nav-link-mobile) {
+  button:not(.nav-link) {
     min-height: 32px;
     padding: 6px 10px;
     font-size: 12px;
@@ -368,11 +351,6 @@
 
 /* Tablet and Medium Mobile Devices (481px - 768px) */
 @media (min-width: 481px) and (max-width: 768px) {
-  /* Remove zoom effect on tablets too */
-  .app-main-content {
-    zoom: 0.9 !important;
-  }
-
   .app-page-content {
     padding: 1rem;
   }
@@ -416,11 +394,6 @@
 
 /* Small Desktops and Landscape Tablets (769px - 1024px) */
 @media (min-width: 769px) and (max-width: 1024px) {
-  /* Slightly reduce zoom */
-  .app-main-content {
-    zoom: 0.85 !important;
-  }
-
   /* Dashboard - 2-3 columns */
   .dashboard-tables-container > div {
     min-width: calc(50% - 5px);

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import '../styles/UserStatusTable.css';
 import '../styles/theme.css'; // Import modern theme
-import { apiGet, apiPost, apiPut, apiDelete, invalidateCache } from '../utils/api';
+import { apiGet, apiPost, apiPut, apiDelete, invalidateCache, executeScript } from '../utils/api';
 import ScriptButton from './ScriptButton'; // Import the ScriptButton component
 import CurrentComputers from './CurrentComputers'; // Import the CurrentComputers component
 
@@ -144,6 +144,18 @@ const UserStatusTable = ({ adObjectID, permissions, endpoint }) => {
     };
   }, [adObjectID, autoRefresh, userAccountStatusProperties, PDC]);
 
+  // Same unlock flow as the "Locked" ScriptButton below, but triggered from the
+  // "False" (not locked out) state - runs harmlessly if the account isn't actually
+  // locked, and keeps both states equally clickable/consistent.
+  const handleNotLockedClick = async () => {
+    try {
+      const result = await executeScript('Unlocker', { userID: adObjectID });
+      await handleUnlockSuccess(result);
+    } catch (error) {
+      console.error('Error running unlock script:', error);
+    }
+  };
+
   const handleUnlockSuccess = async (result) => {
     if (result.message.includes('Unlocked')) {
       // Update the UI to show unlocked status immediately
@@ -279,7 +291,27 @@ const UserStatusTable = ({ adObjectID, permissions, endpoint }) => {
                 </button>
               )
             ) : (
-              'False'
+              permissions.includes('execute_script') ? (
+                // Functionally identical to the "Locked" button above (same
+                // Unlocker script call) - styled to stay pixel-identical to the
+                // plain "False" text it replaces, per no-cosmetic-change request.
+                <button
+                  onClick={handleNotLockedClick}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    margin: 0,
+                    font: 'inherit',
+                    color: 'inherit',
+                    cursor: 'inherit',
+                  }}
+                >
+                  False
+                </button>
+              ) : (
+                'False'
+              )
             )}
           </div>
         );

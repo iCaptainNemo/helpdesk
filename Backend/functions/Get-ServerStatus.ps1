@@ -45,8 +45,19 @@ $ServersArray = $Servers -split ','
 $serverStatuses = @()
 foreach ($server in $ServersArray) {
     $status = $serverManager.CheckServerStatus($server)
-    $fileShareStatus = $serverManager.CheckFileShareService($server)
-    $printSpoolerStatus = $serverManager.CheckPrintSpoolerService($server)
+
+    # Only check services if the server answered a ping. Get-Service -ComputerName uses
+    # legacy RPC/DCOM, which can take far longer than the ping timeout to fail against an
+    # unreachable host — skipping it for offline servers keeps the sequential scan moving
+    # instead of stalling on every unreachable machine.
+    if ($status) {
+        $fileShareStatus = $serverManager.CheckFileShareService($server)
+        $printSpoolerStatus = $serverManager.CheckPrintSpoolerService($server)
+    } else {
+        $fileShareStatus = $false
+        $printSpoolerStatus = $false
+    }
+
     $serverStatuses += [PSCustomObject]@{
         ServerName = $server
         Status     = if ($status) { "Online" } else { "Offline" }

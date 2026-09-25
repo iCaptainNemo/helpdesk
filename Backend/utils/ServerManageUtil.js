@@ -1,5 +1,5 @@
 const path = require('path');
-const { serverPowerShellScript } = require('../powershell');
+const { serverPowerShellScript, MONITORING_SCRIPT_TIMEOUT_MS } = require('../powershell');
 const db = require('../db/init');
 const logger = require('../utils/logger'); // Import the logger module
 const { insertServer, updateServer, deleteServer, fetchServer, fetchAllServers } = require('../db/queries');
@@ -14,8 +14,10 @@ async function getServerStatuses() {
         const servers = await fetchAllServers();
         const serverNames = servers.map(server => server.ServerName);
 
-        // Execute the PowerShell script to get the server statuses
-        const serverStatuses = await serverPowerShellScript(scriptPath, serverNames);
+        // Execute the PowerShell script to get the server statuses. This is a background
+        // interval job (see server.js), not something a user request is blocked on, so it
+        // gets the longer monitoring timeout to accommodate a full sequential scan.
+        const serverStatuses = await serverPowerShellScript(scriptPath, serverNames, MONITORING_SCRIPT_TIMEOUT_MS);
         logger.info('Server statuses fetched successfully.');
 
         // Ensure serverStatuses is an array
@@ -115,7 +117,7 @@ async function getFrequentServerHealth() {
             : path.join(__dirname, '../functions/Get-ServerHealth-Frequent.ps1');
 
         // Execute the frequent health check PowerShell script
-        const healthResults = await serverPowerShellScript(scriptPath, serverNames);
+        const healthResults = await serverPowerShellScript(scriptPath, serverNames, MONITORING_SCRIPT_TIMEOUT_MS);
         logger.info('Frequent server health check completed.');
 
         // Ensure healthResults is an array

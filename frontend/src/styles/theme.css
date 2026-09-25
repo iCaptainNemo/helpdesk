@@ -46,15 +46,17 @@
   --font-family-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   --font-family-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
   
-  --font-size-xs: 0.75rem;
-  --font-size-sm: 0.875rem;
-  --font-size-base: 1rem;
-  --font-size-lg: 1.125rem;
-  --font-size-xl: 1.25rem;
-  --font-size-2xl: 1.5rem;
-  --font-size-3xl: 1.875rem;
-  --font-size-4xl: 2.25rem;
-  --font-size-5xl: 3rem;
+  /* Scaled down ~20% (0.8x) from the original values now that .app-main-content's
+     CSS zoom:0.8 hack - which used to do this same visual shrink - has been removed. */
+  --font-size-xs: 0.6rem;
+  --font-size-sm: 0.7rem;
+  --font-size-base: 0.8rem;
+  --font-size-lg: 0.9rem;
+  --font-size-xl: 1rem;
+  --font-size-2xl: 1.2rem;
+  --font-size-3xl: 1.5rem;
+  --font-size-4xl: 1.8rem;
+  --font-size-5xl: 2.4rem;
   
   --font-weight-normal: 400;
   --font-weight-medium: 500;
@@ -382,6 +384,7 @@ input:checked + .slider:before {
 
 /* Navigation hover effects */
 .nav-link {
+  font-size: var(--font-size-xs);
   transition: all 0.2s ease;
 }
 
@@ -394,34 +397,15 @@ input:checked + .slider:before {
 .nav-link.active {
   background-color: var(--accent-blue) !important;
   color: white !important;
-  font-weight: var(--font-weight-semibold) !important;
 }
 
-/* App Layout Scaling - Responsive */
-.app-main-content {
-  zoom: 0.8; /* Scale down the main app content by 20% on desktop */
-}
-
-/* Remove zoom on mobile devices for better readability */
-@media (max-width: 480px) {
-  .app-main-content {
-    zoom: 1;
-  }
-}
-
-/* Slightly less zoom on tablets */
-@media (min-width: 481px) and (max-width: 768px) {
-  .app-main-content {
-    zoom: 0.9;
-  }
-}
-
-/* Medium zoom on small desktops */
-@media (min-width: 769px) and (max-width: 1024px) {
-  .app-main-content {
-    zoom: 0.85;
-  }
-}
+/* App Layout Scaling - Responsive
+   Previously used CSS zoom to scale .app-main-content down at various breakpoints.
+   Removed: zoom desyncs canvas mouse-coordinate math (confirmed root cause of the
+   locked-users timeline chart's tooltip picking the wrong time column). Content now
+   renders at its natural 1:1 scale everywhere; use real responsive sizing (the
+   font-size and spacing breakpoint overrides already in this file and mobile.css)
+   for any future scaling needs instead. */
 
 /* Dashboard Table Styles */
 .dashboard-table {

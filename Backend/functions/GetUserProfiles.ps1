@@ -5,7 +5,12 @@ param(
 
 try {
     # Get user profiles from the remote computer
-    $result = Invoke-Command -ComputerName $ComputerName -ErrorAction Stop -ScriptBlock {
+    # Note: no -ErrorAction Stop here. Invoke-Command relays remote non-terminating errors
+    # (e.g. a Measure-Object hiccup deep in the loop below) back as local error records, and
+    # -ErrorAction Stop would promote those into a terminating exception on this side - which
+    # bypasses the try/catch blocks inside the scriptblock entirely and gets misreported below
+    # as a connection failure even though the connection was fine.
+    $result = Invoke-Command -ComputerName $ComputerName -ScriptBlock {
         try {
             # Get profiles that match the criteria
             $profiles = Get-CimInstance -ClassName Win32_UserProfile | Where-Object {
@@ -38,7 +43,12 @@ try {
                         LastModifiedRaw = if ($folderInfo) { $folderInfo.LastWriteTime } else { [DateTime]::MinValue }
                         SID = $profile.SID
                         ProfileSize = if ($folderInfo) {
-                            $size = (Get-ChildItem -Path $localPath -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+                            # -File matters here: without it, Get-ChildItem -Recurse also returns
+                            # DirectoryInfo entries, which have no Length property. A profile whose
+                            # subfolders are all empty (no files at all) then pipes zero Length-bearing
+                            # objects into Measure-Object, which throws instead of returning $null.
+                            $size = (Get-ChildItem -Path $localPath -File -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+                            if (-not $size) { $size = 0 }
                             [Math]::Round($size / 1MB, 2)
                         } else { 0 }
                     }

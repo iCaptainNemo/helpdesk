@@ -9,7 +9,7 @@
     "start": "node Backend/server.js",
     "start:backend": "cd Backend && npm start",
     "start:frontend": "cd frontend && npm start",
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "cd Backend && npm run dev",
     "dev:frontend": "cd frontend && npm start",
     "build:frontend": "cd frontend && npm run build",
