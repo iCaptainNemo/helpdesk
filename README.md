@@ -2,23 +2,21 @@
 
 > This project lives on the [`Jarvis-GUI` branch](https://github.com/iCaptainNemo/helpdesk/tree/Jarvis-GUI) of this repository. The `main` branch is a separate, unrelated PowerShell-only project that happens to share this repo - it will not be merged with this one. Always work from `Jarvis-GUI`.
 
-**A portable IT helpdesk solution in a single ~85MB executable.**
-
-Helpdesk Jarvis provides IT professionals with a comprehensive web-based interface for managing user accounts, system monitoring, and administrative tasks. No installation required - just run the exe and get started!
+Helpdesk Jarvis is a standalone executable that provides a web-based interface for managing Active Directory user accounts, monitoring system status, and handling common IT helpdesk tasks. It runs as a single executable with no separate installation step.
 
 ## Key Features
 
 - **Zero Installation**: Single executable file - no Node.js, npm, or dependencies required
 - **Automatic Setup**: Registry integration and tools download automatically on first run
 - **System Management**: User unlock, password reset, computer status monitoring
-- **External Tool Integration**: Launch Remote Desktop, PowerShell, PsExec with one click
+- **External Tool Integration**: Launch Remote Desktop, PowerShell, PsExec
 - **Real-time Monitoring**: Live updates for locked users and system status
 - **Secure Authentication**: JWT-based sessions with Active Directory integration
-- **Modern Interface**: Responsive React-based web UI accessible from any browser
+- **Responsive Interface**: React-based web UI accessible from any browser
 
 ## Quick Start
 
-### Option 1: Download Pre-built Executable (Recommended)
+### Option 1: Download Pre-built Executable
 
 1. **Download** the latest `helpdesk-jarvis.exe` from [Releases](https://github.com/iCaptainNemo/helpdesk/releases)
 2. **Place** the exe in your desired folder (e.g., `C:\IT-Tools\`)
@@ -60,15 +58,6 @@ If you can't run as administrator, the application will show instructions for:
 - Running registry setup batch files
 - External tool integration setup
 
-## System Requirements
-
-- **OS**: Windows 10/11 or Windows Server 2016+
-- **Architecture**: x64 (64-bit)
-- **Memory**: 512MB RAM minimum
-- **Disk**: 200MB free space
-- **Network**: Internet connection for tool downloads (first run)
-- **Privileges**: Administrator rights recommended for full functionality
-
 ## Configuration
 
 ### Setup Wizard
@@ -101,7 +90,7 @@ ADMIN_PASSWORD=your-secure-password
 ### Web Interface
 - Navigate to `http://localhost:3001`
 - Login with your configured credentials
-- Access all features through the modern web interface
+- Access all features through the web interface
 
 ### Core Features
 - **Dashboard**: Overview of system status and locked users
@@ -128,7 +117,7 @@ Click computer names or use context menus to:
 ## File Structure
 
 ```
-helpdesk-jarvis.exe           # Main executable (~85MB)
+helpdesk-jarvis.exe           # Standalone executable
 ├── .env                      # Configuration file (created on first run)
 ├── database.db               # SQLite database (created automatically)
 ├── logs/                     # Application logs
@@ -138,56 +127,12 @@ helpdesk-jarvis.exe           # Main executable (~85MB)
     └── windirstat.exe        # Disk usage analyzer
 ```
 
-## Updates
+## Manual Updates
 
-### Update Checker
-The app checks GitHub Releases for newer versions and notifies you in the UI when one is available. Downloading and installing the update is still manual - the notification opens the release page for you.
-
-### Manual Updates
 1. Download new `helpdesk-jarvis.exe`
 2. Stop current instance
 3. Replace executable
 4. Run new version (configuration preserved)
-
-## Troubleshooting
-
-### Common Issues
-
-**External tools not working:**
-- Run as administrator to enable registry setup
-- Manually download tools to `Tools/` folder if auto-download fails
-
-**Can't access web interface:**
-- Check if port 3001 is available
-- Ensure Windows Firewall isn't blocking the application
-- Try accessing `http://127.0.0.1:3001` instead
-
-**Active Directory connection fails:**
-- Verify LDAP settings in configuration
-- Test network connectivity to domain controller
-- Check service account permissions
-
-### Logs
-Check the `logs/` folder for detailed error information and debugging data.
-
-## vs Development Mode
-
-| Feature | Standalone Exe | Development Mode |
-|---------|----------------|------------------|
-| Installation | Single file | Node.js + npm install |
-| Size | ~85MB | ~500MB+ (node_modules) |
-| Startup Time | ~3 seconds | ~10 seconds |
-| Updates | Replace exe | git pull + rebuild |
-| Dependencies | None | Node.js ecosystem |
-| Configuration | .env file | Multiple config files |
-
-## For Developers
-
-Want to contribute or modify the code? See [DEVELOPMENT.md](DEVELOPMENT.md) for:
-- Development environment setup
-- Building from source
-- Architecture documentation
-- Contributing guidelines
 
 ## License
 
@@ -195,14 +140,10 @@ This project is licensed under the GNU General Public License v3.0. See the [LIC
 
 ## Contributing
 
-Contributions are welcome! Please see [DEVELOPMENT.md](DEVELOPMENT.md) for development setup and contribution guidelines.
+Contributions are welcome. Please see [DEVELOPMENT.md](DEVELOPMENT.md) for development setup and contribution guidelines.
 
 ## Support
 
 - **Issues**: [GitHub Issues](https://github.com/iCaptainNemo/helpdesk/issues)
 - **Documentation**: [Wiki](https://github.com/iCaptainNemo/helpdesk/wiki)
 - **Discussions**: [GitHub Discussions](https://github.com/iCaptainNemo/helpdesk/discussions)
-
----
-
-**Made for IT professionals who need reliable, portable tools.**
