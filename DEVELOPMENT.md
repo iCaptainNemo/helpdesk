@@ -4,7 +4,7 @@ This guide is for developers who want to contribute to the project or run it in 
 
 ## Prerequisites
 
-- Node.js (v14.x or later)
+- Node.js 22.x (the standalone exe is packaged for the `node22-win-x64` target - building or running with a different Node version can produce a mismatched native module for better-sqlite3)
 - npm (v6.x or later)
 - PowerShell (v5.1 or later)
 - SQLite3
@@ -23,14 +23,15 @@ This guide is for developers who want to contribute to the project or run it in 
     npm install
     ```
 
-3. **Create a `.env` file**:
-    ```sh
-    cp .env.example .env
+3. **Create a `.env` file** in `Backend/` (there is no `.env.example` to copy - create it directly). At minimum:
+    ```env
+    ADMIN_USERNAME=admin
+    ADMIN_PASSWORD=your-secure-password
+    DEPLOYMENT_MODE=local
     ```
+    `JWT_SECRET`/`SESSION_SECRET` are optional - if omitted, the server generates ephemeral secrets on startup (fine for local dev, but sessions won't survive a restart). See the root `README.md`'s Manual Configuration section for the full list of supported variables (LDAP settings, etc.).
 
-4. **Configure the `.env` file** with your environment variables.
-
-5. **Start the backend server**:
+4. **Start the backend server**:
     ```sh
     npm start
     ```
@@ -47,14 +48,15 @@ This guide is for developers who want to contribute to the project or run it in 
     npm install
     ```
 
-3. **Create a `.env` file**:
-    ```sh
-    cp .env.example .env
+3. **Create a `.env` file** in `frontend/` (there is no `.env.example` to copy - create it directly):
+    ```env
+    PORT=3000
+    REACT_APP_BACKEND_URL=http://localhost:3001
+    REACT_APP_API_KEY=your-remote-api-key
     ```
+    `REACT_APP_BACKEND_URL` must point at wherever the backend actually runs - if you're testing from another device on the LAN, use this machine's IP instead of `localhost`.
 
-4. **Configure the `.env` file** with your environment variables.
-
-5. **Start the frontend server**:
+4. **Start the frontend server**:
     ```sh
     npm start
     ```
@@ -96,17 +98,13 @@ The backend server will run on `http://localhost:3001` and the frontend server w
 
 ### Create Standalone Executable
 
-1. **Build frontend**:
-    ```sh
-    npm run build:frontend
-    ```
+```sh
+npm run release
+```
 
-2. **Build standalone exe**:
-    ```sh
-    npm run dist:win
-    ```
+This builds the frontend, packages the backend with `@yao-pkg/pkg`, and copies the native `better-sqlite3`/`bcrypt` binaries into place. Output goes to `releases/helpdesk-jarvis-v{version}.exe` (versioned) and `releases/helpdesk-jarvis.exe` (a copy that always points at the latest build).
 
-The standalone executable will be created at `releases/helpdesk-jarvis.exe`.
+Use `npm run dist:win` instead if you just want an unversioned build (always `helpdesk-jarvis.exe`, no versioned copy).
 
 ## Development vs Production
 

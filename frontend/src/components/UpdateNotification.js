@@ -37,7 +37,7 @@ const UpdateNotification = () => {
     const checkForUpdatesWeb = async () => {
         try {
             setIsChecking(true);
-            const updateData = await apiGet('/api/check-updates');
+            const updateData = await apiGet('/api/updates/check');
 
             if (updateData.updateAvailable) {
                 setUpdateInfo(updateData);

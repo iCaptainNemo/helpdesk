@@ -101,6 +101,15 @@ Helpdesk Jarvis is a web-based helpdesk management system with a React frontend 
 
 The project uses GitHub Actions for PowerShell Script Analyzer on `.ps1` files. No specific test commands are configured - check individual package.json files for available test scripts.
 
+## Git Commit Conventions
+
+This is a public repository. Commit messages must not include:
+- `Co-Authored-By:` attribution lines
+- Links to Claude Code chat/session URLs
+- Any other AI-tool signing/attribution footer
+
+Write commit messages as if a human wrote them: a summary line plus body text explaining the change, nothing else appended.
+
 ## Refactor In Progress (started 2026-07-15)
 
 A coherence/hardening refactor is underway. State for the next session:
