@@ -12,30 +12,25 @@ function extractPowerShellScripts() {
     }
 
     const functionsDir = path.join(process.cwd(), 'functions');
-    
+    const sourceFunctionsDir = path.join(__dirname, '../functions');
+
     try {
         // Create functions directory if it doesn't exist
         if (!fs.existsSync(functionsDir)) {
             fs.mkdirSync(functionsDir, { recursive: true });
         }
 
-        // List of PowerShell scripts to extract
-        const scripts = [
-            'Get-DomainControllers.ps1',
-            'LockedOutList.ps1', 
-            'Get-ServerStatus.ps1',
-            'Get-Logs.ps1',
-            'getDomainInfo.ps1',
-            'Get-ADObject.ps1',
-            'Get-ADObjects.ps1',
-            'Fetch-User.ps1',
-            'Unlocker.ps1'
-        ];
+        // Discover scripts dynamically instead of a hardcoded list - a hardcoded
+        // list silently drifts out of sync as scripts get added (this one was
+        // missing 11 of the 20 scripts that actually exist by the time it was
+        // found), and any script not on the list would just fail at execution
+        // time in the packaged exe with no clear error pointing back here.
+        const scripts = fs.readdirSync(sourceFunctionsDir).filter(f => f.endsWith('.ps1'));
 
         for (const scriptName of scripts) {
             const targetPath = path.join(functionsDir, scriptName);
-            const sourcePath = path.join(__dirname, '../functions', scriptName);
-            
+            const sourcePath = path.join(sourceFunctionsDir, scriptName);
+
             // Only extract if target doesn't exist or source is newer
             if (!fs.existsSync(targetPath)) {
                 try {
@@ -51,7 +46,7 @@ function extractPowerShellScripts() {
                 }
             }
         }
-        
+
         return true;
     } catch (error) {
         console.error('Failed to extract PowerShell scripts:', error);

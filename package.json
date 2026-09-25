@@ -17,17 +17,24 @@
     "post-build": "node scripts/post-build.js",
     "build": "npm run build:frontend && npm run build:backend && npm run post-build",
     "copy-native-binaries": "node scripts/copy-native-binaries.js",
-    "dist:win": "npm run build && npm run copy-native-binaries && pkg Backend/server.js --targets node22-win-x64 --output releases/helpdesk-jarvis.exe",
-    "dist:win:versioned": "npm run build && npm run copy-native-binaries && node scripts/version-build.js",
+    "copy-ps-scripts": "node scripts/copy-ps-scripts.js",
+    "copy-frontend-build": "node scripts/copy-frontend-build.js",
+    "dist:win": "npm run build && npm run copy-native-binaries && npm run copy-ps-scripts && npm run copy-frontend-build && pkg Backend/server.js --targets node22-win-x64 --output releases/helpdesk-jarvis.exe",
+    "dist:win:versioned": "npm run build && npm run copy-native-binaries && npm run copy-ps-scripts && npm run copy-frontend-build && node scripts/version-build.js",
     "install-deps": "npm install && cd Backend && npm install && cd ../frontend && npm install",
     "release": "npm run dist:win:versioned"
   },
   "pkg": {
     "assets": [
       "Backend/**/*",
+      "!Backend/node_modules/!(bcrypt|better-sqlite3)/**",
+      "!Backend/node_modules/better-sqlite3/build/**",
+      "!Backend/node_modules/better-sqlite3/deps/**",
+      "!Backend/node_modules/better-sqlite3/src/**",
+      "!Backend/db/database.db",
+      "!Backend/db/admin_backup_*.json",
       "Backend/node_modules/bcrypt/lib/binding/napi-v3/bcrypt_lib.node",
       "Backend/node_modules/better-sqlite3/lib/binding/node-v127-win32-x64/better_sqlite3.node",
-      "frontend/build/**/*",
       "Tools/**/*",
       "setupConfig.js"
     ],

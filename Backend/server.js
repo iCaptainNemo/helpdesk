@@ -143,65 +143,18 @@ app.use(bodyParser.urlencoded({ extended: true }));
 const publicPath = path.join(__dirname, 'public');
 app.use(express.static(publicPath));
 
-// Serve React build files  
-const frontendBuildPath = path.join(__dirname, '../frontend/build');
-
-// In pkg mode, manually serve critical static files since express.static may not work with bundled assets
-if (process.pkg) {
-    const fs = require('fs');
-    let assetManifest = null;
-    
-    // Load asset manifest to get dynamic filenames
-    try {
-        const manifestPath = path.join(__dirname, '../frontend/build/asset-manifest.json');
-        const manifestContent = fs.readFileSync(manifestPath, 'utf8');
-        assetManifest = JSON.parse(manifestContent);
-        console.log('Asset manifest loaded successfully');
-    } catch (err) {
-        console.error('Failed to load asset manifest:', err.message);
-    }
-    
-    // Dynamically serve JS and CSS files based on asset manifest
-    if (assetManifest && assetManifest.files) {
-        const mainJsFile = assetManifest.files['main.js'];
-        const mainCssFile = assetManifest.files['main.css'];
-        
-        if (mainJsFile) {
-            app.get(mainJsFile, (req, res) => {
-                try {
-                    const jsPath = path.join(__dirname, '../frontend/build', mainJsFile);
-                    const content = fs.readFileSync(jsPath, 'utf8');
-                    res.setHeader('Content-Type', 'application/javascript');
-                    res.send(content);
-                } catch (err) {
-                    console.log(`[DEBUG] Failed to serve JS file: ${err.message}`);
-                    res.status(404).send('JS file not found');
-                }
-            });
-        }
-        
-        if (mainCssFile) {
-            app.get(mainCssFile, (req, res) => {
-                try {
-                    const cssPath = path.join(__dirname, '../frontend/build', mainCssFile);
-                    const content = fs.readFileSync(cssPath, 'utf8');
-                    res.setHeader('Content-Type', 'text/css');
-                    res.send(content);
-                } catch (err) {
-                    console.log(`[DEBUG] Failed to serve CSS file: ${err.message}`);
-                    res.status(404).send('CSS file not found');
-                }
-            });
-        }
-        
-        console.log(`[INFO] Dynamic routes created for: ${mainJsFile}, ${mainCssFile}`);
-    } else {
-        console.error('[ERROR] Asset manifest not available - static files may not load correctly');
-    }
-} else {
-    // Development mode - use normal static middleware
-    app.use(express.static(frontendBuildPath));
-}
+// Serve React build files. In packaged mode this reads from releases/build/
+// (a real folder copied there at build time by scripts/copy-frontend-build.js),
+// not from inside the pkg snapshot - pkg's asset embedding was found to
+// silently drop some files under frontend/build/static/** with no identifiable
+// pattern (verified: pkg's own runtime error reports them as "not included
+// into executable at compilation stage" despite matching every asset glob
+// tried). A real folder on disk sidesteps that; express.static works
+// identically here in both dev and packaged mode as a result.
+const frontendBuildPath = process.pkg
+    ? path.join(process.cwd(), 'build')
+    : path.join(__dirname, '../frontend/build');
+app.use(express.static(frontendBuildPath));
 
 // Middleware to attach the database to requests
 app.use((req, res, next) => {
@@ -286,7 +239,7 @@ app.use('/api/cache', require('./routes/cacheInfo')); // Cache monitoring and ma
 
 // Catch-all handler: send back React's index.html file for any non-API routes
 app.get('*', (req, res) => {
-    const indexPath = path.join(__dirname, '../frontend/build/index.html');
+    const indexPath = path.join(frontendBuildPath, 'index.html');
     res.sendFile(indexPath);
 });
 
