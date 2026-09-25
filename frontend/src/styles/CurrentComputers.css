@@ -143,9 +143,9 @@
 }
 .fetch-computers-button {
   display: block;
-  margin: 20px auto; /* Center the button horizontally */
-  padding: 10px 20px;
-  font-size: 16px;
+  margin: 8px auto; /* Center the button horizontally */
+  padding: 4px 12px;
+  font-size: 12px;
   color: #fff;
   background-color: #007bff;
   border: none;

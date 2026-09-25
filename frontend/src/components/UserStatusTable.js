@@ -397,31 +397,40 @@ const UserStatusTable = ({ adObjectID, permissions, endpoint }) => {
         <thead>
           <tr>
             <th colSpan="2" style={{ position: 'relative' }}>
-              Security Questions
-              <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
+              <span style={{
+                display: 'inline-block',
+                maxWidth: 'calc(100% - 80px)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                verticalAlign: 'middle'
+              }}>
+                Security Questions
+              </span>
+              <div style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)' }}>
                 {editingSecurityQuestion ? (
-                  <div style={{ display: 'flex', gap: '4px' }}>
+                  <div style={{ display: 'flex', gap: '3px' }}>
                     <button
                       onClick={handleSaveSecurityQuestion}
                       className="script-button save"
-                      style={{ fontSize: '12px', padding: '2px 6px' }}
+                      style={{ fontSize: '10px', padding: '1px 4px' }}
                     >
                       Save
                     </button>
                     <button
                       onClick={handleCancelSecurityQuestion}
                       className="script-button cancel"
-                      style={{ fontSize: '12px', padding: '2px 6px' }}
+                      style={{ fontSize: '10px', padding: '1px 4px' }}
                     >
                       Cancel
                     </button>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', gap: '4px' }}>
+                  <div style={{ display: 'flex', gap: '3px' }}>
                     <button
                       onClick={() => setEditingSecurityQuestion(true)}
                       className="script-button edit"
-                      style={{ fontSize: '12px', padding: '2px 6px' }}
+                      style={{ fontSize: '10px', padding: '1px 4px' }}
                     >
                       Edit
                     </button>
@@ -429,7 +438,7 @@ const UserStatusTable = ({ adObjectID, permissions, endpoint }) => {
                       <button
                         onClick={handleClearSecurityQuestion}
                         className="script-button clear"
-                        style={{ fontSize: '12px', padding: '2px 6px' }}
+                        style={{ fontSize: '10px', padding: '1px 4px' }}
                       >
                         Clear
                       </button>
@@ -453,7 +462,7 @@ const UserStatusTable = ({ adObjectID, permissions, endpoint }) => {
                     SecurityQuestion: e.target.value
                   }))}
                   placeholder="Enter security question"
-                  style={{ width: '100%', padding: '4px' }}
+                  style={{ width: '100%', padding: '2px 4px', fontSize: '12px' }}
                 />
               ) : (
                 securityQuestions.SecurityQuestion || 'Not set'
@@ -472,7 +481,7 @@ const UserStatusTable = ({ adObjectID, permissions, endpoint }) => {
                     SecurityAnswer: e.target.value
                   }))}
                   placeholder="Enter security answer"
-                  style={{ width: '100%', padding: '4px' }}
+                  style={{ width: '100%', padding: '2px 4px', fontSize: '12px' }}
                 />
               ) : (
                 securityQuestions.SecurityAnswer || 'Not set'
@@ -498,8 +507,8 @@ const UserStatusTable = ({ adObjectID, permissions, endpoint }) => {
                   disabled={votedToday}
                   style={{
                     flex: 1,
-                    fontSize: '14px',
-                    padding: '8px 10px',
+                    fontSize: '12px',
+                    padding: '4px 8px',
                     border: '1px solid #e57373',
                     borderRadius: 'var(--border-radius-sm)',
                     background: '#ffcdd2',
@@ -516,8 +525,8 @@ const UserStatusTable = ({ adObjectID, permissions, endpoint }) => {
                   disabled={votedToday}
                   style={{
                     flex: 1,
-                    fontSize: '14px',
-                    padding: '8px 10px',
+                    fontSize: '12px',
+                    padding: '4px 8px',
                     border: '1px solid #81c784',
                     borderRadius: 'var(--border-radius-sm)',
                     background: '#c8e6c9',
@@ -543,12 +552,21 @@ const UserStatusTable = ({ adObjectID, permissions, endpoint }) => {
         <thead>
           <tr>
             <th colSpan="2" style={{ position: 'relative' }}>
-              Comment
-              <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
+              <span style={{
+                display: 'inline-block',
+                maxWidth: 'calc(100% - 50px)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                verticalAlign: 'middle'
+              }}>
+                Comment
+              </span>
+              <div style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)' }}>
                 <button
                   onClick={handleSaveComment}
                   className="script-button save"
-                  style={{ fontSize: '12px', padding: '2px 6px' }}
+                  style={{ fontSize: '10px', padding: '1px 4px' }}
                 >
                   Save
                 </button>
