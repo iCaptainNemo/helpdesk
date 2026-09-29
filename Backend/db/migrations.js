@@ -2,6 +2,7 @@ const db = require('./init');
 const path = require('path');
 const fs = require('fs');
 const logger = require('../utils/logger');
+const { seedAdminFromEnv } = require('./seedAdminFromEnv');
 
 /**
  * Database migration system for schema updates
@@ -137,6 +138,11 @@ class DatabaseMigrator {
         version: '2026-09-25-allow-null-department-ledger',
         description: 'Allow NULL department in DepartmentLedger (AD users can have no department set)',
         up: this.migration_allowNullDepartmentLedger.bind(this)
+      },
+      {
+        version: '2026-09-28-add-adminusers-table',
+        description: 'Create AdminUsers table for hub-local logins, seeded from .env',
+        up: this.migration_addAdminUsersTable.bind(this)
       }
     ];
 
@@ -439,6 +445,40 @@ class DatabaseMigrator {
         rebuild();
 
         logger.info('DepartmentLedger rebuilt successfully - department now allows NULL');
+        resolve();
+      } catch (error) {
+        logger.error('Migration error:', error);
+        reject(error);
+      }
+    });
+  }
+
+  /**
+   * Migration: Create AdminUsers table for hub-local logins, seeded from .env
+   */
+  migration_addAdminUsersTable() {
+    return new Promise((resolve, reject) => {
+      try {
+        const exists = this.db.prepare(
+          `SELECT name FROM sqlite_master WHERE type='table' AND name='AdminUsers'`
+        ).get();
+
+        if (exists) {
+          logger.info('AdminUsers table already exists');
+        } else {
+          logger.info('Creating AdminUsers table');
+          this.db.exec(`
+            CREATE TABLE IF NOT EXISTS AdminUsers (
+              AdminID TEXT PRIMARY KEY,
+              PasswordHash TEXT NOT NULL,
+              DisplayName TEXT,
+              CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+          `);
+          logger.info('AdminUsers table created successfully');
+        }
+
+        seedAdminFromEnv(this.db);
         resolve();
       } catch (error) {
         logger.error('Migration error:', error);

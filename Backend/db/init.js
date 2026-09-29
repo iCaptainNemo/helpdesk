@@ -9,6 +9,7 @@ const envPath = process.pkg
 require('dotenv').config({ path: envPath });
 
 const logger = require('../utils/logger'); // Import the logger module
+const { seedAdminFromEnv } = require('./seedAdminFromEnv');
 
 // Create a wrapper for the logger functions to add the [Database] prefix
 const dbLogger = {
@@ -44,8 +45,15 @@ const dbPath = getDatabasePath();
 dbLogger.info(`Attempting to open database at path: ${dbPath}`);
 
 const tables = [
-    // Note: Admin table removed - authentication now handled via .env file
-    // Admin credentials are stored in Backend/.env as ADMIN_USERNAME and ADMIN_PASSWORD
+    {
+        name: 'AdminUsers', // Hub-local admin logins (local mode only - remote instances authenticate through the hub)
+        columns: [
+            'AdminID TEXT PRIMARY KEY',
+            'PasswordHash TEXT NOT NULL',
+            'DisplayName TEXT',
+            'CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP'
+        ]
+    },
     {
         name: 'Users', // Active Directory Users
         columns: [
@@ -223,6 +231,8 @@ function initializeDatabase() {
                 dbLogger.error(`Error creating table ${table.name}:`, err.message);
             }
         });
+
+        seedAdminFromEnv(db);
 
         // Insert initial roles
         const roles = ['superadmin', 'admin', 'support_agent', 'user'];

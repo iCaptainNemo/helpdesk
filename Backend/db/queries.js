@@ -111,60 +111,60 @@ function incrementUserPasswordResetCount(userID, adminID) {
     return executeQuery(query, params);
 }
 
-async function insertOrUpdateAdminUser(adminUser) {
-    // Admin table no longer exists - this function is deprecated
-    console.warn('insertOrUpdateAdminUser is deprecated - Admin table no longer exists');
-    return { success: false, message: 'Admin table no longer exists' };
+// Hub-local admin accounts (AdminUsers table). Remote-mode instances never
+// call these directly - they proxy credential checks to the hub over
+// /api/remote/verify-credentials instead. See CLAUDE.md's centralized-identity
+// refactor notes.
+const { hashPassword, verifyPassword } = require('../utils/hashUtils');
+
+async function insertOrUpdateAdminUser({ AdminID, password, displayName }) {
+    const normalizedAdminID = AdminID.toLowerCase();
+    const passwordHash = await hashPassword(password);
+    const resolvedDisplayName = displayName || null;
+    // COALESCE so a password-only update (e.g. self-service change-password)
+    // doesn't clobber an existing DisplayName; a brand new row falls back to AdminID.
+    const query = `
+        INSERT INTO AdminUsers (AdminID, PasswordHash, DisplayName)
+        VALUES (?, ?, COALESCE(?, ?))
+        ON CONFLICT(AdminID) DO UPDATE SET
+            PasswordHash = excluded.PasswordHash,
+            DisplayName = COALESCE(?, DisplayName)
+    `;
+    await executeQuery(query, [normalizedAdminID, passwordHash, resolvedDisplayName, AdminID, resolvedDisplayName]);
+    return { success: true, AdminID: normalizedAdminID };
 }
 
-function fetchAdminUser(adminID) {
-    const deploymentMode = process.env.DEPLOYMENT_MODE;
-    
-    // Handle local and remote modes without database queries
-    if (deploymentMode === 'local') {
-        const mockAdmin = {
-            AdminID: process.env.ADMIN_USERNAME || adminID,
-            AdminComputer: process.env.COMPUTERNAME || 'localhost'
-        };
-        return Promise.resolve(mockAdmin);
-    }
-    
-    if (deploymentMode === 'remote') {
-        const mockAdmin = {
-            AdminID: 'remote_agent',
-            AdminComputer: process.env.COMPUTERNAME || 'localhost'
-        };
-        return Promise.resolve(mockAdmin);
-    }
-    
-    // Legacy database mode - Admin table no longer exists, return null
-    console.warn('fetchAdminUser: Admin table no longer exists, returning null');
-    return Promise.resolve(null);
+async function fetchAdminUser(adminID) {
+    const rows = await executeQuery(
+        'SELECT AdminID, DisplayName, CreatedAt FROM AdminUsers WHERE AdminID = ?',
+        [adminID.toLowerCase()]
+    );
+    return rows[0] || null;
 }
 
-function fetchAllAdminUsers() {
-    const deploymentMode = process.env.DEPLOYMENT_MODE;
-    
-    // Handle local and remote modes without database queries
-    if (deploymentMode === 'local') {
-        const mockAdmins = [{
-            AdminID: process.env.ADMIN_USERNAME || 'local_admin',
-            AdminComputer: process.env.COMPUTERNAME || 'localhost'
-        }];
-        return Promise.resolve(mockAdmins);
+async function fetchAllAdminUsers() {
+    return executeQuery('SELECT AdminID, DisplayName, CreatedAt FROM AdminUsers ORDER BY CreatedAt');
+}
+
+async function verifyAdminCredentials(adminID, password) {
+    const rows = await executeQuery(
+        'SELECT AdminID, PasswordHash, DisplayName, CreatedAt FROM AdminUsers WHERE AdminID = ?',
+        [adminID.toLowerCase()]
+    );
+    const user = rows[0];
+    if (!user) {
+        return null;
     }
-    
-    if (deploymentMode === 'remote') {
-        const mockAdmins = [{
-            AdminID: 'remote_agent',
-            AdminComputer: process.env.COMPUTERNAME || 'localhost'
-        }];
-        return Promise.resolve(mockAdmins);
+    const isMatch = await verifyPassword(password, user.PasswordHash);
+    if (!isMatch) {
+        return null;
     }
-    
-    // Legacy database mode - Admin table no longer exists, return empty array
-    console.warn('fetchAllAdminUsers: Admin table no longer exists, returning empty array');
-    return Promise.resolve([]);
+    const { PasswordHash, ...safeUser } = user;
+    return safeUser;
+}
+
+async function deleteAdminUser(adminID) {
+    return executeQuery('DELETE FROM AdminUsers WHERE AdminID = ?', [adminID.toLowerCase()]);
 }
 
 // New functions for managing servers
@@ -527,7 +527,8 @@ module.exports = {
     incrementUserUnlockCount,
     incrementUserPasswordResetCount,
     insertOrUpdateAdminUser,
-    fetchAdminUser,
+    verifyAdminCredentials,
+    deleteAdminUser,
     insertServer,
     updateServer,
     deleteServer,

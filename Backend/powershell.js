@@ -1,6 +1,7 @@
 const { execFile } = require('child_process');
 const path = require('path');
 const { log, info, warn, error, verbose, debug } = require('./utils/logger');
+const { recordAndBroadcast } = require('./utils/terminalHistory');
 
 // List of scripts where stdout logging should be suppressed
 const scriptsToSuppressLogging = [
@@ -111,13 +112,7 @@ async function executePowerShellScript(scriptPath, params = []) {
     }
 
     // Broadcast PowerShell command to terminal
-    if (global.terminalIO) {
-        global.terminalIO.to('terminal').emit('powershell-output', {
-            type: 'command',
-            command: command,
-            timestamp: new Date().toISOString()
-        });
-    }
+    recordAndBroadcast('powershell-output', { type: 'command', command: command });
 
     return new Promise((resolve, reject) => {
         execFile('powershell.exe', args, buildExecOptions(), (execError, stdout, stderr) => {
@@ -126,13 +121,7 @@ async function executePowerShellScript(scriptPath, params = []) {
                 error(`Execution error: ${err.message}`);
 
                 // Broadcast error to terminal
-                if (global.terminalIO) {
-                    global.terminalIO.to('terminal').emit('powershell-output', {
-                        type: 'error',
-                        error: err.message,
-                        timestamp: new Date().toISOString()
-                    });
-                }
+                recordAndBroadcast('powershell-output', { type: 'error', error: err.message });
 
                 return reject(err);
             }
@@ -140,13 +129,7 @@ async function executePowerShellScript(scriptPath, params = []) {
                 error(`stderr: ${stderr}`);
 
                 // Broadcast stderr to terminal
-                if (global.terminalIO) {
-                    global.terminalIO.to('terminal').emit('powershell-output', {
-                        type: 'error',
-                        error: stderr,
-                        timestamp: new Date().toISOString()
-                    });
-                }
+                recordAndBroadcast('powershell-output', { type: 'error', error: stderr });
             }
             if (!stdout) {
                 error('No output from PowerShell script');
@@ -157,13 +140,7 @@ async function executePowerShellScript(scriptPath, params = []) {
                 debug(`stdout: ${stdout}`);
 
                 // Broadcast output to terminal (only for non-suppressed scripts)
-                if (global.terminalIO) {
-                    global.terminalIO.to('terminal').emit('powershell-output', {
-                        type: 'output',
-                        output: stdout,
-                        timestamp: new Date().toISOString()
-                    });
-                }
+                recordAndBroadcast('powershell-output', { type: 'output', output: stdout });
             }
 
             try {

@@ -1,16 +1,45 @@
-import React, { memo } from 'react';
+import React, { memo, useEffect, useRef, useState } from 'react';
 
-const MetricsCard = memo(({ 
-  title, 
-  value, 
-  change, 
+// Briefly adds the CSS bounce animation (see .metrics-card-refresh / @keyframes
+// metricsBounce in grid.css) whenever `value` changes after the first render -
+// gives a live-update feel on data refresh without re-showing the loading skeleton.
+function usePulseOnChange(value, loading) {
+  const [pulsing, setPulsing] = useState(false);
+  const previousValue = useRef(value);
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      previousValue.current = value;
+      return;
+    }
+    if (value !== previousValue.current) {
+      previousValue.current = value;
+      setPulsing(true);
+      const timeout = setTimeout(() => setPulsing(false), 600); // matches metricsBounce duration
+      return () => clearTimeout(timeout);
+    }
+  }, [value, loading]);
+
+  return pulsing;
+}
+
+const MetricsCard = memo(({
+  title,
+  value,
+  change,
   changeType = 'neutral', // 'positive', 'negative', 'neutral'
-  icon, 
+  icon,
   color = 'default',
   loading = false,
   onClick,
   className = ''
 }) => {
+  const pulsing = usePulseOnChange(value, loading);
   const formatValue = (val) => {
     if (loading) return '---';
     if (typeof val === 'number') {
@@ -55,6 +84,7 @@ const MetricsCard = memo(({
     'metrics-card',
     'transition',
     'hover-lift',
+    pulsing ? 'metrics-card-refresh' : '',
     className
   ].filter(Boolean).join(' ');
 

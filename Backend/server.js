@@ -202,6 +202,7 @@ const getLogsRoute = require('./routes/getLogs'); // Route for fetching logs
 const rolesRoute = require('./routes/roles'); // Route for managing roles
 const permissionsRoute = require('./routes/permissions'); // Route for managing permissions
 const configureRoute = require('./routes/configure'); // Route for the configure page
+const deploymentRoute = require('./routes/deployment'); // Route for deployment mode / hub connection settings
 const serverStatusRoute = require('./routes/serverStatus'); // Route for server statuses
 const executeCommandRoute = require('./routes/executeCommand'); // Route for executing commands
 const loggingSettingsRoute = require('./routes/loggingSettings'); // Import the loggingSettings route
@@ -230,6 +231,9 @@ app.use('/api/get-logs', verifyToken, getLogsRoute); // Route to fetch logs
 app.use('/api/roles', verifyToken, rolesRoute); // Route to manage roles
 app.use('/api/permissions', verifyToken, permissionsRoute); // Route to manage permissions
 app.use('/api/configure', verifyToken, verifyPermissions('access_configure_page'), configureRoute); // Route to access the configure page
+// Deliberately gated by 'manage_deployment', not 'access_configure_page' - remote-mode
+// instances need to reach this even though the rest of Configure is hub-only in remote mode.
+app.use('/api/deployment', verifyToken, verifyPermissions('manage_deployment'), deploymentRoute);
 app.use('/api/servers', verifyToken, serverStatusRoute); // Use the serverStatus route
 app.use('/api/users', verifyToken, usersRoute); // Register the new users route
 // execute-command runs arbitrary PowerShell — require auth AND the execute_command permission
@@ -280,15 +284,20 @@ app.use((err, req, res, next) => {
     res.status(500).json(errorResponse);
 });
 
+const { getHistory } = require('./utils/terminalHistory');
+
 // Function to handle Socket.IO connection and disconnection events
 const handleSocketConnection = (socket) => {
     logger.info('New client connected');
-    
+
     // Handle terminal room joining
     socket.on('join-terminal', () => {
         socket.join('terminal');
         logger.info('Client joined terminal room');
-        
+
+        // Replay recent backlog to this client only, before live events start
+        socket.emit('terminal-history', { entries: getHistory() });
+
         // Send welcome message to terminal
         socket.emit('system-event', {
             type: 'info',

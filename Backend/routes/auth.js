@@ -1,11 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { fetchAdminUser, insertOrUpdateAdminUser, fetchRolesForUser, fetchPermissionsForRoles } = require('../db/queries');
+const fetch = require('node-fetch');
+const { fetchAdminUser, insertOrUpdateAdminUser, verifyAdminCredentials, fetchRolesForUser, fetchPermissionsForRoles } = require('../db/queries');
 const { body, validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const logger = require('../utils/logger'); // Import the logger
 const sessionStore = require('../utils/sessionStore'); // Import sessionStore
 const { hashPassword, verifyPassword } = require('../utils/hashUtils'); // Import password hashing and verification functions
+const { writeEnvVars } = require('../utils/envFile');
 require('dotenv').config(); // Load environment variables from .env file
 const SECRET_KEY = process.env.JWT_SECRET; // Guaranteed set by the secrets bootstrap in server.js
 const JWT_EXPIRATION = process.env.JWT_EXPIRATION || '1d'; // Default to 1 day if not set
@@ -56,43 +58,71 @@ router.post('/login', sanitizeInput, async (req, res) => {
   logger.info('Received login request for AdminID:', AdminID);
 
   try {
-    // Always use .env authentication since Admin table no longer exists
-    const envUsername = process.env.ADMIN_USERNAME;
-    const envPasswordHash = process.env.ADMIN_PASSWORD;
-    
-    if (!envUsername || !envPasswordHash) {
-      logger.error('Admin credentials not configured in .env');
-      return res.status(500).json({ error: 'Authentication not configured' });
+    const deploymentMode = process.env.DEPLOYMENT_MODE;
+    let verifiedAdminID = null;
+
+    if (deploymentMode === 'remote') {
+      // Remote instances hold no local credentials - the hub is the source of
+      // truth. Proxy the credential check over the existing API-key channel;
+      // each instance still mints and verifies its own JWT locally (JWT_SECRET
+      // is per-instance, so a hub-issued token wouldn't validate here anyway).
+      const serverUrl = process.env.REMOTE_SERVER_URL;
+      const apiKey = process.env.API_KEY;
+      if (!serverUrl || !apiKey) {
+        logger.error('Remote mode misconfigured: REMOTE_SERVER_URL/API_KEY missing');
+        return res.status(500).json({ error: 'Remote server not configured' });
+      }
+
+      let hubRes;
+      try {
+        hubRes = await fetch(`${serverUrl.replace(/\/$/, '')}/api/remote/verify-credentials`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-API-Key': apiKey },
+          body: JSON.stringify({ AdminID: normalizedAdminID, password })
+        });
+      } catch (networkErr) {
+        logger.error('Failed to reach hub server for login:', networkErr.message);
+        return res.status(502).json({ error: 'Unable to reach the hub server' });
+      }
+
+      if (hubRes.status === 401) {
+        logger.warn(`Hub rejected credentials for AdminID: ${normalizedAdminID}`);
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+      if (!hubRes.ok) {
+        logger.error(`Hub verify-credentials failed: ${hubRes.status} ${hubRes.statusText}`);
+        return res.status(502).json({ error: 'Unable to reach the hub server' });
+      }
+
+      const hubData = await hubRes.json();
+      if (!hubData.valid) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+      verifiedAdminID = hubData.AdminID;
+    } else {
+      // local (hub) mode: check this instance's own AdminUsers table
+      const user = await verifyAdminCredentials(normalizedAdminID, password);
+      if (!user) {
+        logger.warn('Invalid credentials for AdminID:', normalizedAdminID);
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+      verifiedAdminID = user.AdminID;
     }
-    
-    if (normalizedAdminID !== envUsername.toLowerCase()) {
-      logger.warn(`Invalid username: ${AdminID}, expected: ${envUsername}`);
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-    
-    const bcrypt = require('bcrypt');
-    const isPasswordValid = await bcrypt.compare(password, envPasswordHash);
-    logger.info(`Password verification result for AdminID ${normalizedAdminID}: ${isPasswordValid}`);
-    
-    if (!isPasswordValid) {
-      logger.warn('Invalid password for AdminID:', normalizedAdminID);
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-    
+
     // Generate JWT token
-    const token = jwt.sign({ AdminID: normalizedAdminID, sessionID: req.sessionID }, SECRET_KEY, { expiresIn: JWT_EXPIRATION });
-    logger.info(`JWT token generated for AdminID: ${normalizedAdminID}, SessionID: ${req.sessionID}`);
+    const token = jwt.sign({ AdminID: verifiedAdminID, sessionID: req.sessionID }, SECRET_KEY, { expiresIn: JWT_EXPIRATION });
+    logger.info(`JWT token generated for AdminID: ${verifiedAdminID}, SessionID: ${req.sessionID}`);
 
     // Store session information
-    req.session.AdminID = normalizedAdminID;
+    req.session.AdminID = verifiedAdminID;
     req.session.adminComputer = process.env.COMPUTERNAME || 'localhost';
-    logger.info(`Session created for AdminID: ${normalizedAdminID}`);
+    logger.info(`Session created for AdminID: ${verifiedAdminID}`);
 
     // Return response
-    res.json({ 
-      token, 
-      AdminID: normalizedAdminID, 
-      adminComputer: process.env.COMPUTERNAME || 'localhost', 
+    res.json({
+      token,
+      AdminID: verifiedAdminID,
+      adminComputer: process.env.COMPUTERNAME || 'localhost',
       sessionID: req.sessionID
     });
   } catch (error) {
@@ -108,31 +138,14 @@ router.post('/update-password', verifyToken, sanitizeInput, async (req, res) => 
   logger.info('Received password update request for AdminID:', normalizedAdminID);
 
   try {
-    const envUsername = process.env.ADMIN_USERNAME;
-    
-    if (normalizedAdminID !== envUsername.toLowerCase()) {
-      logger.warn(`Unauthorized password update attempt for AdminID: ${normalizedAdminID}`);
-      return res.status(401).json({ error: 'Unauthorized' });
+    if (process.env.DEPLOYMENT_MODE === 'remote') {
+      logger.warn(`Password update rejected on remote instance for AdminID: ${normalizedAdminID}`);
+      return res.status(403).json({ error: 'Password changes are managed by your administrator on the hub' });
     }
 
-    // Hash the new password
-    const bcrypt = require('bcrypt');
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    // Self-service: update this token's own AdminUsers row
+    await insertOrUpdateAdminUser({ AdminID: normalizedAdminID, password: newPassword });
 
-    // Update the .env file
-    const fs = require('fs');
-    const path = require('path');
-    const envPath = process.pkg 
-      ? path.join(process.cwd(), '.env')
-      : path.join(__dirname, '..', '.env');
-    
-    let envContent = fs.readFileSync(envPath, 'utf8');
-    envContent = envContent.replace(/^ADMIN_PASSWORD=.*$/m, `ADMIN_PASSWORD=${hashedPassword}`);
-    fs.writeFileSync(envPath, envContent);
-    
-    // Update the environment variable in memory
-    process.env.ADMIN_PASSWORD = hashedPassword;
-    
     logger.info(`Password updated for AdminID: ${normalizedAdminID}`);
     res.status(200).json({ message: 'Password updated successfully' });
   } catch (error) {
@@ -155,20 +168,8 @@ router.post('/update-temp-password', verifyToken, sanitizeInput, async (req, res
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // Update the .env file
-    const fs = require('fs');
-    const path = require('path');
-    const envPath = process.pkg 
-      ? path.join(process.cwd(), '.env')
-      : path.join(__dirname, '..', '.env');
-    
-    let envContent = fs.readFileSync(envPath, 'utf8');
-    envContent = envContent.replace(/^TEMP_PASSWORD=.*$/m, `TEMP_PASSWORD=${tempPassword}`);
-    fs.writeFileSync(envPath, envContent);
-    
-    // Update the environment variable in memory
-    process.env.TEMP_PASSWORD = tempPassword;
-    
+    writeEnvVars({ TEMP_PASSWORD: tempPassword });
+
     logger.info(`Temporary password updated for AdminID: ${normalizedAdminID}`);
     res.status(200).json({ message: 'Temporary password updated successfully' });
   } catch (error) {
@@ -185,7 +186,7 @@ router.get('/profile', verifyToken, async (req, res) => {
     
     if (deploymentMode === 'local') {
       // Local mode: Return basic profile information from .env with full permissions
-      const localPermissions = ['read', 'write', 'execute', 'access_configure_page', 'execute_script', 'unlock_user', 'reset_password', 'manage_users', 'manage_tickets', 'view_reports', 'execute_command'];
+      const localPermissions = ['read', 'write', 'execute', 'access_configure_page', 'manage_deployment', 'execute_script', 'unlock_user', 'reset_password', 'manage_users', 'manage_tickets', 'view_reports', 'execute_command'];
       res.json({
         profile: {
           AdminID: adminID,
@@ -198,7 +199,7 @@ router.get('/profile', verifyToken, async (req, res) => {
       });
     } else if (deploymentMode === 'remote') {
       // Remote mode: Return limited permissions (no configuration access)
-      const remotePermissions = ['read', 'write', 'execute', 'execute_script', 'unlock_user', 'reset_password', 'manage_tickets', 'view_reports', 'execute_command'];
+      const remotePermissions = ['read', 'write', 'execute', 'manage_deployment', 'execute_script', 'unlock_user', 'reset_password', 'manage_tickets', 'view_reports', 'execute_command'];
       res.json({
         profile: {
           AdminID: adminID,

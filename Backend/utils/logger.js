@@ -1,5 +1,6 @@
 const SENSITIVE_KEYS = ['password', 'secret', 'token', 'apikey'];
 const config = require('./config'); // Import the configuration object
+const { recordAndBroadcast } = require('./terminalHistory');
 
 let chalk = null;
 
@@ -43,11 +44,7 @@ const broadcastToTerminal = (level, message, ...optionalParams) => {
                 ? `${message} ${optionalParams.join(' ')}`
                 : message;
             
-            global.terminalIO.to('terminal').emit('backend-log', {
-                level: level,
-                message: fullMessage,
-                timestamp: new Date().toISOString()
-            });
+            recordAndBroadcast('backend-log', { level: level, message: fullMessage });
         }
     }
 };

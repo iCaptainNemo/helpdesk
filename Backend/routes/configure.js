@@ -37,10 +37,10 @@ router.use(verifyPermissions('access_configure_page'));
 router.get('/', (req, res) => {
     const deploymentMode = process.env.DEPLOYMENT_MODE;
     const adminID = req.AdminID || 'local_admin';
-    
+
     logger.info(`Admin ${adminID} accessed the configure page in ${deploymentMode} mode`);
-    
-    res.json({ 
+
+    res.json({
         message: 'Welcome to the configure page!',
         mode: deploymentMode,
         adminID: adminID

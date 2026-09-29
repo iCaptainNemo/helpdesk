@@ -59,8 +59,8 @@
     flex: 0 0 36px;
   }
 
-  .terminal-minimized-bar {
-    height: 36px;
+  .app-terminal-section.minimized .terminal-header {
+    min-height: 36px;
     font-size: 12px;
     padding: 0 10px;
   }

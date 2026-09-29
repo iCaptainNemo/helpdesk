@@ -4,7 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { insertOrUpdateAdminUser } = require('../db/queries'); // Import the function
 const { hashPassword } = require('../utils/hashUtils'); // Import the hashPassword function
-const bcrypt = require('bcrypt');
+const { readEnvFile, writeEnvVars } = require('../utils/envFile');
 const { getSystemInfo } = require('../config/modes'); // Import configuration system
 const logger = require('../utils/logger'); // Import logger
 const router = express.Router();
@@ -105,33 +105,18 @@ router.get('/status', (req, res) => {
 router.post('/wizard', async (req, res) => {
   try {
     const { mode, adminCredentials, remoteConnection, systemSettings } = req.body;
-    
-    const envFilePath = process.pkg 
-      ? path.join(process.cwd(), '.env')
-      : path.join(__dirname, '../.env');
-    const setupConfigPath = process.pkg 
+
+    const setupConfigPath = process.pkg
       ? path.join(process.cwd(), 'setupConfig.js')
       : path.join(__dirname, '../../setupConfig.js');
-    
-    // Read existing .env if it exists
-    let existingEnv = {};
-    if (fs.existsSync(envFilePath)) {
-      const envContent = fs.readFileSync(envFilePath, 'utf8');
-      envContent.split('\n').forEach(line => {
-        const [key, value] = line.split('=');
-        if (key && value) {
-          existingEnv[key] = value;
-        }
-      });
-    }
-    
+
     // Generate secure secrets if they don't exist
+    const existingEnv = readEnvFile();
     const jwtSecret = existingEnv.JWT_SECRET || generateRandomString(32);
     const sessionSecret = existingEnv.SESSION_SECRET || generateRandomString(16);
-    
+
     // Prepare environment variables based on mode
     let envVars = {
-      ...existingEnv,
       DEPLOYMENT_MODE: mode,
       JWT_SECRET: jwtSecret,
       SESSION_SECRET: sessionSecret,
@@ -145,7 +130,7 @@ router.post('/wizard', async (req, res) => {
       // Local mode setup - use current system username
       const systemUsername = process.env.USERNAME || process.env.USER || 'helpdesk_agent';
       const sanitizedUsername = systemUsername.replace(/[^a-zA-Z0-9_-]/g, ''); // Sanitize username
-      const hashedPassword = await bcrypt.hash(adminCredentials.password, 10);
+      const hashedPassword = await hashPassword(adminCredentials.password);
       
       envVars = {
         ...envVars,
@@ -159,6 +144,10 @@ router.post('/wizard', async (req, res) => {
         LOGFILE: systemSettings.logPath || './logs/'
       };
       
+      // Seed the AdminUsers table with the same credentials just written to
+      // .env, so login (which now checks the DB, not .env) works immediately.
+      await insertOrUpdateAdminUser({ AdminID: sanitizedUsername, password: adminCredentials.password });
+
       logger.info(`Setting up local mode for system user: ${sanitizedUsername}`);
     } else {
       // Remote mode setup
@@ -171,13 +160,8 @@ router.post('/wizard', async (req, res) => {
       };
     }
     
-    // Write .env file
-    const envData = Object.entries(envVars)
-      .map(([key, value]) => `${key}=${value}`)
-      .join('\n');
-    
-    fs.writeFileSync(envFilePath, envData);
-    
+    writeEnvVars(envVars);
+
     // Update setupConfig.js if needed
     if (mode === 'local') {
       const setupConfigTemplate = `module.exports = {

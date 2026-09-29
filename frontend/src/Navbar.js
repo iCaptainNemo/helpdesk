@@ -44,7 +44,9 @@ const Navbar = ({ permissions }) => {
       to: '/configure',
       icon: 'bx bx-cog',
       label: 'Configure',
-      permission: 'access_configure_page',
+      // Remote-mode users only get 'manage_deployment' (their own hub connection
+      // settings), not full 'access_configure_page' - either is enough to show the link.
+      permission: ['access_configure_page', 'manage_deployment'],
       match: (p) => p === '/configure',
     },
   ];
@@ -82,7 +84,10 @@ const Navbar = ({ permissions }) => {
       }}
     >
       {navItems.map((item) => {
-        if (item.permission && !permissions.includes(item.permission)) {
+        const requiredPerms = Array.isArray(item.permission)
+          ? item.permission
+          : (item.permission ? [item.permission] : []);
+        if (requiredPerms.length > 0 && !requiredPerms.some((p) => permissions.includes(p))) {
           return null;
         }
 

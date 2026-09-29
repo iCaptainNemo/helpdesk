@@ -21,6 +21,7 @@
   align-items: center;
   user-select: none;
   min-height: 40px;
+  cursor: pointer;
 }
 
 .terminal-title {
@@ -115,6 +116,12 @@
   overflow: hidden;
   background: #1e1e1e;
   position: relative;
+}
+
+/* Toggled minimized: the terminal component (xterm instance + socket) stays
+   mounted underneath - only the visible body is hidden, so scrollback survives. */
+.terminal-content.hidden {
+  display: none;
 }
 
 .xterm-container {

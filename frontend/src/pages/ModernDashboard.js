@@ -20,7 +20,6 @@ const ModernDashboard = ({
   const [showAllServers, setShowAllServers] = useState(false);
   const [showAllLockedUsers, setShowAllLockedUsers] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
-  const [refreshing, setRefreshing] = useState(false);
   const [notification, setNotification] = useState({ message: '', type: '' });
   const [departmentFilter, setDepartmentFilter] = useState(null);
   const [dashboardData, setDashboardData] = useState({
@@ -168,12 +167,6 @@ const ModernDashboard = ({
     }
   };
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await fetchDashboardData(true);
-    setRefreshing(false);
-  };
-
   const showNotification = (message, type = 'info') => {
     setNotification({ message, type });
     setTimeout(() => setNotification({ message: '', type: '' }), 4000);
@@ -309,19 +302,11 @@ const ModernDashboard = ({
         onClose={() => setNotification({ message: '', type: '' })}
       />
 
-      {/* Dashboard header: last-updated indicator + manual refresh */}
-      <div className="flex items-center justify-between px-md py-sm" style={{ gap: 'var(--spacing-md)' }}>
+      {/* Dashboard header: last-updated indicator - data refreshes live in the background every 60s */}
+      <div className="flex items-center px-md py-sm" style={{ gap: 'var(--spacing-md)' }}>
         <span className="text-xs text-muted">
           {lastUpdated ? `Last updated ${lastUpdated.toLocaleTimeString()}` : 'Loading…'}
         </span>
-        <button
-          className="px-sm py-xs bg-primary-gradient text-white rounded-sm text-xs hover-lift transition"
-          onClick={handleRefresh}
-          disabled={refreshing}
-          title="Refresh dashboard data"
-        >
-          {refreshing ? 'Refreshing…' : '↻ Refresh'}
-        </button>
       </div>
 
       {/* Dashboard Grid */}

@@ -14,7 +14,7 @@ async function hashPassword(password) {
         const hashedPassword = await bcrypt.hash(password, salt);
         return hashedPassword;
     } catch (error) {
-        throw new Error('Error hashing password');
+        throw new Error(`Error hashing password: ${error.message}`);
     }
 }
 
@@ -29,7 +29,7 @@ async function verifyPassword(password, hashedPassword) {
         const isMatch = await bcrypt.compare(password, hashedPassword);
         return isMatch;
     } catch (error) {
-        throw new Error('Error verifying password');
+        throw new Error(`Error verifying password: ${error.message}`);
     }
 }
 

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const logger = require('../utils/logger');
+const { verifyAdminCredentials } = require('../db/queries');
 require('dotenv').config();
 
 const SECRET_KEY = process.env.JWT_SECRET; // Guaranteed set by the secrets bootstrap in server.js
@@ -66,6 +67,28 @@ router.post('/authenticate', verifyApiKey, (req, res) => {
   } catch (error) {
     logger.error('Remote authentication failed:', error);
     res.status(500).json({ error: 'Authentication failed' });
+  }
+});
+
+// Verify hub-local admin credentials on behalf of a remote instance's login
+// screen. Returns a plain valid/invalid result rather than a token - each
+// instance mints and verifies its own JWT locally (JWT_SECRET is per-instance,
+// so a token issued here wouldn't validate on the remote side anyway).
+router.post('/verify-credentials', verifyApiKey, async (req, res) => {
+  const { AdminID, password } = req.body;
+  if (!AdminID || !password) {
+    return res.status(400).json({ valid: false, message: 'AdminID and password required' });
+  }
+
+  try {
+    const user = await verifyAdminCredentials(AdminID, password);
+    if (!user) {
+      return res.status(401).json({ valid: false });
+    }
+    res.json({ valid: true, AdminID: user.AdminID, displayName: user.DisplayName || user.AdminID });
+  } catch (error) {
+    logger.error('Remote API: verify-credentials failed:', error);
+    res.status(500).json({ valid: false, message: 'Internal error' });
   }
 });
 

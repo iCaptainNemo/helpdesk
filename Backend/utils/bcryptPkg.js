@@ -3,15 +3,35 @@
  * Bypasses node-pre-gyp and directly loads the native binary
  */
 
-const path = require('path');
-
 let bindings;
 
 // Initialize bcrypt bindings for pkg environment
 if (process.pkg) {
-    // In pkg environment, directly load the native binary from bundled assets
-    const nativePath = path.join(__dirname, '../node_modules/bcrypt/lib/binding/napi-v3/bcrypt_lib.node');
-    bindings = require(nativePath);
+    // In pkg environment, directly load the native binary from bundled assets.
+    // pkg's native-module (.node) bundler only extracts/rewires a require() whose
+    // argument is a bare string literal at compile time - not a variable, and not
+    // even path.join(__dirname, ...) (pkg's own build warning explicitly asks for
+    // "a string literal as an argument for require"). The previous
+    // `const nativePath = path.join(...); require(nativePath)` shape was invisible
+    // to that scanner, so the .node file never got extracted.
+    const native = require('../node_modules/bcrypt/lib/binding/napi-v3/bcrypt_lib.node');
+
+    // The raw .node addon only exposes the low-level C++ binding API
+    // (snake_case: gen_salt_sync/encrypt_sync/compare_sync) - the camelCase
+    // genSaltSync/hashSync/compareSync surface normally comes from the `bcrypt`
+    // npm package's own lib/bcrypt.js wrapper, which we bypass here to avoid
+    // node-pre-gyp. Adapt to that same camelCase shape so the rest of this file
+    // doesn't need to know which mode loaded it. (This mismatch is why this
+    // codepath threw "Error hashing password" - bindings.genSaltSync was simply
+    // undefined on the raw addon.)
+    bindings = {
+        // gen_salt_sync's real signature is (minor, rounds, randomBytes) - matched
+        // against the `bcrypt` npm package's own lib/bcrypt.js, the authoritative
+        // source for this native binding's calling convention.
+        genSaltSync: (rounds, minor) => native.gen_salt_sync(minor || 'b', rounds, crypto.randomBytes(16)),
+        hashSync: (data, salt) => native.encrypt_sync(data, salt),
+        compareSync: (data, hash) => native.compare_sync(data, hash)
+    };
 } else {
     // Development environment - use normal bcrypt
     bindings = require('bcrypt');

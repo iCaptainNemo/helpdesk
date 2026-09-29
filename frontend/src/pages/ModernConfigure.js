@@ -1,19 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiGet, apiPost } from '../utils/api';
+import { apiGet, apiPost, apiPut, apiDelete } from '../utils/api';
 import '../styles/theme.css';
 import '../styles/grid.css';
 import ServerManager from '../components/ServerManager';
 
 const ModernConfigure = ({ permissions }) => {
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('system');
+    // Remote-mode users only get 'manage_deployment' (their own hub connection
+    // settings) - they can reach this page but only the Application tab; the
+    // rest of Configure (Users/System/Infrastructure) stays hub-only.
+    const hasFullConfigAccess = Boolean(permissions && permissions.includes('access_configure_page'));
+    const [activeTab, setActiveTab] = useState(() => (hasFullConfigAccess ? 'system' : 'application'));
     const [debugLogging, setDebugLogging] = useState(false);
     const [verboseLogging, setVerboseLogging] = useState(false);
     const [users, setUsers] = useState([]);
-    const [roles, setRoles] = useState([]);
+    const [deploymentMode, setDeploymentMode] = useState('local');
     const [permissionsList, setPermissionsList] = useState([]);
-    const [newUser, setNewUser] = useState({ AdminID: '', roleID: '' });
+    const [newUser, setNewUser] = useState({ AdminID: '', password: '', displayName: '' });
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -26,24 +30,24 @@ const ModernConfigure = ({ permissions }) => {
             return;
         }
 
-        if (!permissions || !permissions.includes('access_configure_page')) {
+        if (!permissions || (!hasFullConfigAccess && !permissions.includes('manage_deployment'))) {
             console.warn('Access denied to configuration page. Redirecting to dashboard.');
             navigate('/dashboard');
             return;
         }
 
         loadAllData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [permissions, navigate]);
 
     const loadAllData = async () => {
         setLoading(true);
         try {
-            await Promise.all([
-                loadLoggingSettings(),
-                loadUsers(),
-                loadRoles(),
-                loadPermissions()
-            ]);
+            const loaders = [loadDeploymentMode()];
+            if (hasFullConfigAccess) {
+                loaders.push(loadLoggingSettings(), loadUsers(), loadPermissions());
+            }
+            await Promise.all(loaders);
         } catch (error) {
             setError('Failed to load configuration data');
             console.error('Error loading configuration:', error);
@@ -71,12 +75,12 @@ const ModernConfigure = ({ permissions }) => {
         }
     };
 
-    const loadRoles = async () => {
+    const loadDeploymentMode = async () => {
         try {
-            const data = await apiGet('/api/roles');
-            setRoles(Array.isArray(data) ? data : []);
+            const data = await apiGet('/api/setup/status');
+            setDeploymentMode(data?.details?.mode || 'local');
         } catch (error) {
-            console.error('Error loading roles:', error);
+            console.error('Error loading deployment mode:', error);
         }
     };
 
@@ -100,24 +104,26 @@ const ModernConfigure = ({ permissions }) => {
         }
     };
 
-    const handleRoleChange = async (userId, roleId) => {
-        try {
-            await apiPost('/api/roles/assign', { adminID: userId, roleID: roleId });
-            setUsers(users.map(user => user.AdminID === userId ? { ...user, roleID: roleId } : user));
-        } catch (error) {
-            console.error('Error updating user role:', error);
-        }
-    };
-
     const handleAddUser = async () => {
-        if (!newUser.AdminID.trim()) return;
+        if (!newUser.AdminID.trim() || !newUser.password) return;
 
         try {
             const data = await apiPost('/api/users', newUser);
             setUsers([...users, data]);
-            setNewUser({ AdminID: '', roleID: '' });
+            setNewUser({ AdminID: '', password: '', displayName: '' });
         } catch (error) {
             console.error('Error adding new user:', error);
+        }
+    };
+
+    const handleRemoveUser = async (adminID) => {
+        if (!window.confirm(`Remove user "${adminID}"?`)) return;
+
+        try {
+            await apiDelete(`/api/users/${encodeURIComponent(adminID)}`);
+            setUsers(users.filter(user => user.AdminID !== adminID));
+        } catch (error) {
+            console.error('Error removing user:', error);
         }
     };
 
@@ -125,12 +131,14 @@ const ModernConfigure = ({ permissions }) => {
         user.AdminID.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const tabs = [
-        { id: 'system', label: 'System Settings', icon: '⚙️' },
-        { id: 'users', label: 'User Management', icon: '👥' },
-        { id: 'infrastructure', label: 'Infrastructure', icon: '🖥️' },
-        { id: 'application', label: 'Application', icon: '📱' }
-    ];
+    const tabs = hasFullConfigAccess
+        ? [
+            { id: 'system', label: 'System Settings', icon: '⚙️' },
+            { id: 'users', label: 'User Management', icon: '👥' },
+            { id: 'infrastructure', label: 'Infrastructure', icon: '🖥️' },
+            { id: 'application', label: 'Application', icon: '📱' }
+        ]
+        : [{ id: 'application', label: 'Application', icon: '📱' }];
 
     if (loading) {
         return (
@@ -232,12 +240,12 @@ const ModernConfigure = ({ permissions }) => {
                 )}
 
                 {activeTab === 'users' && (
-                    <UserManagement 
+                    <UserManagement
                         users={filteredUsers}
-                        roles={roles}
+                        deploymentMode={deploymentMode}
                         searchTerm={searchTerm}
                         onSearchChange={setSearchTerm}
-                        onRoleChange={handleRoleChange}
+                        onRemoveUser={handleRemoveUser}
                         newUser={newUser}
                         onNewUserChange={setNewUser}
                         onAddUser={handleAddUser}
@@ -304,90 +312,122 @@ const SystemSettings = ({ debugLogging, verboseLogging, onLoggingToggle }) => (
 );
 
 // User Management Component
-const UserManagement = ({ users, roles, searchTerm, onSearchChange, onRoleChange, newUser, onNewUserChange, onAddUser }) => (
+const UserManagement = ({ users, deploymentMode, searchTerm, onSearchChange, onRemoveUser, newUser, onNewUserChange, onAddUser }) => (
     <div className="user-management">
         <div className="grid" style={{ gridTemplateColumns: '1fr', gap: 'var(--spacing-lg)' }}>
-            {/* Add User Card */}
-            <div className="dashboard-card">
-                <div className="card-header">
-                    <h3 className="card-title">Add New User</h3>
-                    <p className="card-subtitle">Grant system access to new administrators</p>
-                </div>
-                <div className="card-content">
-                    <div style={{ display: 'flex', gap: 'var(--spacing-md)', alignItems: 'flex-end' }}>
-                        <div style={{ flex: 1 }}>
-                            <label style={{ 
-                                display: 'block', 
-                                marginBottom: 'var(--spacing-xs)', 
-                                color: 'var(--text-secondary)',
-                                fontSize: 'var(--font-size-sm)'
-                            }}>
-                                Admin ID
-                            </label>
-                            <input
-                                type="text"
-                                value={newUser.AdminID}
-                                onChange={(e) => onNewUserChange({ ...newUser, AdminID: e.target.value })}
-                                placeholder="Enter admin username"
+            {/* Add User Card - hub (local mode) only; remote instances authenticate through the hub */}
+            {deploymentMode === 'local' ? (
+                <div className="dashboard-card">
+                    <div className="card-header">
+                        <h3 className="card-title">Add New User</h3>
+                        <p className="card-subtitle">Grant system access to new administrators</p>
+                    </div>
+                    <div className="card-content">
+                        <div style={{ display: 'flex', gap: 'var(--spacing-md)', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                            <div style={{ flex: 1, minWidth: '160px' }}>
+                                <label style={{
+                                    display: 'block',
+                                    marginBottom: 'var(--spacing-xs)',
+                                    color: 'var(--text-secondary)',
+                                    fontSize: 'var(--font-size-sm)'
+                                }}>
+                                    Admin ID
+                                </label>
+                                <input
+                                    type="text"
+                                    value={newUser.AdminID}
+                                    onChange={(e) => onNewUserChange({ ...newUser, AdminID: e.target.value })}
+                                    placeholder="Enter admin username"
+                                    style={{
+                                        width: '100%',
+                                        padding: 'var(--spacing-sm)',
+                                        background: 'var(--bg-card)',
+                                        border: '1px solid var(--border-primary)',
+                                        borderRadius: 'var(--border-radius-sm)',
+                                        color: 'var(--text-primary)',
+                                        fontSize: 'var(--font-size-md)'
+                                    }}
+                                />
+                            </div>
+                            <div style={{ flex: 1, minWidth: '160px' }}>
+                                <label style={{
+                                    display: 'block',
+                                    marginBottom: 'var(--spacing-xs)',
+                                    color: 'var(--text-secondary)',
+                                    fontSize: 'var(--font-size-sm)'
+                                }}>
+                                    Password
+                                </label>
+                                <input
+                                    type="password"
+                                    value={newUser.password}
+                                    onChange={(e) => onNewUserChange({ ...newUser, password: e.target.value })}
+                                    placeholder="Enter password"
+                                    style={{
+                                        width: '100%',
+                                        padding: 'var(--spacing-sm)',
+                                        background: 'var(--bg-card)',
+                                        border: '1px solid var(--border-primary)',
+                                        borderRadius: 'var(--border-radius-sm)',
+                                        color: 'var(--text-primary)',
+                                        fontSize: 'var(--font-size-md)'
+                                    }}
+                                />
+                            </div>
+                            <div style={{ flex: 1, minWidth: '160px' }}>
+                                <label style={{
+                                    display: 'block',
+                                    marginBottom: 'var(--spacing-xs)',
+                                    color: 'var(--text-secondary)',
+                                    fontSize: 'var(--font-size-sm)'
+                                }}>
+                                    Display Name (optional)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={newUser.displayName}
+                                    onChange={(e) => onNewUserChange({ ...newUser, displayName: e.target.value })}
+                                    placeholder="Enter display name"
+                                    style={{
+                                        width: '100%',
+                                        padding: 'var(--spacing-sm)',
+                                        background: 'var(--bg-card)',
+                                        border: '1px solid var(--border-primary)',
+                                        borderRadius: 'var(--border-radius-sm)',
+                                        color: 'var(--text-primary)',
+                                        fontSize: 'var(--font-size-md)'
+                                    }}
+                                />
+                            </div>
+                            <button
+                                onClick={onAddUser}
+                                disabled={!newUser.AdminID.trim() || !newUser.password}
                                 style={{
-                                    width: '100%',
-                                    padding: 'var(--spacing-sm)',
-                                    background: 'var(--bg-card)',
-                                    border: '1px solid var(--border-primary)',
+                                    padding: 'var(--spacing-sm) var(--spacing-lg)',
+                                    background: (newUser.AdminID.trim() && newUser.password) ? 'var(--accent-blue)' : 'var(--bg-tertiary)',
+                                    color: 'white',
+                                    border: 'none',
                                     borderRadius: 'var(--border-radius-sm)',
-                                    color: 'var(--text-primary)',
-                                    fontSize: 'var(--font-size-md)'
-                                }}
-                            />
-                        </div>
-                        <div style={{ flex: 1 }}>
-                            <label style={{ 
-                                display: 'block', 
-                                marginBottom: 'var(--spacing-xs)', 
-                                color: 'var(--text-secondary)',
-                                fontSize: 'var(--font-size-sm)'
-                            }}>
-                                Role
-                            </label>
-                            <select
-                                value={newUser.roleID}
-                                onChange={(e) => onNewUserChange({ ...newUser, roleID: e.target.value })}
-                                style={{
-                                    width: '100%',
-                                    padding: 'var(--spacing-sm)',
-                                    background: 'var(--bg-card)',
-                                    border: '1px solid var(--border-primary)',
-                                    borderRadius: 'var(--border-radius-sm)',
-                                    color: 'var(--text-primary)',
-                                    fontSize: 'var(--font-size-md)'
+                                    cursor: (newUser.AdminID.trim() && newUser.password) ? 'pointer' : 'not-allowed',
+                                    fontSize: 'var(--font-size-md)',
+                                    fontWeight: 'var(--font-weight-semibold)',
+                                    transition: 'var(--transition-fast)'
                                 }}
                             >
-                                <option value="">Select Role</option>
-                                {roles.map(role => (
-                                    <option key={role.RoleID} value={role.RoleID}>{role.RoleName}</option>
-                                ))}
-                            </select>
+                                Add User
+                            </button>
                         </div>
-                        <button
-                            onClick={onAddUser}
-                            disabled={!newUser.AdminID.trim()}
-                            style={{
-                                padding: 'var(--spacing-sm) var(--spacing-lg)',
-                                background: newUser.AdminID.trim() ? 'var(--accent-blue)' : 'var(--bg-tertiary)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: 'var(--border-radius-sm)',
-                                cursor: newUser.AdminID.trim() ? 'pointer' : 'not-allowed',
-                                fontSize: 'var(--font-size-md)',
-                                fontWeight: 'var(--font-weight-semibold)',
-                                transition: 'var(--transition-fast)'
-                            }}
-                        >
-                            Add User
-                        </button>
                     </div>
                 </div>
-            </div>
+            ) : (
+                <div className="dashboard-card">
+                    <div className="card-content">
+                        <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
+                            User management happens on the hub (local mode) instance. Ask your administrator to add or remove logins there.
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {/* Users Directory Card */}
             <div className="dashboard-card">
@@ -417,18 +457,18 @@ const UserManagement = ({ users, roles, searchTerm, onSearchChange, onRoleChange
                 <div className="card-content">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
                         {users.map(user => (
-                            <UserCard 
-                                key={user.AdminID} 
-                                user={user} 
-                                roles={roles}
-                                onRoleChange={onRoleChange}
+                            <UserCard
+                                key={user.AdminID}
+                                user={user}
+                                canRemove={deploymentMode === 'local'}
+                                onRemove={onRemoveUser}
                             />
                         ))}
                         {users.length === 0 && (
-                            <div style={{ 
-                                textAlign: 'center', 
-                                padding: 'var(--spacing-xl)', 
-                                color: 'var(--text-secondary)' 
+                            <div style={{
+                                textAlign: 'center',
+                                padding: 'var(--spacing-xl)',
+                                color: 'var(--text-secondary)'
                             }}>
                                 No users found
                             </div>
@@ -455,26 +495,314 @@ const InfrastructureManagement = () => (
     </div>
 );
 
-// Application Settings Component
-const ApplicationSettings = () => (
-    <div className="application-settings">
-        <div className="dashboard-card">
-            <div className="card-header">
-                <h3 className="card-title">Application Settings</h3>
-                <p className="card-subtitle">Configure application behavior</p>
-            </div>
-            <div className="card-content">
-                <div style={{ 
-                    padding: 'var(--spacing-xl)', 
-                    textAlign: 'center', 
-                    color: 'var(--text-secondary)' 
-                }}>
-                    Application settings will be available in future updates
+// Application Settings Component - deployment mode + hub connection, editable
+// after the initial setup wizard (see Backend/routes/configure.js's
+// /deployment endpoints). Changes take effect live, no restart needed.
+const appSettingsStyles = {
+    label: {
+        display: 'block',
+        marginBottom: 'var(--spacing-xs)',
+        color: 'var(--text-secondary)',
+        fontSize: 'var(--font-size-sm)'
+    },
+    input: {
+        width: '100%',
+        padding: 'var(--spacing-sm)',
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-primary)',
+        borderRadius: 'var(--border-radius-sm)',
+        color: 'var(--text-primary)',
+        fontSize: 'var(--font-size-md)'
+    },
+    modeButton: (active) => ({
+        padding: 'var(--spacing-sm) var(--spacing-lg)',
+        background: active ? 'var(--accent-blue)' : 'transparent',
+        color: active ? 'white' : 'var(--text-secondary)',
+        border: active ? 'none' : '1px solid var(--border-primary)',
+        borderRadius: 'var(--border-radius-md)',
+        cursor: 'pointer',
+        fontSize: 'var(--font-size-md)',
+        fontWeight: active ? 'var(--font-weight-semibold)' : 'normal',
+        transition: 'var(--transition-fast)'
+    }),
+    primaryButton: (enabled) => ({
+        padding: 'var(--spacing-sm) var(--spacing-lg)',
+        background: enabled ? 'var(--accent-blue)' : 'var(--bg-tertiary)',
+        color: 'white',
+        border: 'none',
+        borderRadius: 'var(--border-radius-sm)',
+        cursor: enabled ? 'pointer' : 'not-allowed',
+        fontSize: 'var(--font-size-md)',
+        fontWeight: 'var(--font-weight-semibold)',
+        transition: 'var(--transition-fast)'
+    }),
+    secondaryButton: {
+        padding: 'var(--spacing-sm) var(--spacing-lg)',
+        background: 'transparent',
+        color: 'var(--text-primary)',
+        border: '1px solid var(--border-primary)',
+        borderRadius: 'var(--border-radius-sm)',
+        cursor: 'pointer',
+        fontSize: 'var(--font-size-md)'
+    }
+};
+
+const ApplicationSettings = () => {
+    const [loading, setLoading] = useState(true);
+    const [mode, setMode] = useState('local');
+    const [hasLocalAdmin, setHasLocalAdmin] = useState(true);
+    const [remoteServerUrl, setRemoteServerUrl] = useState('');
+    const [apiKey, setApiKey] = useState('');
+    const [adminUsername, setAdminUsername] = useState('');
+    const [adminPassword, setAdminPassword] = useState('');
+    const [testResult, setTestResult] = useState(null);
+    const [testing, setTesting] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [regenerating, setRegenerating] = useState(false);
+    const [message, setMessage] = useState(null);
+
+    useEffect(() => {
+        loadDeployment();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const loadDeployment = async () => {
+        setLoading(true);
+        try {
+            const data = await apiGet('/api/deployment');
+            setMode(data.mode || 'local');
+            setRemoteServerUrl(data.remoteServerUrl || '');
+            setApiKey(data.apiKey || '');
+            setHasLocalAdmin(data.hasLocalAdmin);
+        } catch (error) {
+            console.error('Error loading deployment settings:', error);
+            setMessage({ type: 'error', text: 'Failed to load deployment settings' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleModeChange = async (newMode) => {
+        if (newMode === mode) return;
+        setMode(newMode);
+        setTestResult(null);
+        setMessage(null);
+
+        if (newMode === 'local' && !hasLocalAdmin && !adminUsername) {
+            try {
+                const sysInfo = await apiGet('/api/setup/system-info');
+                setAdminUsername(sysInfo.systemUsername || '');
+            } catch (error) {
+                console.error('Error loading system info:', error);
+            }
+        }
+    };
+
+    const handleTestConnection = async () => {
+        if (!remoteServerUrl.trim() || !apiKey.trim()) {
+            setMessage({ type: 'error', text: 'Enter a server URL and API key first' });
+            return;
+        }
+        setTesting(true);
+        setMessage(null);
+        try {
+            const result = await apiPost('/api/deployment/test-connection', { remoteServerUrl, apiKey });
+            setTestResult(result);
+        } catch (error) {
+            setTestResult({ reachable: false, validKey: false, message: 'Test request failed' });
+        } finally {
+            setTesting(false);
+        }
+    };
+
+    const handleSave = async () => {
+        setSaving(true);
+        setMessage(null);
+        try {
+            const payload = { mode };
+            if (mode === 'remote') {
+                payload.remoteServerUrl = remoteServerUrl;
+                payload.apiKey = apiKey;
+            } else if (!hasLocalAdmin) {
+                payload.adminUsername = adminUsername;
+                payload.adminPassword = adminPassword;
+            }
+
+            await apiPut('/api/deployment', payload);
+            setMessage({ type: 'success', text: 'Saved - the change is live immediately, no restart needed.' });
+            setAdminPassword('');
+            await loadDeployment();
+        } catch (error) {
+            setMessage({ type: 'error', text: error.message || 'Failed to save deployment settings' });
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleRegenerateKey = async () => {
+        if (!window.confirm('Regenerating the API key will disconnect every remote instance until they are given the new key. Continue?')) {
+            return;
+        }
+        setRegenerating(true);
+        setMessage(null);
+        try {
+            const result = await apiPost('/api/deployment/regenerate-api-key');
+            setApiKey(result.apiKey);
+            setMessage({ type: 'success', text: 'API key regenerated. Update every remote instance with the new key.' });
+        } catch (error) {
+            setMessage({ type: 'error', text: 'Failed to regenerate the API key' });
+        } finally {
+            setRegenerating(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="application-settings">
+                <div className="dashboard-card">
+                    <div className="card-content" style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: 'var(--spacing-xl)' }}>
+                        Loading deployment settings...
+                    </div>
                 </div>
             </div>
+        );
+    }
+
+    const remoteConnectionVerified = testResult && testResult.reachable && testResult.validKey;
+    const canSave = mode === 'remote'
+        ? Boolean(remoteConnectionVerified)
+        : (hasLocalAdmin || (adminUsername.trim() && adminPassword));
+
+    return (
+        <div className="application-settings">
+            <div className="dashboard-card">
+                <div className="card-header">
+                    <h3 className="card-title">Deployment Mode</h3>
+                    <p className="card-subtitle">Run as the hub (local) with your own database, or connect to another instance (remote)</p>
+                </div>
+                <div className="card-content">
+                    <div style={{ display: 'flex', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-lg)' }}>
+                        <button style={appSettingsStyles.modeButton(mode === 'local')} onClick={() => handleModeChange('local')}>
+                            Local (Hub)
+                        </button>
+                        <button style={appSettingsStyles.modeButton(mode === 'remote')} onClick={() => handleModeChange('remote')}>
+                            Remote (Satellite)
+                        </button>
+                    </div>
+
+                    {mode === 'remote' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+                            <div>
+                                <label style={appSettingsStyles.label}>Hub Server URL</label>
+                                <input
+                                    type="text"
+                                    value={remoteServerUrl}
+                                    onChange={(e) => { setRemoteServerUrl(e.target.value); setTestResult(null); }}
+                                    placeholder="http://172.25.129.95:3001"
+                                    style={appSettingsStyles.input}
+                                />
+                            </div>
+                            <div>
+                                <label style={appSettingsStyles.label}>API Key</label>
+                                <input
+                                    type="text"
+                                    value={apiKey}
+                                    onChange={(e) => { setApiKey(e.target.value); setTestResult(null); }}
+                                    placeholder="Provided by the hub administrator"
+                                    style={appSettingsStyles.input}
+                                />
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
+                                <button style={appSettingsStyles.secondaryButton} onClick={handleTestConnection} disabled={testing}>
+                                    {testing ? 'Testing...' : 'Test Connection'}
+                                </button>
+                                {testResult && (
+                                    <span style={{
+                                        color: remoteConnectionVerified ? 'var(--accent-green, #4caf50)' : 'var(--accent-red, #e05252)',
+                                        fontSize: 'var(--font-size-sm)'
+                                    }}>
+                                        {remoteConnectionVerified ? 'Connected successfully' : (testResult.message || 'Connection failed')}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {mode === 'local' && !hasLocalAdmin && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)', margin: 0 }}>
+                                This instance has no local admin account yet - create one to become a hub.
+                            </p>
+                            <div>
+                                <label style={appSettingsStyles.label}>Admin Username</label>
+                                <input
+                                    type="text"
+                                    value={adminUsername}
+                                    onChange={(e) => setAdminUsername(e.target.value)}
+                                    style={appSettingsStyles.input}
+                                />
+                            </div>
+                            <div>
+                                <label style={appSettingsStyles.label}>Admin Password</label>
+                                <input
+                                    type="password"
+                                    value={adminPassword}
+                                    onChange={(e) => setAdminPassword(e.target.value)}
+                                    style={appSettingsStyles.input}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {mode === 'local' && hasLocalAdmin && (
+                        <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)', margin: 0 }}>
+                            This instance already has a local admin account - switching to local mode just flips the mode.
+                        </p>
+                    )}
+
+                    <div style={{ marginTop: 'var(--spacing-lg)', display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
+                        <button style={appSettingsStyles.primaryButton(canSave && !saving)} onClick={handleSave} disabled={!canSave || saving}>
+                            {saving ? 'Saving...' : 'Save'}
+                        </button>
+                        {message && (
+                            <span style={{
+                                color: message.type === 'success' ? 'var(--accent-green, #4caf50)' : 'var(--accent-red, #e05252)',
+                                fontSize: 'var(--font-size-sm)'
+                            }}>
+                                {message.text}
+                            </span>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {mode === 'local' && (
+                <div className="dashboard-card" style={{ marginTop: 'var(--spacing-lg)' }}>
+                    <div className="card-header">
+                        <h3 className="card-title">Hub API Key</h3>
+                        <p className="card-subtitle">Remote instances must present this key to connect</p>
+                    </div>
+                    <div className="card-content">
+                        <div style={{ display: 'flex', gap: 'var(--spacing-md)', alignItems: 'center' }}>
+                            <code style={{
+                                padding: 'var(--spacing-sm)',
+                                background: 'var(--bg-secondary)',
+                                borderRadius: 'var(--border-radius-sm)',
+                                flex: 1,
+                                wordBreak: 'break-all'
+                            }}>
+                                {apiKey || '(not set)'}
+                            </code>
+                            <button style={appSettingsStyles.secondaryButton} onClick={handleRegenerateKey} disabled={regenerating}>
+                                {regenerating ? 'Regenerating...' : 'Regenerate'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
-    </div>
-);
+    );
+};
 
 // Helper Components
 const ToggleSetting = ({ label, description, checked, onChange }) => (
@@ -553,7 +881,7 @@ const StatusItem = ({ label, status }) => (
     </div>
 );
 
-const UserCard = ({ user, roles, onRoleChange }) => (
+const UserCard = ({ user, canRemove, onRemove }) => (
     <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -564,40 +892,37 @@ const UserCard = ({ user, roles, onRoleChange }) => (
         border: '1px solid var(--border-secondary)'
     }}>
         <div style={{ flex: 1 }}>
-            <div style={{ 
-                color: 'var(--text-primary)', 
+            <div style={{
+                color: 'var(--text-primary)',
                 fontWeight: 'var(--font-weight-medium)',
                 marginBottom: 'var(--spacing-xs)'
             }}>
-                {user.AdminID}
+                {user.DisplayName || user.AdminID}
             </div>
-            <div style={{ 
-                color: 'var(--text-secondary)', 
-                fontSize: 'var(--font-size-sm)' 
+            <div style={{
+                color: 'var(--text-secondary)',
+                fontSize: 'var(--font-size-sm)'
             }}>
-                Permissions: {(user.permissions || []).join(', ') || 'None'}
+                {user.AdminID}{user.CreatedAt ? ` · added ${user.CreatedAt}` : ''}
             </div>
         </div>
-        <div style={{ minWidth: '200px', marginLeft: 'var(--spacing-md)' }}>
-            <select
-                value={user.roles?.length > 0 ? user.roles[0].RoleID : ''}
-                onChange={(e) => onRoleChange(user.AdminID, e.target.value)}
+        {canRemove && (
+            <button
+                onClick={() => onRemove(user.AdminID)}
                 style={{
-                    width: '100%',
-                    padding: 'var(--spacing-xs) var(--spacing-sm)',
-                    background: 'var(--bg-card)',
-                    border: '1px solid var(--border-primary)',
+                    padding: 'var(--spacing-xs) var(--spacing-md)',
+                    background: 'transparent',
+                    color: 'var(--accent-red, #e05252)',
+                    border: '1px solid var(--accent-red, #e05252)',
                     borderRadius: 'var(--border-radius-sm)',
-                    color: 'var(--text-primary)',
-                    fontSize: 'var(--font-size-sm)'
+                    cursor: 'pointer',
+                    fontSize: 'var(--font-size-sm)',
+                    marginLeft: 'var(--spacing-md)'
                 }}
             >
-                <option value="">Select Role</option>
-                {roles.map(role => (
-                    <option key={role.RoleID} value={role.RoleID}>{role.RoleName}</option>
-                ))}
-            </select>
-        </div>
+                Remove
+            </button>
+        )}
     </div>
 );
 

@@ -205,10 +205,19 @@ function HeaderWrapper({ AdminID, onLogout }) {
 }
 
 function AuthenticatedLayout({ AdminID, onLogout, permissions, children }) {
-  const [isTerminalMinimized, setIsTerminalMinimized] = useState(false);
+  // Default to minimized on a first visit (no stored preference yet); once the
+  // user toggles it, that choice persists across page refreshes.
+  const [isTerminalMinimized, setIsTerminalMinimized] = useState(() => {
+    const stored = localStorage.getItem('terminalMinimized');
+    return stored === null ? true : stored === 'true';
+  });
 
   const toggleTerminal = () => {
-    setIsTerminalMinimized(!isTerminalMinimized);
+    setIsTerminalMinimized(prev => {
+      const next = !prev;
+      localStorage.setItem('terminalMinimized', String(next));
+      return next;
+    });
   };
 
   return (
@@ -220,16 +229,10 @@ function AuthenticatedLayout({ AdminID, onLogout, permissions, children }) {
           {children}
         </div>
       </div>
+      {/* Terminal always stays mounted - only its visibility toggles - so the
+          xterm instance/socket/scrollback survive minimizing (see Terminal.js) */}
       <div className={`app-terminal-section ${isTerminalMinimized ? 'minimized' : ''}`}>
-        {isTerminalMinimized ? (
-          <div className="terminal-minimized-bar" onClick={toggleTerminal}>
-            <span className="terminal-icon">⚡</span>
-            <span>Live Terminal (Click to expand)</span>
-            <span className="expand-icon">▲</span>
-          </div>
-        ) : (
-          <Terminal onToggle={toggleTerminal} />
-        )}
+        <Terminal onToggle={toggleTerminal} isMinimized={isTerminalMinimized} />
       </div>
     </div>
   );

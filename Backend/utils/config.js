@@ -1,7 +1,7 @@
 const config = {
     logging: {
-        debug: true,
-        verbose: true,
+        debug: false,
+        verbose: false,
     },
 };
 
