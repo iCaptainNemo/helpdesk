@@ -30,68 +30,74 @@ router.get('/system-info', (req, res) => {
   }
 });
 
+// Shared "is this instance already configured" check - used both by /status
+// (informational) and as a guard on /wizard and the legacy / endpoint (below).
+// Those write endpoints are intentionally unauthenticated (there's no admin
+// account to authenticate with on a brand-new instance yet), but that also
+// means without this guard, anyone reachable on the network (this server binds
+// 0.0.0.0 for remote-mode agents) could re-run setup on an already-configured
+// instance at any time and overwrite ADMIN_USERNAME/PASSWORD, JWT_SECRET, etc.
+function getSetupStatus() {
+  const envFilePath = process.pkg
+    ? path.join(process.cwd(), '.env')
+    : path.join(__dirname, '../.env');
+  const setupConfigPath = process.pkg
+    ? path.join(process.cwd(), 'setupConfig.js')
+    : path.join(__dirname, '../../setupConfig.js');
+
+  const envExists = fs.existsSync(envFilePath);
+  const setupConfigExists = fs.existsSync(setupConfigPath);
+
+  let configured = false;
+  let configDetails = {
+    envExists,
+    setupConfigExists,
+    mode: 'unknown',
+    hasRequiredFields: false
+  };
+
+  if (envExists && setupConfigExists) {
+    const envContent = fs.readFileSync(envFilePath, 'utf8');
+
+    // Check for deployment mode setup (new system)
+    if (envContent.includes('DEPLOYMENT_MODE=')) {
+      const mode = envContent.match(/DEPLOYMENT_MODE=(\w+)/)?.[1] || 'unknown';
+      configDetails.mode = mode;
+
+      const hasJwtSecret = envContent.includes('JWT_SECRET=');
+      const hasSessionSecret = envContent.includes('SESSION_SECRET=');
+
+      if (mode === 'local') {
+        const hasAdminCredentials = envContent.includes('ADMIN_USERNAME=') && envContent.includes('ADMIN_PASSWORD=');
+        configured = hasJwtSecret && hasSessionSecret && hasAdminCredentials;
+        configDetails.hasRequiredFields = hasAdminCredentials;
+      } else if (mode === 'remote') {
+        const hasRemoteConfig = envContent.includes('REMOTE_SERVER_URL=') && envContent.includes('API_KEY=');
+        configured = hasJwtSecret && hasSessionSecret && hasRemoteConfig;
+        configDetails.hasRequiredFields = hasRemoteConfig;
+      }
+    } else {
+      // Legacy system - if basic configuration exists, consider it configured
+      configDetails.mode = 'legacy';
+      const hasJwtSecret = envContent.includes('JWT_SECRET=');
+      const hasSessionSecret = envContent.includes('SESSION_SECRET=');
+      const hasBackendUrl = envContent.includes('BACKEND_URL=');
+      configured = hasJwtSecret && hasSessionSecret && hasBackendUrl;
+      configDetails.hasRequiredFields = hasJwtSecret && hasSessionSecret && hasBackendUrl;
+    }
+  }
+
+  return { configured, configDetails };
+}
+
 // Check setup status
 router.get('/status', (req, res) => {
   try {
     logger.info('Setup status check requested');
-    
-    const envFilePath = process.pkg 
-      ? path.join(process.cwd(), '.env')
-      : path.join(__dirname, '../.env');
-    const setupConfigPath = process.pkg 
-      ? path.join(process.cwd(), 'setupConfig.js')
-      : path.join(__dirname, '../../setupConfig.js');
-    
-    // Check if essential files exist
-    const envExists = fs.existsSync(envFilePath);
-    const setupConfigExists = fs.existsSync(setupConfigPath);
-    
-    logger.info(`File existence check: .env=${envExists}, setupConfig=${setupConfigExists}`);
-    
-    let configured = false;
-    let configDetails = {
-      envExists,
-      setupConfigExists,
-      mode: 'unknown',
-      hasRequiredFields: false
-    };
-    
-    if (envExists && setupConfigExists) {
-      const envContent = fs.readFileSync(envFilePath, 'utf8');
-      
-      // Check for deployment mode setup (new system)
-      if (envContent.includes('DEPLOYMENT_MODE=')) {
-        const mode = envContent.match(/DEPLOYMENT_MODE=(\w+)/)?.[1] || 'unknown';
-        configDetails.mode = mode;
-        logger.info(`Found deployment mode: ${mode}`);
-        
-        const hasJwtSecret = envContent.includes('JWT_SECRET=');
-        const hasSessionSecret = envContent.includes('SESSION_SECRET=');
-        
-        if (mode === 'local') {
-          const hasAdminCredentials = envContent.includes('ADMIN_USERNAME=') && envContent.includes('ADMIN_PASSWORD=');
-          configured = hasJwtSecret && hasSessionSecret && hasAdminCredentials;
-          configDetails.hasRequiredFields = hasAdminCredentials;
-        } else if (mode === 'remote') {
-          const hasRemoteConfig = envContent.includes('REMOTE_SERVER_URL=') && envContent.includes('API_KEY=');
-          configured = hasJwtSecret && hasSessionSecret && hasRemoteConfig;
-          configDetails.hasRequiredFields = hasRemoteConfig;
-        }
-      } else {
-        // Legacy system - if basic configuration exists, consider it configured
-        configDetails.mode = 'legacy';
-        const hasJwtSecret = envContent.includes('JWT_SECRET=');
-        const hasSessionSecret = envContent.includes('SESSION_SECRET=');
-        const hasBackendUrl = envContent.includes('BACKEND_URL=');
-        configured = hasJwtSecret && hasSessionSecret && hasBackendUrl;
-        configDetails.hasRequiredFields = hasJwtSecret && hasSessionSecret && hasBackendUrl;
-        logger.info(`Legacy system detected: JWT=${hasJwtSecret}, Session=${hasSessionSecret}, Backend=${hasBackendUrl}`);
-      }
-    }
-    
+    const { configured, configDetails } = getSetupStatus();
     logger.info(`Setup status result: configured=${configured}, details:`, configDetails);
-    
-    res.json({ 
+
+    res.json({
       configured,
       details: configDetails
     });
@@ -103,6 +109,10 @@ router.get('/status', (req, res) => {
 
 // Handle wizard setup
 router.post('/wizard', async (req, res) => {
+  if (getSetupStatus().configured) {
+    return res.status(403).json({ error: 'This instance is already configured. Use Configure > Application to change deployment settings instead of re-running setup.' });
+  }
+
   try {
     const { mode, adminCredentials, remoteConnection, systemSettings } = req.body;
 
@@ -110,10 +120,17 @@ router.post('/wizard', async (req, res) => {
       ? path.join(process.cwd(), 'setupConfig.js')
       : path.join(__dirname, '../../setupConfig.js');
 
-    // Generate secure secrets if they don't exist
+    // Prefer whatever's already active in this process - server.js's
+    // ephemeral-secret bootstrap guarantees process.env.JWT_SECRET/SESSION_SECRET
+    // are set before any route (including this one) can be reached. Persisting
+    // that same value (rather than generating a fresh one here) keeps the on-disk
+    // .env in sync with what's already signing things in memory for the rest of
+    // this process's life. Generating a different secret here was the root cause
+    // of a bug where login right after the wizard would sign a JWT with one
+    // secret while every other route verified against a newly-generated one.
     const existingEnv = readEnvFile();
-    const jwtSecret = existingEnv.JWT_SECRET || generateRandomString(32);
-    const sessionSecret = existingEnv.SESSION_SECRET || generateRandomString(16);
+    const jwtSecret = process.env.JWT_SECRET || existingEnv.JWT_SECRET || generateRandomString(32);
+    const sessionSecret = process.env.SESSION_SECRET || existingEnv.SESSION_SECRET || generateRandomString(16);
 
     // Prepare environment variables based on mode
     let envVars = {
@@ -202,7 +219,11 @@ router.post('/wizard', async (req, res) => {
 
 // Original setup endpoint (kept for backward compatibility)
 router.post('/', async (req, res) => {
-  const envFilePath = process.pkg 
+  if (getSetupStatus().configured) {
+    return res.status(403).json({ error: 'This instance is already configured.' });
+  }
+
+  const envFilePath = process.pkg
     ? path.join(process.cwd(), '.env')
     : path.join(__dirname, '../.env');
   const { SUPER_ADMIN_ID, SUPER_ADMIN_PASSWORD, ...envVars } = req.body;
@@ -215,14 +236,12 @@ router.post('/', async (req, res) => {
     // Write environment variables to .env file
     fs.writeFileSync(envFilePath, envData);
 
-    // Hash the super admin password
-    const hashedPassword = await hashPassword(SUPER_ADMIN_PASSWORD);
-
-    // Create the super admin user
+    // insertOrUpdateAdminUser hashes internally - passing an already-hashed
+    // value here double-hashed it, so the stored hash never matched the real
+    // password and this account could never actually log in.
     await insertOrUpdateAdminUser({
       AdminID: SUPER_ADMIN_ID,
-      password: hashedPassword,
-      temppassword: SUPER_ADMIN_PASSWORD
+      password: SUPER_ADMIN_PASSWORD
     });
 
     res.json({ message: 'Environment variables and super admin created successfully' });

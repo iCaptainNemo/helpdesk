@@ -1,5 +1,12 @@
 const logger = require('../utils/logger');
 
+// Real bcrypt hashes look like $2a$10$<53 more chars> / $2b$.../ $2y$... - guards
+// against seeding a broken login row if .env's ADMIN_PASSWORD was ever hand-edited
+// to a plaintext value or got corrupted by an interrupted write. Without this, a
+// non-hash value gets inserted verbatim and bcrypt.compare() throws on every login
+// attempt, which auth.js surfaces as an opaque 500 instead of a clear cause.
+const BCRYPT_HASH_PATTERN = /^\$2[aby]\$\d{2}\$.{53}$/;
+
 // Seeds the AdminUsers table with the current .env ADMIN_USERNAME/ADMIN_PASSWORD
 // as the first hub login, but only if the table is still empty - preserves login
 // after upgrading an existing local-mode install with zero re-setup. ADMIN_PASSWORD
@@ -16,6 +23,11 @@ function seedAdminFromEnv(db) {
         const adminUsername = process.env.ADMIN_USERNAME;
         const adminPasswordHash = process.env.ADMIN_PASSWORD;
         if (!adminUsername || !adminPasswordHash) {
+            return;
+        }
+
+        if (!BCRYPT_HASH_PATTERN.test(adminPasswordHash)) {
+            logger.error(`[Database] ADMIN_PASSWORD in .env doesn't look like a valid bcrypt hash - skipping AdminUsers seed for ${adminUsername}. Use the setup wizard or Configure > Application to create a working admin account.`);
             return;
         }
 

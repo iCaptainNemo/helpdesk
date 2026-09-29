@@ -59,35 +59,6 @@ router.post('/', verifyToken, async (req, res) => {
             }
         }
 
-        // Handle password reset operations
-        if (scriptName === 'PasswordResetter' && params.userID && req.user?.AdminID) {
-            try {
-                // Log to RecentActions table
-                const insertQuery = `
-                    INSERT INTO RecentActions (adminID, activity, target, action_type, details, result)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                `;
-
-                const stmt = db.prepare(insertQuery);
-                stmt.run(
-                    req.user.AdminID,
-                    `Reset password for user: ${params.userID}`,
-                    params.userID,
-                    'reset_password',
-                    JSON.stringify({ userID: params.userID, scriptResult: result }),
-                    'success'
-                );
-
-                // Update user stats including LastAdminHelped
-                await incrementUserPasswordResetCount(params.userID, req.user.AdminID);
-
-                logger.info(`[Actions] Logged password reset action and updated user stats: ${params.userID} by ${req.user.AdminID}`);
-            } catch (logError) {
-                logger.error('[Actions] Error logging password reset action or updating user stats:', logError);
-                // Don't fail the request if logging fails
-            }
-        }
-        
         res.json({ message: result });
     } catch (error) {
         logger.error(`Error executing PowerShell script: ${error}`);

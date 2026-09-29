@@ -9,6 +9,15 @@ const { fetchAllAdminUsers, insertOrUpdateAdminUser } = require('../db/queries')
 const { readEnvFile, writeEnvVars } = require('../utils/envFile');
 const { hashPassword } = require('../utils/hashUtils');
 
+// Adapter names that are virtual/tunnel interfaces rather than the machine's
+// real LAN NIC - common on admin/dev machines running Docker Desktop, WSL2, or
+// a VPN client. os.networkInterfaces() key order isn't guaranteed to put the
+// real adapter first, so without this a hub admin on such a machine could copy
+// out a Docker-internal or VPN-only address that's unreachable from a
+// coworker's machine, and get a confusing "could not reach hub" instead of an
+// explanation.
+const VIRTUAL_ADAPTER_PATTERN = /virtual|vethernet|vpn|tailscale|zerotier|docker|wsl|hyper-v|loopback|\btap\b|\btun\d/i;
+
 // Best-effort LAN-reachable address for this machine, so the hub admin can copy
 // it straight into a remote instance's setup instead of guessing their own IP.
 // Falls back to whatever's in .env's BACKEND_URL if it's already a real address
@@ -22,13 +31,20 @@ function detectHubUrl(envBackendUrl) {
         return envBackendUrl;
     }
 
+    const candidates = [];
     const interfaces = os.networkInterfaces();
     for (const name of Object.keys(interfaces)) {
         for (const iface of interfaces[name] || []) {
             if (iface.family === 'IPv4' && !iface.internal) {
-                return `http://${iface.address}:${port}`;
+                candidates.push({ name, address: iface.address });
             }
         }
+    }
+
+    const preferred = candidates.find((c) => !VIRTUAL_ADAPTER_PATTERN.test(c.name));
+    const chosen = preferred || candidates[0];
+    if (chosen) {
+        return `http://${chosen.address}:${port}`;
     }
 
     return envBackendUrl || `http://localhost:${port}`;

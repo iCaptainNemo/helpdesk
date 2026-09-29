@@ -172,9 +172,20 @@ const TerminalComponent = ({ onToggle, isMinimized }) => {
             const setupData = await apiGet('/api/setup/status');
             setDeploymentMode(setupData.details?.mode || 'local');
 
-            // Connect to Socket.IO
+            // Connect to Socket.IO - the server requires an auth token to even
+            // accept the connection (the 'terminal' room is a live feed of every
+            // PowerShell command/output plus recent history on join, not
+            // something to hand out to an unauthenticated socket).
             const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
-            socket.current = io(backendUrl);
+            const authToken = localStorage.getItem('token');
+            socket.current = io(backendUrl, { auth: { token: authToken } });
+
+            socket.current.on('connect_error', (err) => {
+                setIsConnected(false);
+                if (terminalInstance.current) {
+                    terminalInstance.current.writeln(`\x1b[91m✗ Connection rejected: ${err.message}\x1b[0m`);
+                }
+            });
 
             socket.current.on('connect', () => {
                 setIsConnected(true);

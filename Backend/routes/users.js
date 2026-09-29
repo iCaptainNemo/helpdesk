@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { fetchAllAdminUsers, insertOrUpdateAdminUser, deleteAdminUser } = require('../db/queries');
+const { fetchAllAdminUsers, fetchAdminUser, insertOrUpdateAdminUser, deleteAdminUser } = require('../db/queries');
 const logger = require('../utils/logger');
 
 // Route to fetch all users
@@ -49,6 +49,15 @@ router.post('/', async (req, res) => {
     }
 
     try {
+        // AdminID is normalized case-insensitively (see insertOrUpdateAdminUser) -
+        // without this check, adding "Alice" when "alice" already exists would
+        // silently overwrite the existing account's password via ON CONFLICT
+        // instead of failing, while still returning 201 as if a new user was created.
+        const existing = await fetchAdminUser(AdminID);
+        if (existing) {
+            return res.status(409).json({ error: `A user named "${existing.AdminID}" already exists` });
+        }
+
         const result = await insertOrUpdateAdminUser({ AdminID, password, displayName });
         logger.info(`Admin user added: ${result.AdminID} by ${req.AdminID}`);
         res.status(201).json({ AdminID: result.AdminID, DisplayName: displayName || AdminID });
@@ -65,12 +74,11 @@ router.delete('/:adminID', async (req, res) => {
     }
 
     try {
-        const users = await fetchAllAdminUsers();
-        if (users.length <= 1) {
-            return res.status(400).json({ error: 'Cannot remove the last remaining admin user' });
+        const result = await deleteAdminUser(req.params.adminID);
+        if (!result.success) {
+            return res.status(400).json({ error: result.error });
         }
 
-        await deleteAdminUser(req.params.adminID);
         logger.info(`Admin user removed: ${req.params.adminID} by ${req.AdminID}`);
         res.json({ message: 'User removed successfully' });
     } catch (error) {

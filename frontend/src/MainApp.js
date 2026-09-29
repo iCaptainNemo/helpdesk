@@ -35,7 +35,7 @@ function App() {
 
   // Establish WebSocket connection
   useEffect(() => {
-    const socket = socketIOClient(ENDPOINT);
+    const socket = socketIOClient(ENDPOINT, { auth: { token: localStorage.getItem('token') } });
 
     socket.on('connect', () => {
       console.log('Connected to Socket.IO server');

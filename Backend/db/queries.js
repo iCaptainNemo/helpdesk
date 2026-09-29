@@ -155,7 +155,17 @@ async function verifyAdminCredentials(adminID, password) {
     if (!user) {
         return null;
     }
-    const isMatch = await verifyPassword(password, user.PasswordHash);
+    // A malformed stored hash (e.g. hand-edited .env, though seedAdminFromEnv now
+    // guards against that at the source) makes bcrypt.compare throw rather than
+    // return false. Treat that the same as "wrong password" - both are "invalid
+    // credentials" to the caller, not a 500, and the failure reason should never
+    // be distinguishable from the outside either way.
+    let isMatch;
+    try {
+        isMatch = await verifyPassword(password, user.PasswordHash);
+    } catch (err) {
+        return null;
+    }
     if (!isMatch) {
         return null;
     }
@@ -163,8 +173,23 @@ async function verifyAdminCredentials(adminID, password) {
     return safeUser;
 }
 
+// Atomic check-and-delete: the count check and the delete run inside one
+// synchronous SQLite transaction with no `await` in between, so two
+// near-simultaneous DELETE requests (e.g. two browser tabs) can't both pass
+// the "more than one admin left" check before either delete commits - a plain
+// separate `await fetchAllAdminUsers()` then `await deleteAdminUser()` in the
+// route had a TOCTOU race that could drop an instance to zero admins.
 async function deleteAdminUser(adminID) {
-    return executeQuery('DELETE FROM AdminUsers WHERE AdminID = ?', [adminID.toLowerCase()]);
+    const normalizedAdminID = adminID.toLowerCase();
+    const guardedDelete = db.transaction(() => {
+        const { count } = db.prepare('SELECT COUNT(*) AS count FROM AdminUsers').get();
+        if (count <= 1) {
+            return { success: false, error: 'Cannot remove the last remaining admin user' };
+        }
+        db.prepare('DELETE FROM AdminUsers WHERE AdminID = ?').run(normalizedAdminID);
+        return { success: true };
+    });
+    return guardedDelete();
 }
 
 // New functions for managing servers

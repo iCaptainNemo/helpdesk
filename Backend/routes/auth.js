@@ -8,6 +8,7 @@ const logger = require('../utils/logger'); // Import the logger
 const sessionStore = require('../utils/sessionStore'); // Import sessionStore
 const { hashPassword, verifyPassword } = require('../utils/hashUtils'); // Import password hashing and verification functions
 const { writeEnvVars } = require('../utils/envFile');
+const { isLocked, getLockRemainingMs, recordFailure, recordSuccess } = require('../utils/loginAttempts');
 require('dotenv').config(); // Load environment variables from .env file
 // JWT_SECRET/JWT_EXPIRATION are read fresh at each use site below (process.env.X),
 // not cached into a module-level const - the setup wizard can write a new
@@ -61,6 +62,12 @@ router.post('/login', sanitizeInput, async (req, res) => {
   const normalizedAdminID = AdminID.toLowerCase();
   logger.info('Received login request for AdminID:', AdminID);
 
+  if (isLocked(normalizedAdminID)) {
+    const remainingMinutes = Math.ceil(getLockRemainingMs(normalizedAdminID) / 60000);
+    logger.warn(`Login locked out for AdminID: ${normalizedAdminID} (${remainingMinutes}m remaining)`);
+    return res.status(429).json({ error: `Too many failed attempts. Try again in ${remainingMinutes} minute(s).` });
+  }
+
   try {
     const deploymentMode = process.env.DEPLOYMENT_MODE;
     let verifiedAdminID = null;
@@ -91,6 +98,7 @@ router.post('/login', sanitizeInput, async (req, res) => {
 
       if (hubRes.status === 401) {
         logger.warn(`Hub rejected credentials for AdminID: ${normalizedAdminID}`);
+        recordFailure(normalizedAdminID);
         return res.status(401).json({ error: 'Invalid credentials' });
       }
       if (!hubRes.ok) {
@@ -100,6 +108,7 @@ router.post('/login', sanitizeInput, async (req, res) => {
 
       const hubData = await hubRes.json();
       if (!hubData.valid) {
+        recordFailure(normalizedAdminID);
         return res.status(401).json({ error: 'Invalid credentials' });
       }
       verifiedAdminID = hubData.AdminID;
@@ -108,10 +117,13 @@ router.post('/login', sanitizeInput, async (req, res) => {
       const user = await verifyAdminCredentials(normalizedAdminID, password);
       if (!user) {
         logger.warn('Invalid credentials for AdminID:', normalizedAdminID);
+        recordFailure(normalizedAdminID);
         return res.status(401).json({ error: 'Invalid credentials' });
       }
       verifiedAdminID = user.AdminID;
     }
+
+    recordSuccess(normalizedAdminID);
 
     // Generate JWT token
     const token = jwt.sign({ AdminID: verifiedAdminID, sessionID: req.sessionID }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRATION || '1d' });

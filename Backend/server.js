@@ -27,6 +27,7 @@ console.log('Path loaded');
 const http = require('http');
 console.log('HTTP loaded');
 const socketIo = require('socket.io');
+const jwt = require('jsonwebtoken');
 console.log('Socket.IO loaded');
 const cors = require('cors');
 console.log('CORS loaded');
@@ -106,12 +107,34 @@ const server = http.createServer(app);
 const io = socketIo(server, {
     cors: {
         origin: [
-            process.env.FRONTEND_URL_1, 
+            process.env.FRONTEND_URL_1,
             process.env.FRONTEND_URL_2
         ], // Allow both frontend addresses
         methods: ["GET", "POST"],
         credentials: true
     }
+});
+
+// Socket.IO auth. The only real-time channel here is the 'terminal' room - a
+// live feed of every PowerShell command/output plus recent history replayed on
+// join (see utils/terminalHistory.js) - so an unauthenticated socket connection
+// is the same class of gap as an unauthenticated HTTP route (this server
+// intentionally binds 0.0.0.0 for LAN remote agents, so "reachable" isn't the
+// same as "should have access"). CORS 'origin' only constrains browser fetches;
+// it does nothing to stop a non-browser WebSocket client from connecting
+// directly, so it can't substitute for real auth here.
+io.use((socket, next) => {
+    const token = socket.handshake.auth?.token;
+    if (!token) {
+        return next(new Error('Authentication required'));
+    }
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+        if (err) {
+            return next(new Error('Invalid or expired token'));
+        }
+        socket.AdminID = decoded.AdminID;
+        next();
+    });
 });
 
 // Define allowed origins once to avoid repetition
@@ -219,14 +242,19 @@ const tabsRoute = require('./routes/tabs'); // Import cross-device tab sync rout
 const { startLedgerService } = require('./services/ledgerService'); // Import ledger service
 
 // Use routes and pass db to them
-app.use('/api/fetch-adobject', fetchADObjectRoute);
-app.use('/api/fetch-user', fetchUserRoute); // Register the fetchUser route
+// fetch-adobject, fetch-user, and check-session were missing verifyToken here
+// (every sibling data route has it) - the frontend already sends a Bearer token
+// on every call, so this closes an actually-open door (unauthenticated AD-object
+// lookups, user-stat writes, and session enumeration) rather than changing any
+// legitimate behavior.
+app.use('/api/fetch-adobject', verifyToken, fetchADObjectRoute);
+app.use('/api/fetch-user', verifyToken, fetchUserRoute); // Register the fetchUser route
 app.use('/api/auth', authRoutes); // Authentication routes
 app.use('/api/get-locked-out-users', verifyToken, getLockedOutUsersRoute); // Route to fetch locked out users
 app.use('/api/execute-script', verifyToken, verifyPermissions('execute_script'), executeScriptRoute); // Route to execute PowerShell scripts with permissions
 app.use('/api/update-locked-out-users', verifyToken, updateLockedOutUsersRoute); // Route to update locked out users
 app.use('/api/logout', logoutRoute); // Register the logout route
-app.use('/api/check-session', checkSessionRoute); // Check powershell sessions on backend
+app.use('/api/check-session', verifyToken, checkSessionRoute); // Check powershell sessions on backend
 app.use('/api/get-logs', verifyToken, getLogsRoute); // Route to fetch logs
 app.use('/api/roles', verifyToken, rolesRoute); // Route to manage roles
 app.use('/api/permissions', verifyToken, permissionsRoute); // Route to manage permissions
@@ -248,7 +276,7 @@ app.use('/api/remote', remoteApiRoute); // Register the remote API routes
 // Test data routes can DELETE from live tables — only register when explicitly
 // enabled, so the portable exe never exposes them by default in a real domain.
 if (process.env.ENABLE_TEST_DATA === 'true') {
-    app.use('/api/test-data', testDataRoute);
+    app.use('/api/test-data', verifyToken, testDataRoute);
     logger.warn('[Security] Test data routes ENABLED (ENABLE_TEST_DATA=true) — do not use in production');
 }
 app.use('/api/ledger', verifyToken, ledgerRoute); // Register ledger routes
@@ -288,12 +316,12 @@ const { getHistory } = require('./utils/terminalHistory');
 
 // Function to handle Socket.IO connection and disconnection events
 const handleSocketConnection = (socket) => {
-    logger.info('New client connected');
+    logger.info(`New client connected: ${socket.AdminID || 'unknown'}`);
 
     // Handle terminal room joining
     socket.on('join-terminal', () => {
         socket.join('terminal');
-        logger.info('Client joined terminal room');
+        logger.info(`${socket.AdminID || 'unknown'} joined terminal room`);
 
         // Replay recent backlog to this client only, before live events start
         socket.emit('terminal-history', { entries: getHistory() });

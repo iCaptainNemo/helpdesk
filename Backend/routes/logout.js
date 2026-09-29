@@ -4,7 +4,11 @@ const sessionStore = require('../utils/sessionStore');
 const logger = require('../utils/logger');
 
 router.post('/', (req, res) => {
-    const { sessionID } = req.body;
+    // Use this request's own cookie-derived session ID, not a client-supplied
+    // one - trusting req.body.sessionID let anyone destroy an arbitrary
+    // session (an unauthenticated logout should only ever be able to end its
+    // own session, never someone else's, even if the ID were guessed).
+    const sessionID = req.sessionID;
 
     if (sessionID) {
         sessionStore.destroy(sessionID, (err) => {

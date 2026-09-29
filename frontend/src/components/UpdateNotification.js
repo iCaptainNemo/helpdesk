@@ -99,9 +99,20 @@ const UpdateNotification = () => {
 
     const formatReleaseNotes = (notes) => {
         if (!notes) return 'No release notes available';
-        
-        // Basic markdown-like formatting
-        return notes
+
+        // Escape raw HTML first - this is rendered via dangerouslySetInnerHTML
+        // below, so any <script>/<img onerror> etc. embedded in a GitHub release
+        // body would otherwise execute in the browser of anyone who checks for
+        // updates. Escape first, then apply our own markdown-lite formatting on
+        // top of the now-safe text.
+        const escaped = notes
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+
+        return escaped
             .replace(/### (.*)/g, '<strong>$1</strong>')
             .replace(/## (.*)/g, '<strong>$1</strong>')
             .replace(/# (.*)/g, '<strong>$1</strong>')

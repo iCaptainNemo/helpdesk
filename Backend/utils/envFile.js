@@ -42,14 +42,24 @@ function readEnvFile() {
 function writeEnvVars(updates) {
     const envPath = getEnvPath();
     const current = readEnvFile();
-    const merged = { ...current, ...updates };
+
+    // .env is one KEY=VALUE per line - a literal newline in a value (e.g. a
+    // pasted password/key) would otherwise split into what looks like extra
+    // lines and corrupt the file's structure. These values are always
+    // admin-typed credentials/URLs/keys, never legitimately multi-line.
+    const sanitized = {};
+    Object.entries(updates).forEach(([key, value]) => {
+        sanitized[key] = String(value).replace(/[\r\n]+/g, '');
+    });
+
+    const merged = { ...current, ...sanitized };
 
     const envData = Object.entries(merged)
         .map(([key, value]) => `${key}=${value}`)
         .join('\n');
     fs.writeFileSync(envPath, envData);
 
-    Object.entries(updates).forEach(([key, value]) => {
+    Object.entries(sanitized).forEach(([key, value]) => {
         process.env[key] = value;
     });
 

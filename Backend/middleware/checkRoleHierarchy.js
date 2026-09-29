@@ -19,8 +19,15 @@ async function checkRoleHierarchy(req, res, next) {
         const userRole = roles.reduce((max, role) => Math.max(max, roleHierarchy[role.RoleName]), -1);
         const targetUserRole = targetRoles.reduce((max, role) => Math.max(max, roleHierarchy[role.RoleName]), -1);
 
-        if (userRole < roleHierarchy['manage_users']) {
-            return res.status(403).json({ message: 'Access denied: Missing manage_users role' });
+        // 'manage_users' is a permission name, not a key in roleHierarchy (which only
+        // has superadmin/admin/support_agent/user) - roleHierarchy['manage_users'] was
+        // always undefined, so `userRole < undefined` was always false and this guard
+        // never actually fired for anyone. Only practically reachable via the legacy
+        // DB-permissions deployment mode (local/remote mode grant everything and never
+        // consult roles at all - see verifyPermissions.js), but fixing the logic anyway:
+        // require at least 'admin' role to modify anyone's role assignment.
+        if (userRole < roleHierarchy['admin']) {
+            return res.status(403).json({ message: 'Access denied: Insufficient role to manage user roles' });
         }
 
         if (userRole <= targetUserRole) {

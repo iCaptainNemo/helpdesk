@@ -136,19 +136,15 @@ const ModernDashboard = ({
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      // Set fallback data
-      setDashboardData({
-        lockedUsers: [],
-        metrics: {
-          lockedUsersCount: 0,
-          offlineServers: 0,
-          todayUnlocks: 0,
-          offlineDomainControllers: 0
-        },
-        systemStatus: [],
-        domainControllers: [],
-        recentActivity: []
-      });
+      // Leave dashboardData as whatever it already was (stale-but-real) instead
+      // of blanking every metric to 0 - zeroing everything out looks like "all
+      // clear" when it's actually an error state, and would also fire the metric
+      // cards' bounce-on-change animation for a fake "update". Individual
+      // endpoint failures are already caught per-request above via .catch(() =>
+      // null), so this only fires for something unexpected (e.g. a bug in the
+      // transform logic below, not a normal network blip) - surface it instead
+      // of hiding it behind fake zeros.
+      showNotification('Failed to refresh dashboard data - showing last known data', 'error');
     } finally {
       // If data came from cache, don't show loading skeleton
       if (hasCachedData && !initialLoad) {

@@ -3,6 +3,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const logger = require('../utils/logger');
 const { verifyAdminCredentials } = require('../db/queries');
+const { isLocked, getLockRemainingMs, recordFailure, recordSuccess } = require('../utils/loginAttempts');
 require('dotenv').config();
 
 // Read fresh (process.env.X) at each use site below, not cached at module load -
@@ -82,11 +83,22 @@ router.post('/verify-credentials', verifyApiKey, async (req, res) => {
     return res.status(400).json({ valid: false, message: 'AdminID and password required' });
   }
 
+  // Shares the same lockout tracker as auth.js's local /login - both ultimately
+  // check the same AdminUsers table, so a failed attempt through either path
+  // should count toward the same limit.
+  const normalizedAdminID = AdminID.toLowerCase();
+  if (isLocked(normalizedAdminID)) {
+    const remainingMinutes = Math.ceil(getLockRemainingMs(normalizedAdminID) / 60000);
+    return res.status(429).json({ valid: false, message: `Too many failed attempts. Try again in ${remainingMinutes} minute(s).` });
+  }
+
   try {
     const user = await verifyAdminCredentials(AdminID, password);
     if (!user) {
+      recordFailure(normalizedAdminID);
       return res.status(401).json({ valid: false });
     }
+    recordSuccess(normalizedAdminID);
     res.json({ valid: true, AdminID: user.AdminID, displayName: user.DisplayName || user.AdminID });
   } catch (error) {
     logger.error('Remote API: verify-credentials failed:', error);

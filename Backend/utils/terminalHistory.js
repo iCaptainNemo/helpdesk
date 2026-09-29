@@ -5,15 +5,22 @@
 // they joined. Ephemeral by design - resets on server restart, same as any other
 // live operational log; RecentActions is the durable audit trail, not this.
 
-const MAX_HISTORY = 300;
-const history = [];
+// Capped per event type (not one shared cap) - background monitoring produces far
+// more 'backend-log' chatter than 'powershell-output' ever will, and a single
+// shared buffer let routine health-check logging push actual command history out
+// before a reconnect ever saw it.
+const MAX_PER_EVENT = 150;
+const buffers = {};
 
 function recordAndBroadcast(event, data) {
     const enriched = { ...data, timestamp: new Date().toISOString() };
 
-    history.push({ event, data: enriched });
-    if (history.length > MAX_HISTORY) {
-        history.shift();
+    if (!buffers[event]) {
+        buffers[event] = [];
+    }
+    buffers[event].push({ event, data: enriched });
+    if (buffers[event].length > MAX_PER_EVENT) {
+        buffers[event].shift();
     }
 
     if (global.terminalIO) {
@@ -24,7 +31,9 @@ function recordAndBroadcast(event, data) {
 }
 
 function getHistory() {
-    return history;
+    return Object.values(buffers)
+        .flat()
+        .sort((a, b) => new Date(a.data.timestamp) - new Date(b.data.timestamp));
 }
 
 module.exports = { recordAndBroadcast, getHistory };
