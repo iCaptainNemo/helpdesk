@@ -4,7 +4,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import '../styles/Terminal.css';
 import io from 'socket.io-client';
-import { apiGet } from '../utils/api';
+import { apiGet, getBackendUrl } from '../utils/api';
 
 const TerminalComponent = ({ onToggle, isMinimized }) => {
     const terminalRef = useRef(null);
@@ -176,7 +176,7 @@ const TerminalComponent = ({ onToggle, isMinimized }) => {
             // accept the connection (the 'terminal' room is a live feed of every
             // PowerShell command/output plus recent history on join, not
             // something to hand out to an unauthenticated socket).
-            const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+            const backendUrl = getBackendUrl();
             const authToken = localStorage.getItem('token');
             socket.current = io(backendUrl, { auth: { token: authToken } });
 

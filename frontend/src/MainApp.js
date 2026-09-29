@@ -6,7 +6,7 @@ import './styles/theme.css'; // Import the new theme
 import './styles/grid.css'; // Import the grid system
 import './styles/mobile.css'; // Import mobile responsive styles
 import 'boxicons/css/boxicons.min.css'; // Icon font - self-hosted via npm (no CDN/CSP changes needed)
-import { apiGet, apiPost } from './utils/api';
+import { apiGet, apiPost, getBackendUrl } from './utils/api';
 import Header from './Header';
 import Navbar from './Navbar';
 import Login from './pages/Login';
@@ -22,8 +22,10 @@ const ModernConfigure = React.lazy(() => import('./pages/ModernConfigure'));
 const Setup = React.lazy(() => import('./pages/Setup'));
 const Terminal = React.lazy(() => import('./components/Terminal'));
 
-// Always use the backend server IP address
-const ENDPOINT = process.env.REACT_APP_BACKEND_URL;
+// Same-origin in production (see getBackendUrl in utils/api.js) - fixes the
+// Socket.IO connection breaking with a CORS error whenever the app is opened
+// via a different hostname than whatever was baked into the build.
+const ENDPOINT = getBackendUrl();
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false); // Track authentication status

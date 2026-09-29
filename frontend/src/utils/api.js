@@ -10,7 +10,26 @@
  *   await apiPost('/api/fetch-adobject', { adObjectID });
  */
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+// In a production build (CRA's NODE_ENV=production - both `npm run build`
+// output and the packaged exe), the frontend is always served BY the same
+// Express process it needs to talk to, so window.location.origin is always
+// correct no matter which hostname/IP the user actually used to reach it
+// (localhost, 127.0.0.1, a LAN IP, ...). REACT_APP_BACKEND_URL is baked in at
+// build time to one fixed value - hardcoding it broke every request (plus the
+// Socket.IO connection, which used this same env var directly) whenever
+// someone opened the app via a different hostname than whatever the build
+// machine's frontend/.env happened to have, defeating the exe's portable/
+// domain-agnostic design (e.g. the exe's own default http://localhost:3001
+// vs. a build baked with a LAN IP for phone access). Dev mode keeps the
+// explicit URL since the CRA dev server (port 3000) and the backend (port
+// 3001) are genuinely different origins there.
+const BACKEND_URL = process.env.NODE_ENV === 'production'
+    ? window.location.origin
+    : (process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001');
+
+// Exported so Socket.IO connections (MainApp.js, Terminal.js) resolve the
+// same way instead of reading process.env.REACT_APP_BACKEND_URL directly.
+export const getBackendUrl = () => BACKEND_URL;
 
 /**
  * In-memory response cache. Module-level, so it lives only for the current page
