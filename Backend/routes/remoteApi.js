@@ -5,8 +5,9 @@ const logger = require('../utils/logger');
 const { verifyAdminCredentials } = require('../db/queries');
 require('dotenv').config();
 
-const SECRET_KEY = process.env.JWT_SECRET; // Guaranteed set by the secrets bootstrap in server.js
-const JWT_EXPIRATION = process.env.JWT_EXPIRATION || '1d';
+// Read fresh (process.env.X) at each use site below, not cached at module load -
+// see the matching note in routes/auth.js for why a frozen const here goes stale
+// after the setup wizard writes a new JWT_SECRET post-boot.
 
 // Middleware to verify API key for remote connections
 function verifyApiKey(req, res, next) {
@@ -38,25 +39,26 @@ router.post('/authenticate', verifyApiKey, (req, res) => {
   try {
     const { clientId } = req.body;
     const clientIdentifier = clientId || 'remote-client';
-    
+    const jwtExpiration = process.env.JWT_EXPIRATION || '1d';
+
     // Generate JWT token for the remote client
     const token = jwt.sign(
-      { 
+      {
         clientId: clientIdentifier,
         type: 'remote',
         authenticated: true
       },
-      SECRET_KEY,
-      { expiresIn: JWT_EXPIRATION }
+      process.env.JWT_SECRET,
+      { expiresIn: jwtExpiration }
     );
-    
+
     logger.info(`Remote client authenticated: ${clientIdentifier}`);
-    
+
     res.json({
       success: true,
       token,
       clientId: clientIdentifier,
-      expiresIn: JWT_EXPIRATION,
+      expiresIn: jwtExpiration,
       serverCapabilities: {
         lockoutUsers: true,
         serverStatus: true,

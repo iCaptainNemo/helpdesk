@@ -1,12 +1,38 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
+const os = require('os');
 const fetch = require('node-fetch');
 const logger = require('../utils/logger');
 const db = require('../db/init');
 const { fetchAllAdminUsers, insertOrUpdateAdminUser } = require('../db/queries');
 const { readEnvFile, writeEnvVars } = require('../utils/envFile');
 const { hashPassword } = require('../utils/hashUtils');
+
+// Best-effort LAN-reachable address for this machine, so the hub admin can copy
+// it straight into a remote instance's setup instead of guessing their own IP.
+// Falls back to whatever's in .env's BACKEND_URL if it's already a real address
+// (set manually or by an older wizard run); only auto-detects when that value is
+// missing or still the wizard's default 'localhost' (which nothing else on the
+// LAN could actually reach).
+function detectHubUrl(envBackendUrl) {
+    const port = process.env.PORT || 3001;
+
+    if (envBackendUrl && !/localhost|127\.0\.0\.1/i.test(envBackendUrl)) {
+        return envBackendUrl;
+    }
+
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name] || []) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                return `http://${iface.address}:${port}`;
+            }
+        }
+    }
+
+    return envBackendUrl || `http://localhost:${port}`;
+}
 
 // Deployment mode + hub connection settings (Configure > Application tab).
 // Deliberately its own router, gated by 'manage_deployment' rather than
@@ -35,6 +61,7 @@ router.get('/', async (req, res) => {
             mode: env.DEPLOYMENT_MODE || process.env.DEPLOYMENT_MODE || 'local',
             remoteServerUrl: env.REMOTE_SERVER_URL || '',
             apiKey: env.API_KEY || '',
+            hubUrl: detectHubUrl(env.BACKEND_URL),
             hasLocalAdmin
         });
     } catch (error) {

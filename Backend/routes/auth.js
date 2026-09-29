@@ -9,8 +9,12 @@ const sessionStore = require('../utils/sessionStore'); // Import sessionStore
 const { hashPassword, verifyPassword } = require('../utils/hashUtils'); // Import password hashing and verification functions
 const { writeEnvVars } = require('../utils/envFile');
 require('dotenv').config(); // Load environment variables from .env file
-const SECRET_KEY = process.env.JWT_SECRET; // Guaranteed set by the secrets bootstrap in server.js
-const JWT_EXPIRATION = process.env.JWT_EXPIRATION || '1d'; // Default to 1 day if not set
+// JWT_SECRET/JWT_EXPIRATION are read fresh at each use site below (process.env.X),
+// not cached into a module-level const - the setup wizard can write a new
+// JWT_SECRET after this module has already loaded (a fresh install boots with an
+// ephemeral bootstrap secret before .env exists, then the wizard generates and
+// persists a different one), and a frozen const here would keep signing with the
+// stale value while everything else verifies against the new one.
 
 // Middleware to sanitize inputs
 const sanitizeInput = [
@@ -39,7 +43,7 @@ function verifyToken(req, res, next) {
     return res.status(401).json({ message: 'Malformed token' });
   }
 
-  jwt.verify(token, SECRET_KEY, (err, decoded) => {
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
     if (err) {
       logger.error('Failed to authenticate token:', err);
       return res.status(401).json({ message: 'Failed to authenticate token' });
@@ -110,7 +114,7 @@ router.post('/login', sanitizeInput, async (req, res) => {
     }
 
     // Generate JWT token
-    const token = jwt.sign({ AdminID: verifiedAdminID, sessionID: req.sessionID }, SECRET_KEY, { expiresIn: JWT_EXPIRATION });
+    const token = jwt.sign({ AdminID: verifiedAdminID, sessionID: req.sessionID }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRATION || '1d' });
     logger.info(`JWT token generated for AdminID: ${verifiedAdminID}, SessionID: ${req.sessionID}`);
 
     // Store session information

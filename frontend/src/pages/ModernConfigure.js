@@ -544,6 +544,31 @@ const appSettingsStyles = {
         borderRadius: 'var(--border-radius-sm)',
         cursor: 'pointer',
         fontSize: 'var(--font-size-md)'
+    },
+    iconButton: {
+        padding: 'var(--spacing-sm)',
+        background: 'transparent',
+        color: 'var(--text-secondary)',
+        border: '1px solid var(--border-primary)',
+        borderRadius: 'var(--border-radius-sm)',
+        cursor: 'pointer',
+        fontSize: 'var(--font-size-md)',
+        lineHeight: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+    },
+    valueRow: {
+        display: 'flex',
+        gap: 'var(--spacing-md)',
+        alignItems: 'center'
+    },
+    valueCode: {
+        padding: 'var(--spacing-sm)',
+        background: 'var(--bg-secondary)',
+        borderRadius: 'var(--border-radius-sm)',
+        flex: 1,
+        wordBreak: 'break-all'
     }
 };
 
@@ -560,6 +585,9 @@ const ApplicationSettings = () => {
     const [saving, setSaving] = useState(false);
     const [regenerating, setRegenerating] = useState(false);
     const [message, setMessage] = useState(null);
+    const [hubUrl, setHubUrl] = useState('');
+    const [showApiKey, setShowApiKey] = useState(false);
+    const [copiedField, setCopiedField] = useState(null);
 
     useEffect(() => {
         loadDeployment();
@@ -573,6 +601,7 @@ const ApplicationSettings = () => {
             setMode(data.mode || 'local');
             setRemoteServerUrl(data.remoteServerUrl || '');
             setApiKey(data.apiKey || '');
+            setHubUrl(data.hubUrl || '');
             setHasLocalAdmin(data.hasLocalAdmin);
         } catch (error) {
             console.error('Error loading deployment settings:', error);
@@ -653,6 +682,18 @@ const ApplicationSettings = () => {
             setMessage({ type: 'error', text: 'Failed to regenerate the API key' });
         } finally {
             setRegenerating(false);
+        }
+    };
+
+    const copyToClipboard = async (text, field) => {
+        if (!text) return;
+        try {
+            await navigator.clipboard.writeText(text);
+            setCopiedField(field);
+            setTimeout(() => setCopiedField(prev => (prev === field ? null : prev)), 2000);
+        } catch (error) {
+            console.error('Error copying to clipboard:', error);
+            setMessage({ type: 'error', text: 'Could not copy - your browser blocked clipboard access' });
         }
     };
 
@@ -779,23 +820,55 @@ const ApplicationSettings = () => {
             {mode === 'local' && (
                 <div className="dashboard-card" style={{ marginTop: 'var(--spacing-lg)' }}>
                     <div className="card-header">
-                        <h3 className="card-title">Hub API Key</h3>
-                        <p className="card-subtitle">Remote instances must present this key to connect</p>
+                        <h3 className="card-title">Hub Connection Info</h3>
+                        <p className="card-subtitle">Give these to a coworker setting up a remote instance</p>
                     </div>
                     <div className="card-content">
-                        <div style={{ display: 'flex', gap: 'var(--spacing-md)', alignItems: 'center' }}>
-                            <code style={{
-                                padding: 'var(--spacing-sm)',
-                                background: 'var(--bg-secondary)',
-                                borderRadius: 'var(--border-radius-sm)',
-                                flex: 1,
-                                wordBreak: 'break-all'
-                            }}>
-                                {apiKey || '(not set)'}
-                            </code>
-                            <button style={appSettingsStyles.secondaryButton} onClick={handleRegenerateKey} disabled={regenerating}>
-                                {regenerating ? 'Regenerating...' : 'Regenerate'}
-                            </button>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+                            <div>
+                                <label style={appSettingsStyles.label}>Hub Address</label>
+                                <div style={appSettingsStyles.valueRow}>
+                                    <code style={appSettingsStyles.valueCode}>
+                                        {hubUrl || '(unavailable)'}
+                                    </code>
+                                    <button
+                                        style={appSettingsStyles.iconButton}
+                                        onClick={() => copyToClipboard(hubUrl, 'hubUrl')}
+                                        title="Copy hub address"
+                                        disabled={!hubUrl}
+                                    >
+                                        {copiedField === 'hubUrl' ? '✓' : '📋'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style={appSettingsStyles.label}>Hub API Key</label>
+                                <div style={appSettingsStyles.valueRow}>
+                                    <code style={appSettingsStyles.valueCode}>
+                                        {apiKey ? (showApiKey ? apiKey : '•'.repeat(Math.min(apiKey.length, 32))) : '(not set)'}
+                                    </code>
+                                    <button
+                                        style={appSettingsStyles.iconButton}
+                                        onClick={() => setShowApiKey(!showApiKey)}
+                                        title={showApiKey ? 'Hide API key' : 'Reveal API key'}
+                                        disabled={!apiKey}
+                                    >
+                                        {showApiKey ? '🙈' : '👁'}
+                                    </button>
+                                    <button
+                                        style={appSettingsStyles.iconButton}
+                                        onClick={() => copyToClipboard(apiKey, 'apiKey')}
+                                        title="Copy API key"
+                                        disabled={!apiKey}
+                                    >
+                                        {copiedField === 'apiKey' ? '✓' : '📋'}
+                                    </button>
+                                    <button style={appSettingsStyles.secondaryButton} onClick={handleRegenerateKey} disabled={regenerating}>
+                                        {regenerating ? 'Regenerating...' : 'Regenerate'}
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

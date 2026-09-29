@@ -2,7 +2,7 @@
   "name": "helpdesk-jarvis",
   "productName": "Helpdesk Jarvis",
   "description": "IT Helpdesk Management System",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "main": "Backend/server.js",
   "homepage": "./",
   "scripts": {
