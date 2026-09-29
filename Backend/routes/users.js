@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { fetchAllAdminUsers, fetchAdminUser, insertOrUpdateAdminUser, deleteAdminUser } = require('../db/queries');
 const logger = require('../utils/logger');
+const db = require('../db/init');
 
 // Route to fetch all users
 router.get('/', async (req, res) => {
@@ -64,6 +65,46 @@ router.post('/', async (req, res) => {
     } catch (error) {
         logger.error('Error adding user:', error);
         res.status(500).json({ error: 'Failed to add user' });
+    }
+});
+
+// Admin-initiated password reset for an existing hub-local user - only
+// meaningful on the hub itself. Separate from auth.js's /update-password
+// (self-service, always acts on the caller's own token identity) - this lets
+// a hub admin reset a coworker's password when they're locked out or forgot
+// it, without needing the coworker's current password.
+router.put('/:adminID/password', async (req, res) => {
+    if (process.env.DEPLOYMENT_MODE !== 'local') {
+        return res.status(403).json({ error: 'User management is only available on the hub (local mode) instance' });
+    }
+
+    const { password } = req.body;
+    if (!password) {
+        return res.status(400).json({ error: 'password is required' });
+    }
+
+    try {
+        const existing = await fetchAdminUser(req.params.adminID);
+        if (!existing) {
+            return res.status(404).json({ error: `No user named "${req.params.adminID}" exists` });
+        }
+
+        await insertOrUpdateAdminUser({ AdminID: existing.AdminID, password });
+
+        try {
+            db.prepare(`
+                INSERT INTO RecentActions (adminID, activity, target, action_type, details, result)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `).run(req.AdminID, `Reset password for hub user: ${existing.AdminID}`, existing.AdminID, 'admin_password_reset', null, 'success');
+        } catch (logErr) {
+            logger.error('Failed to log admin password reset:', logErr);
+        }
+
+        logger.info(`Password reset for ${existing.AdminID} by ${req.AdminID}`);
+        res.json({ message: 'Password reset successfully' });
+    } catch (error) {
+        logger.error('Error resetting user password:', error);
+        res.status(500).json({ error: 'Failed to reset password' });
     }
 });
 

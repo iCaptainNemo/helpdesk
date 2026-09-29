@@ -127,6 +127,19 @@ const ModernConfigure = ({ permissions }) => {
         }
     };
 
+    const handleResetPassword = async (adminID) => {
+        const newPassword = window.prompt(`Enter a new password for "${adminID}":`);
+        if (!newPassword) return;
+
+        try {
+            await apiPut(`/api/users/${encodeURIComponent(adminID)}/password`, { password: newPassword });
+            alert(`Password reset for ${adminID}`);
+        } catch (error) {
+            console.error('Error resetting password:', error);
+            alert(`Failed to reset password: ${error.message}`);
+        }
+    };
+
     const filteredUsers = users.filter(user => 
         user.AdminID.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -246,6 +259,7 @@ const ModernConfigure = ({ permissions }) => {
                         searchTerm={searchTerm}
                         onSearchChange={setSearchTerm}
                         onRemoveUser={handleRemoveUser}
+                        onResetPassword={handleResetPassword}
                         newUser={newUser}
                         onNewUserChange={setNewUser}
                         onAddUser={handleAddUser}
@@ -312,7 +326,7 @@ const SystemSettings = ({ debugLogging, verboseLogging, onLoggingToggle }) => (
 );
 
 // User Management Component
-const UserManagement = ({ users, deploymentMode, searchTerm, onSearchChange, onRemoveUser, newUser, onNewUserChange, onAddUser }) => (
+const UserManagement = ({ users, deploymentMode, searchTerm, onSearchChange, onRemoveUser, onResetPassword, newUser, onNewUserChange, onAddUser }) => (
     <div className="user-management">
         <div className="grid" style={{ gridTemplateColumns: '1fr', gap: 'var(--spacing-lg)' }}>
             {/* Add User Card - hub (local mode) only; remote instances authenticate through the hub */}
@@ -462,6 +476,7 @@ const UserManagement = ({ users, deploymentMode, searchTerm, onSearchChange, onR
                                 user={user}
                                 canRemove={deploymentMode === 'local'}
                                 onRemove={onRemoveUser}
+                                onResetPassword={onResetPassword}
                             />
                         ))}
                         {users.length === 0 && (
@@ -954,7 +969,7 @@ const StatusItem = ({ label, status }) => (
     </div>
 );
 
-const UserCard = ({ user, canRemove, onRemove }) => (
+const UserCard = ({ user, canRemove, onRemove, onResetPassword }) => (
     <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -980,21 +995,36 @@ const UserCard = ({ user, canRemove, onRemove }) => (
             </div>
         </div>
         {canRemove && (
-            <button
-                onClick={() => onRemove(user.AdminID)}
-                style={{
-                    padding: 'var(--spacing-xs) var(--spacing-md)',
-                    background: 'transparent',
-                    color: 'var(--accent-red, #e05252)',
-                    border: '1px solid var(--accent-red, #e05252)',
-                    borderRadius: 'var(--border-radius-sm)',
-                    cursor: 'pointer',
-                    fontSize: 'var(--font-size-sm)',
-                    marginLeft: 'var(--spacing-md)'
-                }}
-            >
-                Remove
-            </button>
+            <div style={{ display: 'flex', gap: 'var(--spacing-sm)', marginLeft: 'var(--spacing-md)' }}>
+                <button
+                    onClick={() => onResetPassword(user.AdminID)}
+                    style={{
+                        padding: 'var(--spacing-xs) var(--spacing-md)',
+                        background: 'transparent',
+                        color: 'var(--text-primary)',
+                        border: '1px solid var(--border-primary)',
+                        borderRadius: 'var(--border-radius-sm)',
+                        cursor: 'pointer',
+                        fontSize: 'var(--font-size-sm)'
+                    }}
+                >
+                    Reset Password
+                </button>
+                <button
+                    onClick={() => onRemove(user.AdminID)}
+                    style={{
+                        padding: 'var(--spacing-xs) var(--spacing-md)',
+                        background: 'transparent',
+                        color: 'var(--accent-red, #e05252)',
+                        border: '1px solid var(--accent-red, #e05252)',
+                        borderRadius: 'var(--border-radius-sm)',
+                        cursor: 'pointer',
+                        fontSize: 'var(--font-size-sm)'
+                    }}
+                >
+                    Remove
+                </button>
+            </div>
         )}
     </div>
 );
