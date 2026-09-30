@@ -9,17 +9,19 @@ const TickerTape = ({ className = '' }) => {
     totalUnlocks: 0,
     offlineServers: 0,
     offlineDCs: 0,
-    lastUpdate: null
+    lastUpdate: null,
+    deployment: null
   });
 
   // Fetch ticker data using same endpoints as dashboard
   const fetchTickerData = async () => {
     try {
       // Fetch independently so one failing endpoint doesn't blank the whole ticker
-      const [lockedData, actionsData, serversData] = await Promise.all([
+      const [lockedData, actionsData, serversData, deploymentData] = await Promise.all([
         apiGet('/api/ledger/current-locked-users').catch(() => null),
         apiGet('/api/actions/recent/50').catch(() => null),
-        apiGet('/api/servers/status').catch(() => null)
+        apiGet('/api/servers/status').catch(() => null),
+        apiGet('/api/deployment').catch(() => null)
       ]);
 
       let lockedUsers = 0;
@@ -68,7 +70,8 @@ const TickerTape = ({ className = '' }) => {
         totalUnlocks,
         offlineServers,
         offlineDCs,
-        lastUpdate: new Date()
+        lastUpdate: new Date(),
+        deployment: deploymentData
       });
 
     } catch (error) {
@@ -87,8 +90,32 @@ const TickerTape = ({ className = '' }) => {
   }, []);
 
   // Generate ticker items
+  const formatRemaining = (ms) => {
+    const totalMinutes = Math.max(0, Math.floor(ms / 60000));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${hours}h ${minutes}m`;
+  };
+
   const generateTickerItems = () => {
     const items = [];
+
+    // Hub connectivity - only relevant for remote instances, or a local
+    // instance currently running on a fallen-back cached login. A normal
+    // local (hub) instance has no hub to report on.
+    const deployment = tickerData.deployment;
+    if (deployment?.fallback?.active) {
+      items.push({
+        icon: '🟡',
+        text: `Running on cached local login - reconnect to hub within ${formatRemaining(deployment.fallback.remainingMs)}`,
+        type: 'warning'
+      });
+    } else if (deployment?.mode === 'remote') {
+      const reachable = deployment.hubHealth?.reachable;
+      items.push(reachable
+        ? { icon: '🟢', text: 'Connected to hub', type: 'success' }
+        : { icon: '🟡', text: 'Hub unreachable', type: 'warning' });
+    }
 
     // Locked users count
     items.push({

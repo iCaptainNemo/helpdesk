@@ -9,6 +9,8 @@ const sessionStore = require('../utils/sessionStore'); // Import sessionStore
 const { hashPassword, verifyPassword } = require('../utils/hashUtils'); // Import password hashing and verification functions
 const { writeEnvVars } = require('../utils/envFile');
 const { isLocked, getLockRemainingMs, recordFailure, recordSuccess } = require('../utils/loginAttempts');
+const { enterFallback } = require('../utils/hubFallback');
+const terminalHistory = require('../utils/terminalHistory');
 require('dotenv').config(); // Load environment variables from .env file
 // JWT_SECRET/JWT_EXPIRATION are read fresh at each use site below (process.env.X),
 // not cached into a module-level const - the setup wizard can write a new
@@ -84,7 +86,8 @@ router.post('/login', sanitizeInput, async (req, res) => {
         return res.status(500).json({ error: 'Remote server not configured' });
       }
 
-      let hubRes;
+      let hubRes = null;
+      let hubUnreachable = false;
       try {
         hubRes = await fetch(`${serverUrl.replace(/\/$/, '')}/api/remote/verify-credentials`, {
           method: 'POST',
@@ -93,25 +96,46 @@ router.post('/login', sanitizeInput, async (req, res) => {
         });
       } catch (networkErr) {
         logger.error('Failed to reach hub server for login:', networkErr.message);
-        return res.status(502).json({ error: 'Unable to reach the hub server' });
+        hubUnreachable = true;
       }
 
-      if (hubRes.status === 401) {
+      if (hubRes && hubRes.status === 401) {
         logger.warn(`Hub rejected credentials for AdminID: ${normalizedAdminID}`);
         recordFailure(normalizedAdminID);
         return res.status(401).json({ error: 'Invalid credentials' });
       }
-      if (!hubRes.ok) {
-        logger.error(`Hub verify-credentials failed: ${hubRes.status} ${hubRes.statusText}`);
-        return res.status(502).json({ error: 'Unable to reach the hub server' });
-      }
 
-      const hubData = await hubRes.json();
-      if (!hubData.valid) {
-        recordFailure(normalizedAdminID);
-        return res.status(401).json({ error: 'Invalid credentials' });
+      if (hubUnreachable || !hubRes.ok) {
+        if (!hubUnreachable) {
+          logger.error(`Hub verify-credentials failed: ${hubRes.status} ${hubRes.statusText}`);
+        }
+
+        // Hub is unreachable/erroring - fall back to a previously-cached local
+        // credential for this AdminID if one exists, rather than locking the
+        // tech out entirely. See utils/hubFallback.js for the 72h expiry and
+        // services/hubHealthService.js for the background hub-recovery poll.
+        const cachedUser = await verifyAdminCredentials(normalizedAdminID, password);
+        if (!cachedUser) {
+          return res.status(502).json({ error: 'Unable to reach the hub server' });
+        }
+
+        await enterFallback(normalizedAdminID, password, serverUrl, apiKey);
+        terminalHistory.recordAndBroadcast('system-event', {
+          type: 'warning',
+          message: `Hub unreachable - fell back to cached local login for ${cachedUser.AdminID}. This instance is now running in local mode for up to 72 hours.`
+        });
+        verifiedAdminID = cachedUser.AdminID;
+      } else {
+        const hubData = await hubRes.json();
+        if (!hubData.valid) {
+          recordFailure(normalizedAdminID);
+          return res.status(401).json({ error: 'Invalid credentials' });
+        }
+        verifiedAdminID = hubData.AdminID;
+        // Refresh the local cache on every hub-confirmed login, so it stays
+        // current for a possible future fallback.
+        await insertOrUpdateAdminUser({ AdminID: verifiedAdminID, password });
       }
-      verifiedAdminID = hubData.AdminID;
     } else {
       // local (hub) mode: check this instance's own AdminUsers table
       const user = await verifyAdminCredentials(normalizedAdminID, password);

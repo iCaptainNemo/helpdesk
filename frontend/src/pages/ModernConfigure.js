@@ -603,6 +603,7 @@ const ApplicationSettings = () => {
     const [hubUrl, setHubUrl] = useState('');
     const [showApiKey, setShowApiKey] = useState(false);
     const [copiedField, setCopiedField] = useState(null);
+    const [fallback, setFallback] = useState(null);
 
     useEffect(() => {
         loadDeployment();
@@ -618,6 +619,7 @@ const ApplicationSettings = () => {
             setApiKey(data.apiKey || '');
             setHubUrl(data.hubUrl || '');
             setHasLocalAdmin(data.hasLocalAdmin);
+            setFallback(data.fallback?.active ? data.fallback : null);
         } catch (error) {
             console.error('Error loading deployment settings:', error);
             setMessage({ type: 'error', text: 'Failed to load deployment settings' });
@@ -640,6 +642,15 @@ const ApplicationSettings = () => {
                 console.error('Error loading system info:', error);
             }
         }
+    };
+
+    const handleReconnectToHub = () => {
+        if (!fallback) return;
+        setRemoteServerUrl(fallback.originalRemoteServerUrl || '');
+        setApiKey(fallback.originalApiKey || '');
+        setTestResult(null);
+        setMessage(null);
+        setMode('remote');
     };
 
     const handleTestConnection = async () => {
@@ -731,6 +742,26 @@ const ApplicationSettings = () => {
 
     return (
         <div className="application-settings">
+            {fallback && (
+                <div className="dashboard-card" style={{ marginBottom: 'var(--spacing-lg)', border: '1px solid var(--accent-yellow, #e0a930)' }}>
+                    <div className="card-content">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 'var(--spacing-md)', flexWrap: 'wrap' }}>
+                            <div>
+                                <div style={{ color: 'var(--accent-yellow, #e0a930)', fontWeight: 'var(--font-weight-medium)', marginBottom: 'var(--spacing-xs)' }}>
+                                    🟡 Running on a cached local login
+                                </div>
+                                <div style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)' }}>
+                                    The hub became unreachable on {new Date(fallback.since).toLocaleString()}, so this instance switched to local mode automatically.
+                                    {' '}It will keep working locally until {new Date(fallback.expiresAt).toLocaleString()}, after which the cached login is cleared and setup must be redone.
+                                </div>
+                            </div>
+                            <button style={appSettingsStyles.secondaryButton} onClick={handleReconnectToHub}>
+                                Reconnect to hub
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             <div className="dashboard-card">
                 <div className="card-header">
                     <h3 className="card-title">Deployment Mode</h3>

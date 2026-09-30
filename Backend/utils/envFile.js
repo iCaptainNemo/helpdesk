@@ -66,4 +66,25 @@ function writeEnvVars(updates) {
     return merged;
 }
 
-module.exports = { getEnvPath, readEnvFile, writeEnvVars };
+// Removes keys entirely (not just empties their value) - some callers (e.g.
+// getSetupStatus() in setup.js) check for the literal substring 'KEY=' to
+// decide whether a value is "set", so writing an empty value wouldn't make
+// that check turn false the way a real removal does.
+function deleteEnvVars(keys) {
+    const envPath = getEnvPath();
+    const current = readEnvFile();
+
+    keys.forEach((key) => {
+        delete current[key];
+        delete process.env[key];
+    });
+
+    const envData = Object.entries(current)
+        .map(([key, value]) => `${key}=${value}`)
+        .join('\n');
+    fs.writeFileSync(envPath, envData);
+
+    return current;
+}
+
+module.exports = { getEnvPath, readEnvFile, writeEnvVars, deleteEnvVars };

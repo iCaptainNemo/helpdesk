@@ -8,6 +8,8 @@ const db = require('../db/init');
 const { fetchAllAdminUsers, insertOrUpdateAdminUser } = require('../db/queries');
 const { readEnvFile, writeEnvVars } = require('../utils/envFile');
 const { hashPassword } = require('../utils/hashUtils');
+const { getFallbackStatus, clearFallback } = require('../utils/hubFallback');
+const { getLastHubStatus } = require('../services/hubHealthService');
 
 // Adapter names that are virtual/tunnel interfaces rather than the machine's
 // real LAN NIC - common on admin/dev machines running Docker Desktop, WSL2, or
@@ -72,13 +74,16 @@ router.get('/', async (req, res) => {
     try {
         const env = readEnvFile();
         const hasLocalAdmin = (await fetchAllAdminUsers()).length > 0;
+        const fallback = getFallbackStatus();
 
         res.json({
             mode: env.DEPLOYMENT_MODE || process.env.DEPLOYMENT_MODE || 'local',
             remoteServerUrl: env.REMOTE_SERVER_URL || '',
             apiKey: env.API_KEY || '',
             hubUrl: detectHubUrl(env.BACKEND_URL),
-            hasLocalAdmin
+            hasLocalAdmin,
+            hubHealth: getLastHubStatus(),
+            fallback: fallback ? { active: true, ...fallback } : { active: false }
         });
     } catch (error) {
         logger.error('Failed to fetch deployment settings:', error);
@@ -107,6 +112,8 @@ router.put('/', async (req, res) => {
                 REMOTE_SERVER_URL: remoteServerUrl,
                 API_KEY: apiKey
             });
+            // Manually reconnecting to remote resolves any active fallback state.
+            clearFallback();
         } else {
             const hasLocalAdmin = (await fetchAllAdminUsers()).length > 0;
 

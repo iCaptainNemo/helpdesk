@@ -138,6 +138,17 @@ const ModernADProperties = ({ permissions }) => {
   });
   const logsTableRef = useRef(null);
   const adPropertiesTableRef = useRef(null);
+  const [logsRefreshing, setLogsRefreshing] = useState(false);
+
+  const handleRefreshLogs = async () => {
+    if (!logsTableRef.current || logsRefreshing) return;
+    setLogsRefreshing(true);
+    try {
+      await logsTableRef.current.refresh();
+    } finally {
+      setLogsRefreshing(false);
+    }
+  };
 
   // All the callback functions from original ADProperties
   const fetchADObjectData = useCallback(async (id, exact = false) => {
@@ -521,10 +532,27 @@ const ModernADProperties = ({ permissions }) => {
           }}>
             {/* Column 1: Logs (left) - Order 3 on mobile */}
             <div className="dashboard-card ad-column-logs" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              <div className="card-header">
+              <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h3 className="card-title">
                   {currentData.ObjectClass === 'computer' ? 'Computer Logs' : 'Login ledger'}
                 </h3>
+                <button
+                  onClick={handleRefreshLogs}
+                  disabled={logsRefreshing}
+                  title="Refresh logs"
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: logsRefreshing ? 'default' : 'pointer',
+                    fontSize: '1rem',
+                    color: 'var(--text-secondary)',
+                    opacity: logsRefreshing ? 0.5 : 1,
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
+                >
+                  {logsRefreshing ? '⏳' : '🔄'}
+                </button>
               </div>
               <div className="card-content" style={{ flex: 1, overflow: 'auto', padding: 'var(--spacing-md)' }}>
                 <Logs

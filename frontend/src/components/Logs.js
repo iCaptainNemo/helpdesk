@@ -1,43 +1,58 @@
-import React, { useEffect, useState, forwardRef } from 'react';
-import { apiPost } from '../utils/api';
+import React, { useEffect, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
+import { apiPost, invalidateCache } from '../utils/api';
 import '../styles/Logs.css'; // Import the CSS file
 import '../styles/theme.css'; // Import modern theme
 
 const Logs = forwardRef(({ adObjectID }, ref) => {
   const [logs, setLogs] = useState([]);
   const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [tooltip, setTooltip] = useState({ visible: false, message: '' });
 
-  useEffect(() => {
-    const fetchLogs = async () => {
-      try {
-        if (!adObjectID) {
-          throw new Error('AD Object ID is undefined');
-        }
-
-       // console.log('Fetching logs for AD Object ID:', adObjectID); // Add this log
-
-        // Cache briefly so switching between AD tabs doesn't re-pull the same logs.
-        const logsData = await apiPost('/api/get-logs', { adObjectID }, { cache: 60000 });
-       // console.log('Fetched logs data:', logsData); // Add this log
-
-        if (Array.isArray(logsData)) {
-          setLogs(logsData.reverse()); // Reverse the logs order if it's an array
-        } else if (typeof logsData === 'object' && logsData !== null) {
-          setLogs([logsData]); // Wrap the single log entry in an array
-        } else {
-          throw new Error('Logs data is not an array or an object');
-        }
-      } catch (error) {
-        console.error('Error fetching logs:', error);
-        setError(`Error fetching logs: ${error.message}`);
+  const fetchLogs = useCallback(async ({ bypassCache = false } = {}) => {
+    try {
+      if (!adObjectID) {
+        throw new Error('AD Object ID is undefined');
       }
-    };
 
+      if (bypassCache) {
+        invalidateCache('/api/get-logs');
+      }
+
+      // Cache briefly so switching between AD tabs doesn't re-pull the same logs.
+      const logsData = await apiPost('/api/get-logs', { adObjectID }, { cache: 60000 });
+
+      if (Array.isArray(logsData)) {
+        setLogs(logsData.reverse()); // Reverse the logs order if it's an array
+      } else if (typeof logsData === 'object' && logsData !== null) {
+        setLogs([logsData]); // Wrap the single log entry in an array
+      } else {
+        throw new Error('Logs data is not an array or an object');
+      }
+      setError(null);
+    } catch (error) {
+      console.error('Error fetching logs:', error);
+      setError(`Error fetching logs: ${error.message}`);
+    }
+  }, [adObjectID]);
+
+  useEffect(() => {
     if (adObjectID) {
       fetchLogs();
     }
-  }, [adObjectID]);
+  }, [adObjectID, fetchLogs]);
+
+  useImperativeHandle(ref, () => ({
+    refresh: async () => {
+      setRefreshing(true);
+      try {
+        await fetchLogs({ bypassCache: true });
+      } finally {
+        setRefreshing(false);
+      }
+    },
+    isRefreshing: () => refreshing
+  }), [fetchLogs, refreshing]);
 
   const copyToClipboard = (value) => {
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -65,7 +80,7 @@ const Logs = forwardRef(({ adObjectID }, ref) => {
   };
 
   return (
-    <div ref={ref} className="logs-container theme-modern">
+    <div className="logs-container theme-modern">
       <div className="table-container">
         <table className="logs-table">
           <thead>

@@ -192,6 +192,14 @@ async function deleteAdminUser(adminID) {
     return guardedDelete();
 }
 
+// Unguarded full wipe - unlike deleteAdminUser, this intentionally allows
+// dropping every admin, including the last one. Used only when the hub
+// fallback's 72h window expires: the point is to force a fresh setup wizard
+// run, not to preserve access for whoever is left.
+async function clearAllAdminUsers() {
+    return db.prepare('DELETE FROM AdminUsers').run();
+}
+
 // New functions for managing servers
 function insertServer(server) {
     const query = `
@@ -545,6 +553,7 @@ module.exports = {
     fetchPDC,
     fetchAdminUser,
     fetchAllAdminUsers,
+    clearAllAdminUsers,
     executeQuery,
     storeUser,
     fetchUser,

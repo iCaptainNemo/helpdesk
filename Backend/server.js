@@ -240,6 +240,7 @@ const ledgerRoute = require('./routes/ledger'); // Import ledger routes
 const actionsRoute = require('./routes/actions'); // Import actions routes
 const tabsRoute = require('./routes/tabs'); // Import cross-device tab sync routes
 const { startLedgerService } = require('./services/ledgerService'); // Import ledger service
+const { startHubHealthService } = require('./services/hubHealthService'); // Import hub health/fallback poller
 
 // Use routes and pass db to them
 // fetch-adobject, fetch-user, and check-session were missing verifyToken here
@@ -373,6 +374,11 @@ server.listen(PORT, HOST, async () => {
         // Start ledger service after database is ready
         startLedgerService();
         logger.info('Ledger service started');
+
+        // Start hub health/fallback poller - checks hub reachability and
+        // enforces the 72h fallback expiry window (see utils/hubFallback.js)
+        startHubHealthService();
+        logger.info('Hub health service started');
     } catch (error) {
         logger.error('Database migration failed:', error);
         // Continue startup even if migrations fail to maintain compatibility
