@@ -226,6 +226,7 @@ const rolesRoute = require('./routes/roles'); // Route for managing roles
 const permissionsRoute = require('./routes/permissions'); // Route for managing permissions
 const configureRoute = require('./routes/configure'); // Route for the configure page
 const deploymentRoute = require('./routes/deployment'); // Route for deployment mode / hub connection settings
+const externalToolsRoute = require('./routes/externalTools'); // Route for CmRcViewer/PsExec path detection + overrides
 const serverStatusRoute = require('./routes/serverStatus'); // Route for server statuses
 const executeCommandRoute = require('./routes/executeCommand'); // Route for executing commands
 const loggingSettingsRoute = require('./routes/loggingSettings'); // Import the loggingSettings route
@@ -263,6 +264,9 @@ app.use('/api/configure', verifyToken, verifyPermissions('access_configure_page'
 // Deliberately gated by 'manage_deployment', not 'access_configure_page' - remote-mode
 // instances need to reach this even though the rest of Configure is hub-only in remote mode.
 app.use('/api/deployment', verifyToken, verifyPermissions('manage_deployment'), deploymentRoute);
+// Per-machine instance config (deep-link tool paths), not hub-database config -
+// same gating as /api/deployment for the same reason.
+app.use('/api/external-tools', verifyToken, verifyPermissions('manage_deployment'), externalToolsRoute);
 app.use('/api/servers', verifyToken, serverStatusRoute); // Use the serverStatus route
 app.use('/api/users', verifyToken, usersRoute); // Register the new users route
 // execute-command runs arbitrary PowerShell — require auth AND the execute_command permission

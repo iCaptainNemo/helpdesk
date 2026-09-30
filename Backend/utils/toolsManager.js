@@ -31,6 +31,11 @@ class ToolsManager {
                 name: 'windirstat.exe',
                 url: `https://raw.githubusercontent.com/${this.githubOwner}/${this.githubRepo}/${this.githubBranch}/Tools/windirstat.exe`,
                 description: 'WinDirStat - Directory statistics'
+            },
+            {
+                name: 'PsExec.exe',
+                url: `https://raw.githubusercontent.com/${this.githubOwner}/${this.githubRepo}/${this.githubBranch}/Tools/PsExec.exe`,
+                description: 'PsTools - Remote process execution (jarvis:// CMD deep link)'
             }
         ];
     }

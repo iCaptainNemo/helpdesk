@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { apiGet } from '../../utils/api'; // shared API client
 import {
   Chart as ChartJS,
@@ -32,6 +32,14 @@ const LockedUsersTimeChart = ({
 }) => {
   const [chartData, setChartData] = useState(null);
   const [selectedHours, setSelectedHours] = useState(3);
+  // Same technique as LockedUsersPieChart: react-chartjs-2 updates the
+  // existing Chart.js instance on data-only changes (tweening values) rather
+  // than recreating it, so the line-draw reveal animation only plays on first
+  // mount. Bumping this key forces a real remount to replay it - but only
+  // when the plotted values (or the hours window) actually changed, not on
+  // every 5-minute poll that comes back identical.
+  const [chartKey, setChartKey] = useState(0);
+  const previousSignatureRef = useRef(null);
 
   // Generate time labels based on selected hours (current time on the right)
   const generateTimeLabels = (hours = selectedHours) => {
@@ -81,8 +89,22 @@ const LockedUsersTimeChart = ({
     const loadChartData = async () => {
       const chartDataResult = await fetchChartData();
       setChartData(chartDataResult);
+
+      // Stable signature of the plotted values plus the hours window, so a
+      // poll that comes back identical doesn't trigger a remount, but either
+      // a real data change or switching the time range does.
+      const dataSignature = chartDataResult.datasets
+        .map((ds) => `${ds.label}:${ds.data.join(',')}`)
+        .sort()
+        .join('|');
+      const signature = `${selectedHours}::${dataSignature}`;
+
+      if (previousSignatureRef.current !== null && previousSignatureRef.current !== signature) {
+        setChartKey(prev => prev + 1);
+      }
+      previousSignatureRef.current = signature;
     };
-    
+
     loadChartData();
   }, [selectedHours, data]); // Refetch when hours selection changes OR data prop changes
   
@@ -214,7 +236,7 @@ const LockedUsersTimeChart = ({
         {chartData ? (
           <>
             <div className="chart-container">
-              <Line data={chartData} options={chartOptions} />
+              <Line key={chartKey} data={chartData} options={chartOptions} />
             </div>
 
             {/* Custom legend: colored box per department with the name in white

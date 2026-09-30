@@ -488,6 +488,24 @@ const ModernADProperties = ({ permissions }) => {
     fetchTempPassword();
   }, []);
 
+  // CmRcViewer and PsExec aren't part of Windows and may not be installed/
+  // configured on this machine - fetched once so the corresponding deep-link
+  // buttons below can grey themselves out instead of failing silently.
+  const [externalTools, setExternalTools] = useState(null);
+  useEffect(() => {
+    const fetchExternalTools = async () => {
+      try {
+        if (!localStorage.getItem('token')) return;
+        const data = await apiGet('/api/external-tools');
+        setExternalTools(data);
+      } catch (error) {
+        console.error('Error fetching external tools status:', error);
+      }
+    };
+
+    fetchExternalTools();
+  }, []);
+
   const currentTab = tabs[activeTab];
   const currentData = currentTab?.data || {};
   const currentProperties = currentTab?.showAdvanced ? currentTab?.allProperties : currentTab?.defaultProperties;
@@ -633,16 +651,21 @@ const ModernADProperties = ({ permissions }) => {
                     <>
                       <button
                         onClick={() => launchProgram('CmRcViewer', currentTab?.name)}
+                        disabled={externalTools !== null && !externalTools.cmRcViewer?.available}
                         style={{
-                          background: 'var(--accent-blue)',
+                          background: (externalTools !== null && !externalTools.cmRcViewer?.available) ? 'var(--text-muted)' : 'var(--accent-blue)',
                           color: 'white',
                           border: 'none',
                           padding: 'var(--spacing-xs) var(--spacing-sm)',
                           borderRadius: 'var(--border-radius-sm)',
                           fontSize: 'var(--font-size-xs)',
-                          cursor: 'pointer',
+                          cursor: (externalTools !== null && !externalTools.cmRcViewer?.available) ? 'not-allowed' : 'pointer',
+                          opacity: (externalTools !== null && !externalTools.cmRcViewer?.available) ? 0.5 : 1,
                           transition: 'var(--transition-fast)'
                         }}
+                        title={(externalTools !== null && !externalTools.cmRcViewer?.available)
+                          ? 'CmRcViewer not found on this machine - set its path in Configure > Application'
+                          : undefined}
                       >
                         📺 CmRcViewer
                       </button>
@@ -694,6 +717,7 @@ const ModernADProperties = ({ permissions }) => {
                       </button>
                       <button
                         onClick={() => launchProgram('CommandPrompt', currentTab?.name)}
+                        disabled={externalTools !== null && !externalTools.psExec?.available}
                         style={{
                           background: 'var(--text-muted)',
                           color: 'white',
@@ -701,9 +725,13 @@ const ModernADProperties = ({ permissions }) => {
                           padding: 'var(--spacing-xs) var(--spacing-sm)',
                           borderRadius: 'var(--border-radius-sm)',
                           fontSize: 'var(--font-size-xs)',
-                          cursor: 'pointer',
+                          cursor: (externalTools !== null && !externalTools.psExec?.available) ? 'not-allowed' : 'pointer',
+                          opacity: (externalTools !== null && !externalTools.psExec?.available) ? 0.5 : 1,
                           transition: 'var(--transition-fast)'
                         }}
+                        title={(externalTools !== null && !externalTools.psExec?.available)
+                          ? 'PsExec not found on this machine - set its path in Configure > Application'
+                          : undefined}
                       >
                         ⌨️ CMD
                       </button>

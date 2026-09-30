@@ -604,9 +604,15 @@ const ApplicationSettings = () => {
     const [showApiKey, setShowApiKey] = useState(false);
     const [copiedField, setCopiedField] = useState(null);
     const [fallback, setFallback] = useState(null);
+    const [externalTools, setExternalTools] = useState(null);
+    const [cmRcViewerInput, setCmRcViewerInput] = useState('');
+    const [psExecInput, setPsExecInput] = useState('');
+    const [toolsSaving, setToolsSaving] = useState(null); // 'cmRcViewer' | 'psExec' | null
+    const [toolsMessage, setToolsMessage] = useState(null);
 
     useEffect(() => {
         loadDeployment();
+        loadExternalTools();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -625,6 +631,33 @@ const ApplicationSettings = () => {
             setMessage({ type: 'error', text: 'Failed to load deployment settings' });
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadExternalTools = async () => {
+        try {
+            const data = await apiGet('/api/external-tools');
+            setExternalTools(data);
+            setCmRcViewerInput(data.cmRcViewer?.source === 'override' ? data.cmRcViewer.path : '');
+            setPsExecInput(data.psExec?.source === 'override' ? data.psExec.path : '');
+        } catch (error) {
+            console.error('Error loading external tools status:', error);
+        }
+    };
+
+    // toolKey: 'cmRcViewer' | 'psExec' - value '' clears the override and falls back to auto-detect
+    const handleSaveToolPath = async (toolKey, value) => {
+        setToolsSaving(toolKey);
+        setToolsMessage(null);
+        try {
+            const payload = toolKey === 'cmRcViewer' ? { cmRcViewerPath: value } : { psExecPath: value };
+            const data = await apiPut('/api/external-tools', payload);
+            setExternalTools(data);
+            setToolsMessage({ type: 'success', text: 'Saved.' });
+        } catch (error) {
+            setToolsMessage({ type: 'error', text: error.message || 'Failed to save tool path' });
+        } finally {
+            setToolsSaving(null);
         }
     };
 
@@ -919,6 +952,66 @@ const ApplicationSettings = () => {
                     </div>
                 </div>
             )}
+
+            {/* External deep-link tools (jarvis:// CmRcViewer/CMD) - shown in both
+                modes since this is about the machine running THIS instance, not
+                hub/remote config. CmRcViewer and PsExec aren't part of Windows,
+                so their install path varies; this lets a tech see what was
+                auto-detected and override it if the app guessed wrong. */}
+            <div className="dashboard-card" style={{ marginTop: 'var(--spacing-lg)' }}>
+                <div className="card-header">
+                    <h3 className="card-title">External Tools</h3>
+                    <p className="card-subtitle">Used by the CmRcViewer and CMD deep-link buttons on computer objects</p>
+                </div>
+                <div className="card-content">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
+                        {[
+                            { key: 'cmRcViewer', label: 'CmRcViewer (SCCM Remote Control Viewer)', input: cmRcViewerInput, setInput: setCmRcViewerInput },
+                            { key: 'psExec', label: 'PsExec', input: psExecInput, setInput: setPsExecInput }
+                        ].map(({ key, label, input, setInput }) => {
+                            const status = externalTools?.[key];
+                            return (
+                                <div key={key}>
+                                    <label style={appSettingsStyles.label}>{label}</label>
+                                    {status ? (
+                                        <div style={{ marginBottom: 'var(--spacing-xs)', fontSize: 'var(--font-size-sm)' }}>
+                                            {status.available
+                                                ? <span style={{ color: 'var(--accent-green, #4caf50)' }}>✅ Detected at <code>{status.path}</code>{status.source === 'override' ? ' (manual override)' : ''}</span>
+                                                : <span style={{ color: 'var(--accent-red, #e05252)' }}>⚠️ Not found - the corresponding deep-link button is disabled until a path is set here</span>}
+                                        </div>
+                                    ) : (
+                                        <div style={{ marginBottom: 'var(--spacing-xs)', fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)' }}>Checking...</div>
+                                    )}
+                                    <div style={appSettingsStyles.valueRow}>
+                                        <input
+                                            type="text"
+                                            value={input}
+                                            onChange={(e) => setInput(e.target.value)}
+                                            placeholder="Leave blank to auto-detect"
+                                            style={{ ...appSettingsStyles.input, flex: 1 }}
+                                        />
+                                        <button
+                                            style={appSettingsStyles.secondaryButton}
+                                            onClick={() => handleSaveToolPath(key, input)}
+                                            disabled={toolsSaving === key}
+                                        >
+                                            {toolsSaving === key ? 'Saving...' : 'Save'}
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        {toolsMessage && (
+                            <span style={{
+                                color: toolsMessage.type === 'success' ? 'var(--accent-green, #4caf50)' : 'var(--accent-red, #e05252)',
+                                fontSize: 'var(--font-size-sm)'
+                            }}>
+                                {toolsMessage.text}
+                            </span>
+                        )}
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };

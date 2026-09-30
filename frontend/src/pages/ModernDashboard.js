@@ -1,7 +1,8 @@
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MetricsCard, { StatusMetricsCard } from '../components/MetricsCard';
 import Notification from '../components/Notification';
+import TickerTape from '../components/TickerTape';
 import { executePowerShellScript, apiGet, apiPut, apiRequestRaw, invalidateCache } from '../utils/api';
 import { ActionLogger } from '../utils/actionLogger';
 
@@ -34,6 +35,12 @@ const ModernDashboard = ({
     domainControllers: [],
     recentActivity: []
   });
+  // Split-flap row reveal for "Currently Locked Users" (see theme.css's
+  // .flip-row-enter / @keyframes flip-row-in): tracks which UserIDs have
+  // already played their flip-in animation, so a row only cascades in once
+  // - on the poll where it first appears - rather than replaying on every
+  // 60s refresh for users who are still locked out.
+  const flippedIdsRef = useRef(new Set());
 
   // Fetch dashboard data
   const fetchDashboardData = async (showFullLoading = false) => {
@@ -181,6 +188,15 @@ const ModernDashboard = ({
     return () => clearInterval(interval);
   }, []);
 
+  // Runs after each render that could change the locked-users list,
+  // resyncing the "seen" set to exactly who's currently shown (computed
+  // during render, below, against the PREVIOUS contents of this set) - a
+  // user who unlocks and is later locked out again drops out of the set
+  // when they leave the list, so they correctly flip in again if relocked.
+  useEffect(() => {
+    flippedIdsRef.current = new Set(dashboardData.lockedUsers.map(user => user.UserID));
+  }, [dashboardData.lockedUsers]);
+
   const getActionTitle = (actionType) => {
     switch (actionType) {
       case 'unlock': return 'User Unlocked';
@@ -292,6 +308,9 @@ const ModernDashboard = ({
 
   return (
     <div className={`dashboard-content ${!initialLoad ? 'dashboard-loaded' : ''}`} style={{ background: 'var(--bg-primary)', minHeight: '100%' }}>
+      {/* Real-time system status - also surfaces hub connectivity/fallback state in remote mode */}
+      <TickerTape />
+
       <Notification
         message={notification.message}
         type={notification.type}
@@ -419,21 +438,30 @@ const ModernDashboard = ({
                           ? sortedUsers.filter(u => (u.department || 'Unknown Dept') === departmentFilter)
                           : sortedUsers;
                         const displayUsers = showAllLockedUsers ? filteredUsers : filteredUsers.slice(0, 6);
+                        let newRowIndex = 0;
                         return displayUsers.map(user => {
                           // Check if lockout occurred within last 5 minutes
                           const lockoutTime = new Date(user.AccountLockoutTime);
                           const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
                           const isRecentLockout = lockoutTime > fiveMinutesAgo;
+                          // Split-flap reveal for rows not yet seen (see flippedIdsRef above) -
+                          // staggered by position among the OTHER new rows in this render, so a
+                          // batch of new lockouts cascades top-to-bottom instead of flipping at once.
+                          const isNewRow = !flippedIdsRef.current.has(user.UserID);
+                          const flipDelayMs = isNewRow ? newRowIndex++ * 80 : 0;
 
                           return (
                         <tr
                           key={user.UserID}
-                          className={isRecentLockout ? 'recent-lockout' : ''}
-                          style={isRecentLockout ? {
-                            backgroundColor: '#ffeb3b',
-                            color: '#000000',
-                            fontWeight: '500'
-                          } : {}}
+                          className={[isRecentLockout ? 'recent-lockout' : '', isNewRow ? 'flip-row-enter' : ''].filter(Boolean).join(' ')}
+                          style={{
+                            ...(isRecentLockout ? {
+                              backgroundColor: '#ffeb3b',
+                              color: '#000000',
+                              fontWeight: '500'
+                            } : {}),
+                            ...(isNewRow ? { animationDelay: `${flipDelayMs}ms` } : {})
+                          }}
                         >
                           <td>
                             <span

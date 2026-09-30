@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { apiGet } from '../../utils/api'; // shared API client
 import {
   Chart as ChartJS,
@@ -18,6 +18,14 @@ const LockedUsersPieChart = ({
 }) => {
   const [chartData, setChartData] = useState(null);
   const [totalUsers, setTotalUsers] = useState(0);
+  // react-chartjs-2 updates the existing Chart.js instance in place when data
+  // changes (tweening arc angles) rather than recreating it, so the sweep-in
+  // reveal animation only ever plays once, on first mount. Changing this key
+  // forces a real remount so the reveal replays - but only when the
+  // department counts actually changed, not on every 60s poll, so it reads as
+  // "something moved" rather than a flash that happens regardless.
+  const [chartKey, setChartKey] = useState(0);
+  const previousSignatureRef = useRef(null);
 
   // Fetch data from ledger API
   const fetchChartData = async () => {
@@ -82,8 +90,20 @@ const LockedUsersPieChart = ({
     const loadChartData = async () => {
       const chartDataResult = await fetchChartData();
       setChartData(chartDataResult);
+
+      // Stable signature of department -> count, order-independent, so a
+      // poll that comes back with the same numbers doesn't trigger a remount.
+      const signature = chartDataResult.labels
+        .map((label, i) => `${label}:${chartDataResult.datasets[0].data[i]}`)
+        .sort()
+        .join('|');
+
+      if (previousSignatureRef.current !== null && previousSignatureRef.current !== signature) {
+        setChartKey(prev => prev + 1);
+      }
+      previousSignatureRef.current = signature;
     };
-    
+
     loadChartData();
   }, [data]); // React to data prop changes
   
@@ -198,7 +218,7 @@ const LockedUsersPieChart = ({
       <div className="card-content">
         {chartData && totalUsers > 0 ? (
           <div className="chart-container">
-            <Doughnut data={chartData} options={chartOptions} />
+            <Doughnut key={chartKey} data={chartData} options={chartOptions} />
           </div>
         ) : (
           <div className="empty-state">

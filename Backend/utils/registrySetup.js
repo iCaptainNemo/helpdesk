@@ -42,15 +42,35 @@ class RegistrySetup {
     }
 
     /**
-     * Create JarvisLauncher folder and batch file
+     * Create/regenerate the JarvisLauncher folder and batch file. CmRcViewer and
+     * PsExec aren't part of Windows and may not be installed - when their path
+     * isn't resolved, that branch echoes a clear explanation instead of trying
+     * (and failing cryptically) to run a missing exe.
+     *
+     * %adObjectID% is quoted for CmRcViewer/msra/PowerShell, which receive it as
+     * a normal CreateProcess argument. It's deliberately left UNQUOTED in the
+     * PsExec branch: that one runs through `cmd.exe /k "..."`, and cmd has a
+     * legacy rule that only preserves quotes in a /k argument when the entire
+     * remainder contains EXACTLY two quote characters wrapping a valid exe path -
+     * any more (e.g. a second pair around adObjectID) makes it fall back to
+     * blindly stripping just the first and last quote, mangling a path with
+     * spaces. AD/NetBIOS computer names can't contain spaces anyway, so quoting
+     * it there would be pure risk for no actual safety benefit.
      */
-    async createLauncherFiles() {
+    async createLauncherFiles(cmRcViewerPath, psExecPath) {
         try {
             // Create directory if it doesn't exist
             if (!fs.existsSync(this.jarvisLauncherPath)) {
                 fs.mkdirSync(this.jarvisLauncherPath, { recursive: true });
                 logger.info(`Created JarvisLauncher directory: ${this.jarvisLauncherPath}`);
             }
+
+            const cmRcViewerBranch = cmRcViewerPath
+                ? `"${cmRcViewerPath}" "%adObjectID%"`
+                : `echo CmRcViewer not found or not configured - set its path in Configure ^> Application & pause`;
+            const psExecBranch = psExecPath
+                ? `cmd.exe /k "${psExecPath}" \\\\%adObjectID% cmd.exe`
+                : `echo PsExec not found or not configured - set its path in Configure ^> Application & pause`;
 
             // Create the batch file content
             const batContent = `@echo off
@@ -61,13 +81,13 @@ set "program=%protocol:~0,7%"
 set "adObjectID=%protocol:~7%"
 
 if "%program%"=="cmrcvie" (
-    "C:\\Program Files (x86)\\Microsoft Endpoint Manager\\AdminConsole\\bin\\i386\\CmRcViewer.exe" %adObjectID%
+    ${cmRcViewerBranch}
 ) else if "%program%"=="msraaaa" (
-    "C:\\Windows\\System32\\msra.exe" /offerRA %adObjectID%
+    "C:\\Windows\\System32\\msra.exe" /offerRA "%adObjectID%"
 ) else if "%program%"=="powersh" (
-    powershell.exe -NoExit Enter-PSSession -ComputerName %adObjectID%
+    powershell.exe -NoExit Enter-PSSession -ComputerName "%adObjectID%"
 ) else if "%program%"=="cmdexec" (
-    cmd.exe /k "psexec.exe \\\\%adObjectID% cmd.exe"
+    ${psExecBranch}
 ) else (
     echo ========== Debug Info ==========
     echo Input URL: %url%
@@ -82,7 +102,7 @@ endlocal`;
             // Write the batch file
             fs.writeFileSync(this.jarvisLauncherBat, batContent);
             logger.info(`Created JarvisLauncher.bat: ${this.jarvisLauncherBat}`);
-            
+
             return true;
         } catch (error) {
             logger.error('Failed to create JarvisLauncher files:', error);
@@ -131,35 +151,28 @@ endlocal`;
     }
 
     /**
-     * Main setup routine - checks and creates everything needed for deep linking
+     * Main setup routine - checks and creates everything needed for deep linking.
+     * Unlike protocol registration (idempotent, only done once), the launcher
+     * .bat is regenerated on every call with freshly-detected tool paths (see
+     * externalTools.js), so a tool installed - or a path configured in
+     * Configure > Application - since the last boot is picked up automatically.
      */
     async setupDeepLinking() {
         try {
             logger.info('🔗 Checking deep linking setup...');
 
-            // Check if protocol is already registered
-            const protocolRegistered = await this.checkProtocolRegistered();
-            
-            // Check if launcher files exist
-            const launcherFilesExist = this.checkLauncherFiles();
+            const { getExternalToolsStatus } = require('./externalTools');
+            const toolStatus = await getExternalToolsStatus();
 
-            // If both exist, we're good to go
-            if (protocolRegistered && launcherFilesExist) {
-                logger.info('✅ Deep linking is already properly configured');
-                return true;
-            }
-
-            // Create launcher files if they don't exist
-            if (!launcherFilesExist) {
-                logger.info('📁 Creating JarvisLauncher files...');
-                const filesCreated = await this.createLauncherFiles();
-                if (!filesCreated) {
-                    logger.error('❌ Failed to create JarvisLauncher files');
-                    return false;
-                }
+            logger.info('📁 Regenerating JarvisLauncher files with current tool paths...');
+            const filesCreated = await this.createLauncherFiles(toolStatus.cmRcViewer.path, toolStatus.psExec.path);
+            if (!filesCreated) {
+                logger.error('❌ Failed to create JarvisLauncher files');
+                return false;
             }
 
             // Register protocol if not already registered
+            const protocolRegistered = await this.checkProtocolRegistered();
             if (!protocolRegistered) {
                 logger.info('📝 Registering jarvis protocol in registry...');
                 const protocolRegisteredSuccess = await this.registerProtocol();

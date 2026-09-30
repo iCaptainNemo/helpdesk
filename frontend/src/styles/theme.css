@@ -470,6 +470,42 @@ input:checked + .slider:before {
   }
 }
 
+/* Split-flap row reveal (airport/train departure board style) - a row
+   hinges down from its own top edge to reveal itself, rather than fading or
+   sliding in. Rows get this class only when they're newly added to the list
+   (see ModernDashboard's flippedIdsRef), with a per-row animation-delay set
+   inline so consecutive new rows cascade top-to-bottom instead of flipping
+   together. */
+@keyframes flip-row-in {
+  0% {
+    transform: perspective(500px) rotateX(-90deg);
+    opacity: 0;
+  }
+  60% {
+    transform: perspective(500px) rotateX(8deg);
+    opacity: 1;
+  }
+  100% {
+    transform: perspective(500px) rotateX(0deg);
+    opacity: 1;
+  }
+}
+
+.dashboard-table tbody tr.flip-row-enter {
+  animation: flip-row-in 0.5s ease-out both;
+  transform-origin: top center;
+}
+
+/* A row is very often both newly-added AND within the 5-minute "recent"
+   window at the same time, but .animation is a shorthand - without this,
+   whichever rule has higher specificity/comes later would silently replace
+   the other's animation instead of both playing. This combined selector
+   (higher specificity than either alone) runs the flip first, then the
+   pulse picks up right as the flip settles. */
+.dashboard-table tbody tr.recent-lockout.flip-row-enter {
+  animation: flip-row-in 0.5s ease-out both, pulse-recent-lockout 2s ease-in-out 0.5s infinite;
+}
+
 /* Print Styles */
 @media print {
   * {
