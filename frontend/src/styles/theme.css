@@ -492,7 +492,7 @@ input:checked + .slider:before {
 }
 
 .dashboard-table tbody tr.flip-row-enter {
-  animation: flip-row-in 0.5s ease-out both;
+  animation: flip-row-in 0.9s ease-out both;
   transform-origin: top center;
 }
 
@@ -503,7 +503,7 @@ input:checked + .slider:before {
    (higher specificity than either alone) runs the flip first, then the
    pulse picks up right as the flip settles. */
 .dashboard-table tbody tr.recent-lockout.flip-row-enter {
-  animation: flip-row-in 0.5s ease-out both, pulse-recent-lockout 2s ease-in-out 0.5s infinite;
+  animation: flip-row-in 0.9s ease-out both, pulse-recent-lockout 2s ease-in-out 0.9s infinite;
 }
 
 /* Print Styles */

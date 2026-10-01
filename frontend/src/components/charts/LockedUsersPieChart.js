@@ -127,6 +127,13 @@ const LockedUsersPieChart = ({
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    // Chart.js's default reveal duration (~1s) was barely noticeable against
+    // the remount-triggered replay (see chartKey above) - slowed down so the
+    // sweep-in is actually visible as a deliberate "something changed" cue.
+    animation: {
+      duration: 1800,
+      easing: 'easeOutQuart'
+    },
     plugins: {
       legend: {
         position: 'right',

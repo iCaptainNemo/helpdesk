@@ -194,8 +194,15 @@ const ModernDashboard = ({
   // user who unlocks and is later locked out again drops out of the set
   // when they leave the list, so they correctly flip in again if relocked.
   useEffect(() => {
+    // Skip while the loading skeleton is showing - dashboardData can update
+    // (and this effect re-run) BEFORE the loading flag clears on a render
+    // after it, which would mark every row "seen" before the rows have ever
+    // actually painted with the flip class, silently killing the cascade on
+    // first load. Waiting for loading===false keeps the ref stale until the
+    // render that actually shows the rows.
+    if (loading) return;
     flippedIdsRef.current = new Set(dashboardData.lockedUsers.map(user => user.UserID));
-  }, [dashboardData.lockedUsers]);
+  }, [dashboardData.lockedUsers, loading]);
 
   const getActionTitle = (actionType) => {
     switch (actionType) {
@@ -448,7 +455,7 @@ const ModernDashboard = ({
                           // staggered by position among the OTHER new rows in this render, so a
                           // batch of new lockouts cascades top-to-bottom instead of flipping at once.
                           const isNewRow = !flippedIdsRef.current.has(user.UserID);
-                          const flipDelayMs = isNewRow ? newRowIndex++ * 80 : 0;
+                          const flipDelayMs = isNewRow ? newRowIndex++ * 150 : 0;
 
                           return (
                         <tr

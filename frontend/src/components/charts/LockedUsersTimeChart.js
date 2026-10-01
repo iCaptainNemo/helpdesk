@@ -40,6 +40,24 @@ const LockedUsersTimeChart = ({
   // every 5-minute poll that comes back identical.
   const [chartKey, setChartKey] = useState(0);
   const previousSignatureRef = useRef(null);
+  // Which department lines are toggled off via the custom legend below the
+  // chart. Chart.js's built-in legend supports this out of the box, but it
+  // was replaced with a custom HTML legend (see render, below) that can't
+  // render a label inside its own colored swatch - this restores the same
+  // click-to-toggle behavior on the replacement. Kept as plain React state
+  // (not an imperative chart.setDatasetVisibility call) and applied as a
+  // `hidden` flag on each dataset at render time, so it survives the
+  // key-forced remounts above instead of resetting to all-visible.
+  const [hiddenLabels, setHiddenLabels] = useState(new Set());
+
+  const toggleDepartment = (label) => {
+    setHiddenLabels(prev => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+  };
 
   // Generate time labels based on selected hours (current time on the right)
   const generateTimeLabels = (hours = selectedHours) => {
@@ -127,11 +145,29 @@ const LockedUsersTimeChart = ({
     }
   }, [data, selectedHours]);
 
+  // Overlay the legend's hidden-department toggles onto the fetched data at
+  // render time, rather than mutating chartData itself - keeps the toggle
+  // fully decoupled from the fetch/signature logic above (toggling never
+  // counts as a "real data change" and never triggers a remount) while still
+  // being re-applied correctly whenever a remount DOES happen for other
+  // reasons (new hours window, genuine value change).
+  const displayChartData = chartData ? {
+    ...chartData,
+    datasets: chartData.datasets.map(ds => ({ ...ds, hidden: hiddenLabels.has(ds.label) }))
+  } : null;
+
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     // devicePixelRatio intentionally left unset - Chart.js computes this itself by
     // default; forcing it was redundant even now that the CSS zoom hack is gone.
+    // Default reveal duration (~1s) was barely noticeable against the
+    // remount-triggered replay (see chartKey above) - slowed down so the
+    // line-draw is actually visible as a deliberate cue.
+    animation: {
+      duration: 1800,
+      easing: 'easeOutQuart'
+    },
     plugins: {
       legend: {
         // Replaced by a custom HTML legend below the chart (colored boxes with the
@@ -236,11 +272,14 @@ const LockedUsersTimeChart = ({
         {chartData ? (
           <>
             <div className="chart-container">
-              <Line key={chartKey} data={chartData} options={chartOptions} />
+              <Line key={chartKey} data={displayChartData} options={chartOptions} />
             </div>
 
             {/* Custom legend: colored box per department with the name in white
-                inside it, since Chart.js's built-in legend can't render that. */}
+                inside it, since Chart.js's built-in legend can't render that.
+                Clickable to toggle that department's line, same as Chart.js's
+                default legend behavior (lost when the built-in legend was
+                replaced with this custom one). */}
             <div
               style={{
                 display: 'flex',
@@ -251,21 +290,31 @@ const LockedUsersTimeChart = ({
                 marginTop: 'var(--spacing-sm)',
               }}
             >
-              {chartData.datasets.map((dataset) => (
-                <span
-                  key={dataset.label}
-                  style={{
-                    backgroundColor: dataset.borderColor,
-                    color: '#ffffff',
-                    padding: '2px 8px',
-                    borderRadius: 'var(--border-radius-sm)',
-                    fontSize: 'var(--font-size-xs)',
-                    fontWeight: 'var(--font-weight-medium)',
-                  }}
-                >
-                  {dataset.label}
-                </span>
-              ))}
+              {chartData.datasets.map((dataset) => {
+                const isHidden = hiddenLabels.has(dataset.label);
+                return (
+                  <span
+                    key={dataset.label}
+                    onClick={() => toggleDepartment(dataset.label)}
+                    title={isHidden ? `Show ${dataset.label}` : `Hide ${dataset.label}`}
+                    style={{
+                      backgroundColor: isHidden ? 'var(--bg-tertiary, #3a4150)' : dataset.borderColor,
+                      color: isHidden ? 'var(--text-muted)' : '#ffffff',
+                      opacity: isHidden ? 0.5 : 1,
+                      textDecoration: isHidden ? 'line-through' : 'none',
+                      padding: '2px 8px',
+                      borderRadius: 'var(--border-radius-sm)',
+                      fontSize: 'var(--font-size-xs)',
+                      fontWeight: 'var(--font-weight-medium)',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      transition: 'var(--transition-fast)'
+                    }}
+                  >
+                    {dataset.label}
+                  </span>
+                );
+              })}
             </div>
           </>
         ) : (
