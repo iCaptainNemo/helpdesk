@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiGet } from '../utils/api';
+import { parseUtcTimestamp, toLocalDateKey } from '../utils/dateUtils';
 import '../styles/TickerTape.css';
 
 const TickerTape = ({ className = '' }) => {
@@ -44,10 +45,14 @@ const TickerTape = ({ className = '' }) => {
 
       // Process recent actions for unlock count (today only)
       if (Array.isArray(actionsData)) {
-        const today = new Date().toDateString();
+        // action.timestamp is a naive UTC string (SQLite's CURRENT_TIMESTAMP) -
+        // parsing it with a plain `new Date()` gets misread as local time by
+        // V8, shifting it by the browser's UTC offset. parseUtcTimestamp marks
+        // it UTC explicitly before comparing local calendar days.
+        const todayKey = toLocalDateKey(new Date());
         totalUnlocks = actionsData.filter(action =>
           action.action_type === 'unlock' &&
-          new Date(action.timestamp).toDateString() === today
+          toLocalDateKey(parseUtcTimestamp(action.timestamp)) === todayKey
         ).length;
       }
 

@@ -5,6 +5,7 @@ import Notification from '../components/Notification';
 import TickerTape from '../components/TickerTape';
 import { executePowerShellScript, apiGet, apiPut, apiRequestRaw, invalidateCache } from '../utils/api';
 import { ActionLogger } from '../utils/actionLogger';
+import { parseUtcTimestamp, toLocalDateKey } from '../utils/dateUtils';
 
 // Lazy load chart components to reduce initial bundle size
 const LockedUsersTimeChart = React.lazy(() => import('../components/charts/LockedUsersTimeChart'));
@@ -92,12 +93,11 @@ const ModernDashboard = ({
       // Count this admin's successful unlocks today
       let todayUnlocks = 0;
       if (Array.isArray(unlockActions)) {
-        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-        todayUnlocks = unlockActions.filter(action =>
-          action.action_type === 'unlock' &&
-          action.result === 'success' &&
-          action.timestamp.startsWith(today)
-        ).length;
+        const todayKey = toLocalDateKey(new Date());
+        todayUnlocks = unlockActions.filter(action => {
+          if (action.action_type !== 'unlock' || action.result !== 'success') return false;
+          return toLocalDateKey(parseUtcTimestamp(action.timestamp)) === todayKey;
+        }).length;
       }
 
       const metrics = {
