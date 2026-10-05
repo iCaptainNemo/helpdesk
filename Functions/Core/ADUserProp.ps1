@@ -6,7 +6,7 @@
     group memberships, account status, password information, and lockout details.
     Supports both PowerShell AD module and DirectorySearcher fallback methods.
 .NOTES
-    Author: Helpdesk Team
+    Authorship: See CONTRIBUTORS.md and repository history
     Version: 2.0
     Requires: Active Directory access, PowerShell AD module (preferred) or WMI fallback
     Part of: Jarvis Helpdesk Automation System
