@@ -4,7 +4,7 @@
 .DESCRIPTION
     Provides functions to establish remote command line access via PowerShell and PsExec
 .NOTES
-    Author: Helpdesk Team
+    Authorship: See CONTRIBUTORS.md and repository history
     Version: 2.0
     Requires: PowerShell Remoting, PsExec
 #>
