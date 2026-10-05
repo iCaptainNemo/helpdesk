@@ -9,7 +9,7 @@
 .EXAMPLE
     Asset-Control -userId "jdoe"
 .NOTES
-    Author: Helpdesk Team
+    Authorship: See CONTRIBUTORS.md and repository history
     Version: 2.0
     Requires: YAML configuration file at Config/AssetControlMenu.yaml
 #>
