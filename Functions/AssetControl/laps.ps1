@@ -4,7 +4,7 @@
 .DESCRIPTION
     Provides functions to retrieve LAPS passwords for domain computers
 .NOTES
-    Author: Helpdesk Team  
+    Authorship: See CONTRIBUTORS.md and repository history  
     Version: 2.0
     Requires: Active Directory PowerShell module, LAPS read permissions
 #>
