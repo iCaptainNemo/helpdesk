@@ -4,7 +4,7 @@
 .DESCRIPTION
     Provides functions for system-level operations like restarts, uptime monitoring, and service management
 .NOTES
-    Author: Helpdesk Team
+    Authorship: See CONTRIBUTORS.md and repository history
     Version: 2.0
     Requires: Administrative privileges on target systems
 #>
