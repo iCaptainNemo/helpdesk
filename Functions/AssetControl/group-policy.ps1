@@ -4,7 +4,7 @@
 .DESCRIPTION
     Provides functions for Group Policy updates, reports, and management
 .NOTES
-    Author: Helpdesk Team
+    Authorship: See CONTRIBUTORS.md and repository history
     Version: 2.0
     Requires: Administrative privileges, Group Policy PowerShell module
 #>
