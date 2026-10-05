@@ -4,7 +4,7 @@
 .DESCRIPTION
     Provides functions to launch remote desktop connections and assistance tools
 .NOTES
-    Author: Helpdesk Team
+    Authorship: See CONTRIBUTORS.md and repository history
     Version: 2.0
     Requires: SCCM Remote Tools, Windows Remote Assistance
 #>
