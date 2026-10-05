@@ -4,7 +4,7 @@
 .DESCRIPTION
     Provides functions to test network connectivity to remote computers using various methods
 .NOTES
-    Author: Helpdesk Team
+    Authorship: See CONTRIBUTORS.md and repository history
     Version: 2.0
     Requires: PowerShell 5.1+, Network connectivity
 #>
