@@ -13,7 +13,7 @@
 .EXAMPLE
     Unlock-UserAdvanced -userId "jdoe"
 .NOTES
-    Author: Helpdesk Team
+    Authorship: See CONTRIBUTORS.md and repository history
     Version: 3.0 - Optimized with cached domain controllers
     Requires: Cached domain controllers from jarvis startup
 #>

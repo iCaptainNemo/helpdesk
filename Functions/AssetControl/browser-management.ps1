@@ -4,7 +4,7 @@
 .DESCRIPTION
     Provides functions for browser cache clearing, bookmark management, and file associations
 .NOTES
-    Author: Helpdesk Team
+    Authorship: See CONTRIBUTORS.md and repository history
     Version: 2.0
     Requires: Administrative privileges on target systems, PsExec for remote operations
 #>

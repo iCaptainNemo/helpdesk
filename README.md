@@ -147,6 +147,12 @@ helpdesk/
 - Basic domain controller testing
 - Legacy .env file configuration system
 
+## 👤 Authorship and Project History
+
+Jarvis is maintained by [iCaptainNemo](https://github.com/iCaptainNemo). Individual contributions are preserved in the repository's Git history.
+
+See [CONTRIBUTORS.md](CONTRIBUTORS.md) for contributor credit and [PROVENANCE.md](PROVENANCE.md) for the project's technical and historical provenance.
+
 ## 📄 License
 
-Internal use only. See LICENSE file for details.
+This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)**. See [LICENSE](LICENSE) for the complete license terms.

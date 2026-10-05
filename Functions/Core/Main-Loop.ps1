@@ -14,7 +14,7 @@
     - Asset control menu integration
     - Script restart and cleanup functionality
 .NOTES
-    Author: Helpdesk Team
+    Authorship: See CONTRIBUTORS.md and repository history
     Version: 2.0
     Requires: Active Directory access, YAML configuration system
     Part of: Jarvis Helpdesk Automation System - Core Functions

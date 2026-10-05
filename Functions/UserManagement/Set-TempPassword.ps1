@@ -16,7 +16,7 @@
     Set-TempPassword
     Prompts for temporary password or generates seasonal default
 .NOTES
-    Author: Helpdesk Team
+    Authorship: See CONTRIBUTORS.md and repository history
     Version: 2.0
     Requires: YAML environment configuration system
     Part of: Jarvis Helpdesk Automation System - User Management

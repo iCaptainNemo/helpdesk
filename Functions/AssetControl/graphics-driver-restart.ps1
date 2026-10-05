@@ -4,7 +4,7 @@
 .DESCRIPTION
     Restarts the graphics driver on a remote computer by disabling and re-enabling the display adapter
 .NOTES
-    Author: Helpdesk Team
+    Authorship: See CONTRIBUTORS.md and repository history
     Version: 1.0
     Requires: Administrative privileges on target systems
 #>

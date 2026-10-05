@@ -17,7 +17,7 @@
     Get-ADObjectType -object "jdoe"
     Retrieves and displays properties for user or object matching "jdoe"
 .NOTES
-    Author: Helpdesk Team
+    Authorship: See CONTRIBUTORS.md and repository history
     Version: 2.0
     Requires: Active Directory PowerShell module (imported by jarvis.ps1)
     Part of: Jarvis Helpdesk Automation System - Utilities

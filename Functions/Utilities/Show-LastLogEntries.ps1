@@ -25,7 +25,7 @@
     4. Update date/time parsing to match your log timestamp format
     5. Configure admin YAML file Logging section with domain-specific settings
 .NOTES
-    Author: Helpdesk Team
+    Authorship: See CONTRIBUTORS.md and repository history
     Version: 2.0
     Requires: Log file access, YAML environment configuration, domain-specific customization
     Part of: Jarvis Helpdesk Automation System - Utilities

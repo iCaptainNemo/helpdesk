@@ -4,7 +4,7 @@
 .DESCRIPTION
     Provides functions to retrieve BitLocker recovery keys from Active Directory
 .NOTES
-    Author: Helpdesk Team
+    Authorship: See CONTRIBUTORS.md and repository history
     Version: 2.0
     Requires: Active Directory PowerShell module, BitLocker recovery key read permissions
 #>

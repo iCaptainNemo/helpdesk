@@ -116,6 +116,15 @@ When converting standalone scripts from `Standalone-NotReady/` to Asset Control 
 3. Verify domain detection works (PowerShell AD vs WMI fallback)
 4. Test multi-user scenarios with different service desk agents
 
+
+
+### Attribution and Licensing
+- Do not add generic `Author: Helpdesk Team` metadata to source files.
+- When a source-file attribution line is useful, use `Authorship: See CONTRIBUTORS.md and repository history` so file headers do not overwrite individual contribution history.
+- Preserve contributor credit already recorded in Git history.
+- Do not add "internal use only" or other restrictions that conflict with the repository's GPL-3.0 license.
+- Do not make legal ownership or work-for-hire claims in code comments or generated documentation. `CONTRIBUTORS.md` and `PROVENANCE.md` document repository history and technical provenance, not legal ownership.
+
 ## Common Maintenance Tasks
 
 ### Troubleshooting

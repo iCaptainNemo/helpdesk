@@ -15,7 +15,7 @@
     $adConfig = Get-ADPropertiesConfig
     $userProperties = Get-ADUserProperties -Properties $adConfig.PowerShellAD.UserProperties.All
 .NOTES
-    Author: Helpdesk Team
+    Authorship: See CONTRIBUTORS.md and repository history
     Version: 2.0
     Requires: YAML configuration file at Config/ADProperties.yaml
     Part of: Jarvis Helpdesk Automation System - Core Functions
