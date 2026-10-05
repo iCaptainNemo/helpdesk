@@ -29,7 +29,7 @@
     Runs the script with debug output enabled
     
 .NOTES
-    Author: Helpdesk Team
+    Authorship: See CONTRIBUTORS.md and repository history
     Version: 2.0
     Requires: PowerShell 5.1+, ActiveDirectory module, powershell-yaml module
     
